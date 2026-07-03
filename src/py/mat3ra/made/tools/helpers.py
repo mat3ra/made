@@ -42,7 +42,7 @@ from .build.defective_structures.zero_dimensional.point_defect.substitutional.he
 )
 from .build.defective_structures.zero_dimensional.point_defect.types import PointDefectDict
 from .build.defective_structures.zero_dimensional.point_defect.vacancy.helpers import create_defect_point_vacancy
-from .build.defective_structures.zero_dimensional.solid_solution.helpers import create_solid_solution
+from .build.defective_structures.three_dimensional.solid_solution.helpers import create_solid_solution
 
 # Pristine Structures
 from .build.pristine_structures.three_dimensional.ideal_crystal.helpers import create_monolayer

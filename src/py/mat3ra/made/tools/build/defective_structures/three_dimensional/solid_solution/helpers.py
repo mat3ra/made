@@ -2,9 +2,11 @@ from typing import Optional, Union
 
 from mat3ra.made.material import Material
 
-from .....build_components import MaterialWithBuildMetadata
 from .....analyze.solid_solution_analyzer import SolidSolutionAnalyzer
+from .....build_components import MaterialWithBuildMetadata
 from .builder import SolidSolutionBuilder
+from .configuration import SolidSolutionConfiguration
+from .enums import SiteSelectionMethodEnum
 
 
 def create_solid_solution(
@@ -14,7 +16,7 @@ def create_solid_solution(
     concentration: float,
     seed: Optional[int] = None,
     tolerance: float = 0.01,
-    site_selection_method: str = "uniform",
+    site_selection_method: SiteSelectionMethodEnum = SiteSelectionMethodEnum.UNIFORM,
 ) -> MaterialWithBuildMetadata:
     """
     Create a solid solution by partially substituting one element for another.
@@ -29,7 +31,7 @@ def create_solid_solution(
         concentration (float): Fraction of source_element to replace (0.0-1.0).
         seed (Optional[int]): Random seed for reproducible site selection.
         tolerance (float): Acceptable deviation from target concentration.
-        site_selection_method (str): "random" or "uniform" (Farthest Point Sampling).
+        site_selection_method (SiteSelectionMethodEnum): RANDOM or UNIFORM (Farthest Point Sampling).
 
     Returns:
         MaterialWithBuildMetadata: Solid solution with full build metadata.
@@ -43,6 +45,13 @@ def create_solid_solution(
         seed=seed,
         site_selection_method=site_selection_method,
     )
-    config = analyzer.configuration
+    config = SolidSolutionConfiguration.from_parameters(
+        crystal=material,
+        supercell_material=analyzer.supercell_material,
+        source_element=source_element,
+        target_element=target_element,
+        concentration=analyzer.achievable_concentration,
+        selected_site_indices=analyzer.selected_site_indices,
+    )
     builder = SolidSolutionBuilder()
     return builder.get_material(config)
