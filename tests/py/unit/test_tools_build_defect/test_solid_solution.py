@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.made.tools.build.defective_structures.zero_dimensional.solid_solution.helpers import (
+from mat3ra.made.tools.build.defective_structures.three_dimensional.solid_solution.helpers import (
     create_solid_solution,
 )
 from mat3ra.standata.materials import Materials
@@ -28,7 +28,7 @@ def test_create_solid_solution_uniform_element_counts():
     material = Material.create(BULK_HfO2)
     result = create_solid_solution(material, "Hf", "Zr", 0.5, seed=42, site_selection_method="uniform")
     elements = result.basis.elements.values
-    assert elements == ["Zr", "Hf", "Zr", "Hf", "O", "O", "O", "O", "O", "O", "O", "O"]
+    assert elements == ["Hf", "Hf", "O", "O", "O", "O", "O", "O", "O", "O", "Zr", "Zr"]
 
 
 @pytest.mark.parametrize(
