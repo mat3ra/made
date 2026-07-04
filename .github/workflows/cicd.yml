@@ -58,7 +58,6 @@ jobs:
         uses: ./actions/py/pytest
         with:
           python-version: ${{ matrix.python-version }}
-          ruff-version: 0.15.20
           unit-test-directory: tests/py/unit
           bot-ssh-key: ${{ secrets.BOT_GITHUB_KEY }}
 
@@ -68,6 +67,7 @@ jobs:
       matrix:
         node-version:
           - 20.x
+          - 22.x
 
     steps:
       - name: Checkout this repository
