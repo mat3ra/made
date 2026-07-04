@@ -60,7 +60,8 @@
         "lint-staged": "^12.1.2",
         "mocha": "10.3.0",
         "prettier": "^2.5.1",
-        "nyc": "^15.1.0"
+        "nyc": "^15.1.0",
+        "@mat3ra/standata": "2026.6.30-0"
     },
     "dependencies": {
         "@babel/core": "7.24.1",
