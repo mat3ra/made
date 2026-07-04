@@ -25,6 +25,8 @@ jobs:
 
       - name: Run ruff linter
         uses: ./actions/py/lint
+        with:
+          ruff-version: 0.15.20
 
   run-py-tests:
     needs: run-py-linter

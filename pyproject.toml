@@ -18,7 +18,7 @@ dependencies = [
     # add requirements here
     # new verison of numpy==2.0.0 is not handled by pymatgen yet
     "numpy<=1.26.4",
-    "mat3ra-utils @ git+https://github.com/mat3ra/utils.git@ab9f4971c3625f39e17798e2762889a21b345edf",
+    "mat3ra-utils>=2026.7.3.post0",
     "mat3ra-esse>=2026.6.30.post0",
     "mat3ra-code"
 ]
