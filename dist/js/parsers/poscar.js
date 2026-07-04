@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.atomsCount = void 0;
+exports.atomsCount = atomsCount;
 const math_1 = require("@mat3ra/code/dist/js/math");
 const utils_1 = require("@mat3ra/utils");
 const underscore_string_1 = __importDefault(require("underscore.string"));
@@ -63,7 +63,6 @@ function atomsCount(poscarFileContent) {
     const atomsLine = lines[6].split(/\s+/);
     return atomsLine.map((x) => parseInt(x, 10)).reduce((a, b) => a + b);
 }
-exports.atomsCount = atomsCount;
 /**
  * Parses POSCAR file into a Material config object.
  * @param fileContent - POSCAR file content.
