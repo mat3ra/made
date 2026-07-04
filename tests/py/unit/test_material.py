@@ -132,12 +132,22 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
     assert material.basis.labels.values == expected_final
 
 
-@pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json", "feo-standata.json"])
+@pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
 def test_calculate_hash(fixture_file):
     fixture = load_fixture(fixture_file)
     material = Material.create(fixture)
     assert material.hash == fixture["hash"]
     assert material.scaled_hash == fixture["scaledHash"]
+
+
+def test_calculate_hash_feo_standata():
+    from mat3ra.standata.materials import Materials
+
+    expected_hashes = load_fixture("hashes.json")["FeO"]
+    data = Materials.get_by_name_first_match("FeO")
+    material = Material.create(data)
+    assert material.hash == expected_hashes["hash"]
+    assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
 def test_model_dump_includes_hashes():

@@ -24,13 +24,19 @@ describe("Material", () => {
         [
             { name: "Silicon", fixture: Silicon },
             { name: "Graphene", fixture: Graphene },
-            { name: "FeOStandata", fixture: FeOStandata },
         ].forEach(({ name, fixture }) => {
             it(`should match expected hash for ${name}`, () => {
                 const material = new Material(fixture);
                 expect(material.calculateHash()).to.equal((fixture as any).hash);
                 expect(material.scaledHash).to.equal((fixture as any).scaledHash);
             });
+        });
+
+        it("should match expected hash for FeO (standata)", () => {
+            const expectedHashes = require("../../fixtures/hashes.json");
+            const material = new Material(FeOStandata);
+            expect(material.calculateHash()).to.equal(expectedHashes.FeO.hash);
+            expect(material.scaledHash).to.equal(expectedHashes.FeO.scaledHash);
         });
     });
 });
