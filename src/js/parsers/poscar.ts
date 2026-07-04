@@ -15,9 +15,8 @@ import { ATOMIC_COORD_UNITS } from "../constants";
 import { AtomicConstraintValue } from "../constraints/constraints";
 import { Lattice } from "../lattice/lattice";
 
-const { math } = Utils;
 
-const _print = (x: number, printFormat = "%14.9f") => s.sprintf(printFormat, math.precise(x));
+const _print = (x: number, printFormat = "%14.9f") => s.sprintf(printFormat, Utils.math.precise(x));
 const _latticeVectorsToString = (vectors: Vector3DSchema[]) =>
     vectors.map((v) => v.map((c) => _print(c)).join("\t")).join("\n");
 const atomicConstraintsCharFromBool = (bool: boolean): string => (bool ? "T" : "F");

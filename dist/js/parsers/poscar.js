@@ -10,8 +10,7 @@ const constrained_basis_1 = require("../basis/constrained_basis");
 const cell_1 = require("../cell/cell");
 const constants_1 = require("../constants");
 const lattice_1 = require("../lattice/lattice");
-const { math } = utils_1.Utils;
-const _print = (x, printFormat = "%14.9f") => underscore_string_1.default.sprintf(printFormat, math.precise(x));
+const _print = (x, printFormat = "%14.9f") => underscore_string_1.default.sprintf(printFormat, utils_1.Utils.math.precise(x));
 const _latticeVectorsToString = (vectors) => vectors.map((v) => v.map((c) => _print(c)).join("\t")).join("\n");
 const atomicConstraintsCharFromBool = (bool) => (bool ? "T" : "F");
 /**

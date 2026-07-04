@@ -4,7 +4,6 @@ exports.Coordinates = exports.Coordinate = void 0;
 const code_1 = require("@mat3ra/code");
 const utils_1 = require("@mat3ra/utils");
 const underscore_string_1 = require("underscore.string");
-const { math } = utils_1.Utils;
 class Coordinate extends code_1.RoundedValueWithId {
     constructor({ value, id }) {
         super(id, value);
@@ -59,7 +58,7 @@ class Coordinates extends code_1.RoundedArrayWithIds {
         });
     }
     getCenterPoint() {
-        const transposed = math.transpose(this.values);
+        const transposed = utils_1.Utils.math.transpose(this.values);
         const center = [0, 0, 0];
         for (let i = 0; i < 3; i++) {
             const axisCoords = transposed[i];

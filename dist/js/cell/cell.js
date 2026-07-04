@@ -7,10 +7,9 @@ exports.Cell = void 0;
 const code_1 = require("@mat3ra/code");
 const utils_1 = require("@mat3ra/utils");
 const constants_1 = __importDefault(require("../constants"));
-const { math } = utils_1.Utils;
-const MATRIX = math.matrix;
-const MULT = math.multiply;
-const INV = math.inv;
+const MATRIX = utils_1.Utils.math.matrix;
+const MULT = utils_1.Utils.math.multiply;
+const INV = utils_1.Utils.math.inv;
 // @ts-ignore
 const MATRIX_MULT = (...args) => MULT(...args.map((x) => MATRIX(x))).toArray();
 class Cell {
@@ -45,10 +44,10 @@ class Cell {
         return [this._a.valueRounded, this._b.valueRounded, this._c.valueRounded];
     }
     get volume() {
-        return math.det(this.vectorArrays);
+        return utils_1.Utils.math.det(this.vectorArrays);
     }
     get volumeRounded() {
-        return math.roundArrayOrNumber(this.volume, Cell.roundPrecision);
+        return utils_1.Utils.math.roundArrayOrNumber(this.volume, Cell.roundPrecision);
     }
     clone() {
         return new Cell({ a: this.a, b: this.b, c: this.c });
@@ -67,7 +66,7 @@ class Cell {
     isPointInsideCellCartesian(point) {
         const { tolerance } = this.constructor;
         return (this.convertPointToCrystal(point)
-            .map((c) => math.isBetweenZeroInclusiveAndOne(c, tolerance))
+            .map((c) => utils_1.Utils.math.isBetweenZeroInclusiveAndOne(c, tolerance))
             // @ts-ignore
             .reduce((a, b) => a && b));
     }
@@ -75,7 +74,7 @@ class Cell {
     isPointInsideCellCrystal(point) {
         const { tolerance } = this.constructor;
         return (point
-            .map((c) => math.isBetweenZeroInclusiveAndOne(c, tolerance))
+            .map((c) => utils_1.Utils.math.isBetweenZeroInclusiveAndOne(c, tolerance))
             // @ts-ignore
             .reduce((a, b) => a && b));
     }
@@ -86,8 +85,8 @@ class Cell {
         return this.isPointInsideCellCartesian(point);
     }
     getMostCollinearVectorIndex(testVector) {
-        const angles = this.vectorArrays.map((v) => math.angleUpTo90(v, testVector, "deg"));
-        return angles.findIndex((el) => el === math.min(angles));
+        const angles = this.vectorArrays.map((v) => utils_1.Utils.math.angleUpTo90(v, testVector, "deg"));
+        return angles.findIndex((el) => el === utils_1.Utils.math.min(angles));
     }
     scaleByMatrix(matrix) {
         // @ts-ignore - mathjs v12 multiply return type is broader than runtime

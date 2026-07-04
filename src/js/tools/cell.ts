@@ -3,7 +3,6 @@ import { Utils } from "@mat3ra/utils";
 
 import { Cell } from "../cell/cell";
 
-const { math } = Utils;
 
 /**
  * Returns the list of points on the original lattice contained in the supercell in fractional coordinates.
@@ -24,8 +23,8 @@ function latticePointsInSupercell(supercellMatrix: Matrix3X3Schema) {
     const d_points = diagonals.map((point) =>
         supercell.convertPointToCartesian(point as Coordinate3DSchema),
     );
-    const mins = [0, 1, 2].map((i) => math.min(...d_points.map((p) => p[i])));
-    const maxes = [0, 1, 2].map((i) => math.max(...d_points.map((p) => p[i])) + 1);
+    const mins = [0, 1, 2].map((i) => Utils.math.min(...d_points.map((p) => p[i])));
+    const maxes = [0, 1, 2].map((i) => Utils.math.max(...d_points.map((p) => p[i])) + 1);
     const points = [];
     for (let i = mins[0]; i <= maxes[0]; i++) {
         for (let j = mins[1]; j <= maxes[1]; j++) {

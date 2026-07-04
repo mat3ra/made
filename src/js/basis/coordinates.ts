@@ -8,7 +8,6 @@ import {
 import { Utils } from "@mat3ra/utils";
 import { sprintf } from "underscore.string";
 
-const { math } = Utils;
 
 export type AtomicCoordinateValue = AtomicCoordinateSchema["value"];
 
@@ -80,7 +79,7 @@ export class Coordinates extends RoundedArrayWithIds<Coordinate3DSchema> {
     }
 
     getCenterPoint(): Vector3DSchema {
-        const transposed = math.transpose(this.values) as Matrix3X3Schema;
+        const transposed = Utils.math.transpose(this.values) as Matrix3X3Schema;
         const center: Vector3DSchema = [0, 0, 0];
 
         for (let i = 0; i < 3; i++) {

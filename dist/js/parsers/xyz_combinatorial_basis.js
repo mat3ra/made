@@ -28,7 +28,6 @@ const utils_1 = require("@mat3ra/utils");
 const lodash_1 = require("lodash");
 const s = __importStar(require("underscore.string"));
 const cell_1 = require("../cell/cell");
-const { math } = utils_1.Utils;
 /**
  * @summary Combinatorial XYZ basis class and related. Create and get all information about basis and elements in it.
  * Constructor accepts string in extended XYZ format. Extended XYZ format is as follows:
@@ -200,7 +199,7 @@ class CombinatorialBasis {
             dimensions.push(itemsSet);
         });
         // @ts-ignore // We're multiplying objects with math, not numbers. No type casting will help.
-        const basisSet = math.cartesianProduct.apply(null, dimensions);
+        const basisSet = utils_1.Utils.math.cartesianProduct.apply(null, dimensions);
         return basisSet.map((basis) => basis.filter((entry) => entry.element !== VACANCY_CHARACTER));
     }
     /**

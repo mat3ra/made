@@ -8,9 +8,8 @@ import { Lattice } from "../lattice/lattice";
 import type { Material } from "../material";
 import cellTools from "./cell";
 
-const { math } = Utils;
 
-const ADD = math.add;
+const ADD = Utils.math.add;
 
 /**
  * @summary Generates new basis for a supercell. For each site from basis generates shifts that are within supercell.
@@ -58,7 +57,7 @@ function generateNewBasisWithinSupercell(
  * @param supercellMatrix {Number[][]}
  */
 function generateConfig(material: Material, supercellMatrix: Matrix3X3Schema) {
-    const det = math.det(supercellMatrix);
+    const det = Utils.math.det(supercellMatrix);
     if (det === 0) {
         throw new Error("Scaling matrix is degenerate.");
     }

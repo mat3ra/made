@@ -7,7 +7,6 @@ import { Lattice } from "../lattice";
 import { paths } from "./paths";
 import { symmetryPoints } from "./symmetry_points";
 
-const { math } = Utils;
 
 export type KPointCoordinates = number[];
 export type KPointPath = Array<{
@@ -41,16 +40,16 @@ export class ReciprocalLattice extends Lattice {
      */
     get reciprocalVectors(): Vector3DSchema[] {
         const vectors_: Vector3DSchema[] = this.vectors.vectorArrays as Vector3DSchema[];
-        const a: number = math.vlen(vectors_[0]);
+        const a: number = Utils.math.vlen(vectors_[0]);
         const divider: number =
-            (math.multiply(
+            (Utils.math.multiply(
                 vectors_[0],
-                math.cross(vectors_[1], vectors_[2]),
+                Utils.math.cross(vectors_[1], vectors_[2]),
             ) as unknown as number) / a;
         return [
-            math.multiply(math.cross(vectors_[1], vectors_[2]), 1 / divider) as Vector3DSchema,
-            math.multiply(math.cross(vectors_[2], vectors_[0]), 1 / divider) as Vector3DSchema,
-            math.multiply(math.cross(vectors_[0], vectors_[1]), 1 / divider) as Vector3DSchema,
+            Utils.math.multiply(Utils.math.cross(vectors_[1], vectors_[2]), 1 / divider) as Vector3DSchema,
+            Utils.math.multiply(Utils.math.cross(vectors_[2], vectors_[0]), 1 / divider) as Vector3DSchema,
+            Utils.math.multiply(Utils.math.cross(vectors_[0], vectors_[1]), 1 / divider) as Vector3DSchema,
         ];
     }
 
@@ -58,7 +57,7 @@ export class ReciprocalLattice extends Lattice {
      * Norms of reciprocal vectors.
      */
     get reciprocalVectorNorms(): Vector3DSchema {
-        return this.reciprocalVectors.map((vec) => math.norm(vec) as number) as Vector3DSchema;
+        return this.reciprocalVectors.map((vec) => Utils.math.norm(vec) as number) as Vector3DSchema;
     }
 
     /**
@@ -66,7 +65,7 @@ export class ReciprocalLattice extends Lattice {
      */
     get reciprocalVectorRatios(): Vector3DSchema {
         const norms: number[] = this.reciprocalVectorNorms;
-        const maxNorm: number = math.max(...norms) as number;
+        const maxNorm: number = Utils.math.max(...norms) as number;
         return norms.map((n: number) => n / maxNorm) as Vector3DSchema;
     }
 
@@ -76,7 +75,7 @@ export class ReciprocalLattice extends Lattice {
      * @return {KPointCoordinates}
      */
     getCartesianCoordinates(point: KPointCoordinates): KPointCoordinates {
-        return math.multiply(point, this.reciprocalVectors) as KPointCoordinates;
+        return Utils.math.multiply(point, this.reciprocalVectors) as KPointCoordinates;
     }
 
     /**
@@ -107,7 +106,7 @@ export class ReciprocalLattice extends Lattice {
 
         dataPoints.forEach((point: KPointCoordinates, index: number) => {
             const symmPoint: SymmetryPoint | undefined = symmPoints.find((x) => {
-                return math.vEqualWithTolerance(x.coordinates, point, 1e-4);
+                return Utils.math.vEqualWithTolerance(x.coordinates, point, 1e-4);
             });
             if (symmPoint) {
                 kpointPath.push({
@@ -130,10 +129,10 @@ export class ReciprocalLattice extends Lattice {
     calculateDimension(nPoints: number, index: number): number {
         const norms: number[] = this.reciprocalVectorNorms;
         const [j, k] = [0, 1, 2].filter((i) => i !== index); // get indices of other two dimensions
-        const N: number = math.cbrt(
+        const N: number = Utils.math.cbrt(
             (nPoints * norms[index] ** 2) / (norms[j] * norms[k]),
         ) as number;
-        return math.max(1, math.ceil(N)) as number;
+        return Utils.math.max(1, Utils.math.ceil(N)) as number;
     }
 
     /**
@@ -150,10 +149,10 @@ export class ReciprocalLattice extends Lattice {
         const { a } = this;
         return {
             [ATOMIC_COORD_UNITS.cartesian]: {
-                [UNITS.angstrom]: (2 * math.PI) / a,
+                [UNITS.angstrom]: (2 * Utils.math.PI) / a,
             },
             [UNITS.angstrom]: {
-                [ATOMIC_COORD_UNITS.cartesian]: a / (2 * math.PI),
+                [ATOMIC_COORD_UNITS.cartesian]: a / (2 * Utils.math.PI),
             },
         };
     }
@@ -168,7 +167,7 @@ export class ReciprocalLattice extends Lattice {
     getDimensionsFromSpacing(spacing: number, units: string = ATOMIC_COORD_UNITS.cartesian) {
         const factor: number = this.conversionTable[units][ATOMIC_COORD_UNITS.cartesian] || 1;
         return this.reciprocalVectorNorms.map((norm: number) => {
-            return math.max(1, math.ceil(lodash.round(norm / (spacing * factor), 4))) as number;
+            return Utils.math.max(1, Utils.math.ceil(lodash.round(norm / (spacing * factor), 4))) as number;
         }) as Vector3DSchema;
     }
 
@@ -186,8 +185,8 @@ export class ReciprocalLattice extends Lattice {
         const norms: number[] = this.reciprocalVectorNorms;
         return (
             factor *
-            (math.mean(
-                dimensions.map((dim: number, i: number) => norms[i] / math.max(1, dim)),
+            (Utils.math.mean(
+                dimensions.map((dim: number, i: number) => norms[i] / Utils.math.max(1, dim)),
             ) as number)
         );
     }

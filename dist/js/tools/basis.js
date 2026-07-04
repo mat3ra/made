@@ -3,9 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@mat3ra/utils");
 const lodash_1 = require("lodash");
 const coordinates_1 = require("../basis/coordinates");
-const { math } = utils_1.Utils;
-const ADD = math.add;
-const MULT = math.multiply;
+const ADD = utils_1.Utils.math.add;
+const MULT = utils_1.Utils.math.multiply;
 /**
  * Returns a repeated basis of a crystal.
  * @param basis {Basis} Original basis.

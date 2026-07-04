@@ -8,7 +8,6 @@ import { AtomicCoordinateValue } from "../basis/coordinates";
 import { AtomicElementValue } from "../basis/elements";
 import { Cell } from "../cell/cell";
 
-const { math } = Utils;
 
 /**
  * @summary Combinatorial XYZ basis class and related. Create and get all information about basis and elements in it.
@@ -226,7 +225,7 @@ export class CombinatorialBasis {
             dimensions.push(itemsSet);
         });
         // @ts-ignore // We're multiplying objects with math, not numbers. No type casting will help.
-        const basisSet = math.cartesianProduct.apply(null, dimensions) as ElementWithCoordinate[][];
+        const basisSet = Utils.math.cartesianProduct.apply(null, dimensions) as ElementWithCoordinate[][];
         return basisSet.map((basis: ElementWithCoordinate[]) =>
             basis.filter((entry) => entry.element !== VACANCY_CHARACTER),
         );

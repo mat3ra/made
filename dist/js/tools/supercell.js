@@ -6,8 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@mat3ra/utils");
 const lattice_1 = require("../lattice/lattice");
 const cell_1 = __importDefault(require("./cell"));
-const { math } = utils_1.Utils;
-const ADD = math.add;
+const ADD = utils_1.Utils.math.add;
 /**
  * @summary Generates new basis for a supercell. For each site from basis generates shifts that are within supercell.
  */
@@ -40,7 +39,7 @@ function generateNewBasisWithinSupercell(basis, cell, supercell, supercellMatrix
  * @param supercellMatrix {Number[][]}
  */
 function generateConfig(material, supercellMatrix) {
-    const det = math.det(supercellMatrix);
+    const det = utils_1.Utils.math.det(supercellMatrix);
     if (det === 0) {
         throw new Error("Scaling matrix is degenerate.");
     }

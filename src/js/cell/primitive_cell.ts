@@ -4,6 +4,7 @@ import { Utils } from "@mat3ra/utils";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const math: any = Utils.math;
 
+
 /**
  * Routines for calculating primitive cell vectors from conventional cell Bravais parameters.
  * Following Setyawan, W., & Curtarolo, S. (2010). doi:10.1016/j.commatsci.2010.05.010

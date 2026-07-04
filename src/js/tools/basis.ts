@@ -5,10 +5,9 @@ import { chunk, flatten } from "lodash";
 import { Basis } from "../basis/basis";
 import { AtomicCoordinateValue, Coordinate } from "../basis/coordinates";
 
-const { math } = Utils;
 
-const ADD = math.add;
-const MULT = math.multiply;
+const ADD = Utils.math.add;
+const MULT = Utils.math.multiply;
 
 /**
  * Returns a repeated basis of a crystal.

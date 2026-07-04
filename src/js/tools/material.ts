@@ -5,7 +5,6 @@ import { ATOMIC_COORD_UNITS } from "../constants";
 import { Lattice } from "../lattice/lattice";
 import { Material } from "../material";
 
-const { math } = Utils;
 
 /**
  * Scales one lattice vector for the given material
@@ -46,11 +45,11 @@ function translateAtomsToCenter(material: Material) {
     material.toCartesian();
     const updatedBasis = material.Basis;
     const centerOfCoordinates = updatedBasis.centerOfCoordinatesPoint;
-    const centerOfLattice = math.multiply(
+    const centerOfLattice = Utils.math.multiply(
         0.5,
-        material.Lattice.vectorArrays.reduce((a, b) => math.add(a, b) as Vector3DSchema),
+        material.Lattice.vectorArrays.reduce((a, b) => Utils.math.add(a, b) as Vector3DSchema),
     );
-    const translationVector = math.subtract(centerOfLattice, centerOfCoordinates);
+    const translationVector = Utils.math.subtract(centerOfLattice, centerOfCoordinates);
     updatedBasis.translateByVector(translationVector as Vector3DSchema);
     material.setBasis(updatedBasis.toJSON());
     if (originalUnits !== ATOMIC_COORD_UNITS.cartesian) material.toCrystal();

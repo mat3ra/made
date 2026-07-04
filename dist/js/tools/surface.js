@@ -6,12 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const utils_1 = require("@mat3ra/utils");
 const lattice_1 = require("../lattice/lattice");
 const supercell_1 = __importDefault(require("./supercell"));
-const { math } = utils_1.Utils;
-const MULT = math.multiply;
-const ADD = math.add;
-const DOT = math.product;
+const MULT = utils_1.Utils.math.multiply;
+const ADD = utils_1.Utils.math.add;
+const DOT = utils_1.Utils.math.product;
 const getMatrixInLeftHandedRepresentation = (matrix) => {
-    return math.det(matrix) < 0 ? MULT(matrix, -1) : matrix;
+    return utils_1.Utils.math.det(matrix) < 0 ? MULT(matrix, -1) : matrix;
 };
 /**
  * Helper function for extended GCD.
@@ -23,10 +22,10 @@ const getMatrixInLeftHandedRepresentation = (matrix) => {
 function extGCD(a, b) {
     if (b === 0)
         return [1, 0];
-    if (math.mod(a, b) === 0)
+    if (utils_1.Utils.math.mod(a, b) === 0)
         return [0, 1];
-    const [x, y] = extGCD(b, math.mod(a, b));
-    return [y, x - y * math.floor(a / b)];
+    const [x, y] = extGCD(b, utils_1.Utils.math.mod(a, b));
+    return [y, x - y * utils_1.Utils.math.floor(a / b)];
 }
 /**
  * Generates a slab scaling matrix for the specified cell based on miller indices.
@@ -37,7 +36,7 @@ function extGCD(a, b) {
  * @return {Number[][]}
  */
 function getMillerScalingMatrix(cell, millerIndices, tol = 1e-8) {
-    if (!millerIndices.reduce((a, b) => math.abs(a) + math.abs(b)))
+    if (!millerIndices.reduce((a, b) => utils_1.Utils.math.abs(a) + utils_1.Utils.math.abs(b)))
         throw new Error("Miller indices are zeros.");
     let scalingMatrix;
     const [h, k, l] = millerIndices;
@@ -79,20 +78,20 @@ function getMillerScalingMatrix(cell, millerIndices, tol = 1e-8) {
         const k1 = DOT(ADD(MULT(p, z1), MULT(q, z2)), z3);
         // @ts-ignore
         const k2 = DOT(ADD(MULT(l, z1), -MULT(k, z2)), z3);
-        if (math.abs(k2) > tol) {
+        if (utils_1.Utils.math.abs(k2) > tol) {
             // For mathjs version 3.20: round(-0.5) = -0
             // For mathjs version 5.10: round(-0.5) = -1
             // Here we specify rounding method to Bankers
             // For Python 3.11: round(-0.5) = 0
             // @ts-ignore - mathjs v12 dot return type
             const value = k1 / k2;
-            const roundedValue = math.roundCustom(value, 0, math.RoundingMethod.Bankers);
+            const roundedValue = utils_1.Utils.math.roundCustom(value, 0, utils_1.Utils.math.RoundingMethod.Bankers);
             const i = -roundedValue;
             [p, q] = [p + i * l, q - i * k];
         }
         const [a, b] = extGCD(p * k + q * l, h);
         const c1 = [p * k + q * l, -p * h, -q * h];
-        const c2 = [0, l, -k].map((c) => math.trunc(c / math.gcd(l, k))); // floor division
+        const c2 = [0, l, -k].map((c) => utils_1.Utils.math.trunc(c / utils_1.Utils.math.gcd(l, k))); // floor division
         const c3 = [b, a * p, a * q];
         scalingMatrix = [c1, c2, c3];
     }

@@ -8,7 +8,6 @@ import { chain, toPairs, uniq, values } from "lodash";
 import { Cell } from "../cell/cell";
 import { ATOMIC_COORD_UNITS, HASH_TOLERANCE } from "../constants";
 
-const { math } = Utils;
 import {
     defaultNonPeriodicMinimumLatticeSize,
     diatomicLatticePaddingFactor,
@@ -249,7 +248,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
     toStandardRepresentation() {
         this.toCrystal();
         this._coordinates.mapArrayInPlace(
-            (point) => point.map((x) => math.mod(x)) as Coordinate3DSchema,
+            (point) => point.map((x) => Utils.math.mod(x)) as Coordinate3DSchema,
         );
     }
 
@@ -332,7 +331,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
     get formula(): string {
         const counts = this.uniqueElementCountsSortedByElectronegativity;
         const countsValues = values(counts);
-        const gcd = countsValues.length > 1 ? math.gcd(...countsValues) : countsValues[0];
+        const gcd = countsValues.length > 1 ? Utils.math.gcd(...countsValues) : countsValues[0];
 
         return toPairs(counts)
             .map(([element, count]) => element + (count / gcd === 1 ? "" : count / gcd))
@@ -394,7 +393,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
             const element = entry[0];
             const coordinate = entry[1];
             const atomicLabel = entry[2];
-            const toleratedCoordinate = coordinate.map((x) => math.roundCustom(x, HASH_TOLERANCE));
+            const toleratedCoordinate = coordinate.map((x) => Utils.math.roundCustom(x, HASH_TOLERANCE));
             return `${element}${atomicLabel} ${toleratedCoordinate.join()}`;
         });
         return `${standardRep.sort().join(";")};`;
@@ -473,7 +472,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
     hasEquivalentCellTo(anotherBasisClsInstance: Basis): boolean {
         return !this.cell.vectorArrays
             .map((vector, idx) => {
-                return math.vEqualWithTolerance(
+                return Utils.math.vEqualWithTolerance(
                     vector,
                     anotherBasisClsInstance.cell.vectorArrays[idx],
                 );
@@ -498,7 +497,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         const maxDistance = this.maxPairwiseDistance;
         const minDistance = this.minPairwiseDistance;
         const widthRatio = maxDistance > 0 ? minDistance / maxDistance : 1;
-        const latticeScalingFactor = math.almostEqual(widthRatio, 1)
+        const latticeScalingFactor = Utils.math.almostEqual(widthRatio, 1)
             ? diatomicLatticePaddingFactor
             : molecularLatticePaddingFactor;
         const moleculeLatticeSize = maxDistance * latticeScalingFactor;
@@ -527,7 +526,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
                     (getElementAtomicRadius(el1) + getElementAtomicRadius(el2)); // in angstroms
 
                 // @ts-ignore
-                const distance = math.vDist(entry1.value, entry2.value) as number;
+                const distance = Utils.math.vDist(entry1.value, entry2.value) as number;
                 if (distance < tolerance) {
                     overlaps.push({
                         id1: i,
@@ -573,7 +572,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         if (this._elements.values.length >= 2) {
             for (let i = 0; i < this._elements.values.length; i++) {
                 for (let j = i + 1; j < this._elements.values.length; j++) {
-                    const distance = math.vDist(
+                    const distance = Utils.math.vDist(
                         this._coordinates.getElementValueByIndex(i) as Coordinate3DSchema,
                         this._coordinates.getElementValueByIndex(j) as Coordinate3DSchema,
                     );

@@ -8,7 +8,6 @@ const utils_1 = require("@mat3ra/utils");
 const lodash_1 = require("lodash");
 const cell_1 = require("../cell/cell");
 const constants_1 = require("../constants");
-const { math } = utils_1.Utils;
 const lattice_1 = require("../lattice/lattice");
 const coordinates_1 = require("./coordinates");
 const elements_1 = require("./elements");
@@ -164,7 +163,7 @@ class Basis extends entity_1.InMemoryEntity {
     }
     toStandardRepresentation() {
         this.toCrystal();
-        this._coordinates.mapArrayInPlace((point) => point.map((x) => math.mod(x)));
+        this._coordinates.mapArrayInPlace((point) => point.map((x) => utils_1.Utils.math.mod(x)));
     }
     /** A representation where all coordinates are within 0 and 1 in crystal units */
     get standardRepresentation() {
@@ -238,7 +237,7 @@ class Basis extends entity_1.InMemoryEntity {
     get formula() {
         const counts = this.uniqueElementCountsSortedByElectronegativity;
         const countsValues = (0, lodash_1.values)(counts);
-        const gcd = countsValues.length > 1 ? math.gcd(...countsValues) : countsValues[0];
+        const gcd = countsValues.length > 1 ? utils_1.Utils.math.gcd(...countsValues) : countsValues[0];
         return (0, lodash_1.toPairs)(counts)
             .map(([element, count]) => element + (count / gcd === 1 ? "" : count / gcd))
             .reduce((acc, part) => acc + part, "");
@@ -291,7 +290,7 @@ class Basis extends entity_1.InMemoryEntity {
             const element = entry[0];
             const coordinate = entry[1];
             const atomicLabel = entry[2];
-            const toleratedCoordinate = coordinate.map((x) => math.roundCustom(x, constants_1.HASH_TOLERANCE));
+            const toleratedCoordinate = coordinate.map((x) => utils_1.Utils.math.roundCustom(x, constants_1.HASH_TOLERANCE));
             return `${element}${atomicLabel} ${toleratedCoordinate.join()}`;
         });
         return `${standardRep.sort().join(";")};`;
@@ -362,7 +361,7 @@ class Basis extends entity_1.InMemoryEntity {
     hasEquivalentCellTo(anotherBasisClsInstance) {
         return !this.cell.vectorArrays
             .map((vector, idx) => {
-            return math.vEqualWithTolerance(vector, anotherBasisClsInstance.cell.vectorArrays[idx]);
+            return utils_1.Utils.math.vEqualWithTolerance(vector, anotherBasisClsInstance.cell.vectorArrays[idx]);
         })
             .some((x) => !x);
     }
@@ -381,7 +380,7 @@ class Basis extends entity_1.InMemoryEntity {
         const maxDistance = this.maxPairwiseDistance;
         const minDistance = this.minPairwiseDistance;
         const widthRatio = maxDistance > 0 ? minDistance / maxDistance : 1;
-        const latticeScalingFactor = math.almostEqual(widthRatio, 1)
+        const latticeScalingFactor = utils_1.Utils.math.almostEqual(widthRatio, 1)
             ? lattice_1.diatomicLatticePaddingFactor
             : lattice_1.molecularLatticePaddingFactor;
         const moleculeLatticeSize = maxDistance * latticeScalingFactor;
@@ -405,7 +404,7 @@ class Basis extends entity_1.InMemoryEntity {
                 const tolerance = overlapCoefficient *
                     ((0, periodic_table_js_1.getElementAtomicRadius)(el1) + (0, periodic_table_js_1.getElementAtomicRadius)(el2)); // in angstroms
                 // @ts-ignore
-                const distance = math.vDist(entry1.value, entry2.value);
+                const distance = utils_1.Utils.math.vDist(entry1.value, entry2.value);
                 if (distance < tolerance) {
                     overlaps.push({
                         id1: i,
@@ -447,7 +446,7 @@ class Basis extends entity_1.InMemoryEntity {
         if (this._elements.values.length >= 2) {
             for (let i = 0; i < this._elements.values.length; i++) {
                 for (let j = i + 1; j < this._elements.values.length; j++) {
-                    const distance = math.vDist(this._coordinates.getElementValueByIndex(i), this._coordinates.getElementValueByIndex(j));
+                    const distance = utils_1.Utils.math.vDist(this._coordinates.getElementValueByIndex(i), this._coordinates.getElementValueByIndex(j));
                     if (!distance)
                         continue;
                     if (extremum === "max" && distance > resultDistance) {
