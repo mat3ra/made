@@ -5,6 +5,7 @@ import numpy as np
 from mat3ra.made.material import Material
 
 from mat3ra.made.tools.analyze import BaseMaterialAnalyzer
+from mat3ra.made.tools.analyze.utils import minimum_image_distances
 from mat3ra.made.tools.build.defective_structures.three_dimensional.solid_solution.enums import SiteSelectionMethodEnum
 from mat3ra.made.tools.build_components import MaterialWithBuildMetadata
 from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
@@ -30,18 +31,6 @@ def _most_isotropic_dimensions(total_cells: int) -> List[int]:
                 best = [a, b, c]
                 best_spread = spread
     return best
-
-
-def _minimum_image_distances(frac_coords: np.ndarray, lattice_vectors: np.ndarray) -> np.ndarray:
-    n = len(frac_coords)
-    distances = np.zeros((n, n))
-    for i in range(n):
-        delta = frac_coords[i] - frac_coords[i + 1 :]
-        delta -= np.round(delta)
-        dists = np.linalg.norm(delta @ lattice_vectors, axis=1)
-        distances[i, i + 1 :] = dists
-        distances[i + 1 :, i] = dists
-    return distances
 
 
 def _select_sites_uniform(
@@ -73,7 +62,7 @@ def _select_sites_uniform(
     material.to_crystal()
     frac_coords = np.array(material.basis.coordinates.values)
     lattice_vectors = np.array(material.lattice.vector_arrays)
-    dist_matrix = _minimum_image_distances(frac_coords[source_indices], lattice_vectors)
+    dist_matrix = minimum_image_distances(frac_coords[source_indices], lattice_vectors)
 
     rng = random.Random(seed)
     start = rng.randrange(len(source_indices))
