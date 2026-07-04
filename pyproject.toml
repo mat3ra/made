@@ -15,12 +15,11 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
-    # add requirements here
+    "mat3ra-code",
+    "mat3ra-esse>=2026.6.30.post0",
+    "mat3ra-utils>=2026.7.3.post0",
     # new verison of numpy==2.0.0 is not handled by pymatgen yet
     "numpy<=1.26.4",
-    "mat3ra-utils>=2026.7.3.post0",
-    "mat3ra-esse>=2026.6.30.post0",
-    "mat3ra-code"
 ]
 
 [project.optional-dependencies]
