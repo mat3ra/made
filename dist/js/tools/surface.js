@@ -78,6 +78,7 @@ function getMillerScalingMatrix(cell, millerIndices, tol = 1e-8) {
         const k1 = DOT(ADD(MULT(p, z1), MULT(q, z2)), z3);
         // @ts-ignore
         const k2 = DOT(ADD(MULT(l, z1), -MULT(k, z2)), z3);
+        // @ts-ignore
         if (utils_1.Utils.math.abs(k2) > tol) {
             // For mathjs version 3.20: round(-0.5) = -0
             // For mathjs version 5.10: round(-0.5) = -1

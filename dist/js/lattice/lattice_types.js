@@ -27,7 +27,7 @@ var LatticeTypeExtended;
     LatticeTypeExtended["TRI_1a"] = "TRI_1a";
     LatticeTypeExtended["TRI_2a"] = "TRI_2a";
     LatticeTypeExtended["TRI_1b"] = "TRI_1b";
-})(LatticeTypeExtended = exports.LatticeTypeExtended || (exports.LatticeTypeExtended = {}));
+})(LatticeTypeExtended || (exports.LatticeTypeExtended = LatticeTypeExtended = {}));
 exports.DEFAULT_LATTICE_UNITS = {
     // by default lattice vectors shall be measured in angstrom, angles - in degrees
     length: {

@@ -37,34 +37,34 @@ declare class Material extends InMemoryEntity implements Schema {
      * @summary Returns the specific derived property (as specified by name) for a material.
      */
     getDerivedPropertyByName(name: string): {
-        name?: "volume" | undefined;
-        units?: "angstrom^3" | undefined;
+        name?: "volume";
+        units?: "angstrom^3";
         value: number;
     } | {
-        name?: "density" | undefined;
-        units?: "g/cm^3" | undefined;
+        name?: "density";
+        units?: "g/cm^3";
         value: number;
     } | {
-        pointGroupSymbol?: string | undefined;
-        spaceGroupSymbol?: string | undefined;
+        pointGroupSymbol?: string;
+        spaceGroupSymbol?: string;
         tolerance?: {
-            units?: "angstrom" | undefined;
+            units?: "angstrom";
             value: number;
-        } | undefined;
-        name?: "symmetry" | undefined;
+        };
+        name?: "symmetry";
     } | {
-        name?: "elemental_ratio" | undefined;
+        name?: "elemental_ratio";
         value: number;
-        element?: string | undefined;
+        element?: string;
     } | {
-        name?: "p-norm" | undefined;
-        degree?: number | undefined;
+        name?: "p-norm";
+        degree?: number;
         value: number;
     } | {
-        name?: "inchi" | undefined;
+        name?: "inchi";
         value: string;
     } | {
-        name?: "inchi_key" | undefined;
+        name?: "inchi_key";
         value: string;
     } | undefined;
     /**

@@ -11,7 +11,6 @@ import { Lattice } from "../lattice/lattice";
 import { Material } from "../material";
 import SupercellTools from "./supercell";
 
-
 const MULT = Utils.math.multiply;
 const ADD = Utils.math.add;
 const DOT = Utils.math.product;
@@ -95,6 +94,7 @@ function getMillerScalingMatrix(
         // @ts-ignore
         const k2 = DOT(ADD(MULT(l, z1), -MULT(k, z2)), z3);
 
+        // @ts-ignore
         if (Utils.math.abs(k2) > tol) {
             // For mathjs version 3.20: round(-0.5) = -0
             // For mathjs version 5.10: round(-0.5) = -1
@@ -102,7 +102,11 @@ function getMillerScalingMatrix(
             // For Python 3.11: round(-0.5) = 0
             // @ts-ignore - mathjs v12 dot return type
             const value = k1 / k2;
-            const roundedValue = Utils.math.roundCustom(value, 0, Utils.math.RoundingMethod.Bankers);
+            const roundedValue = Utils.math.roundCustom(
+                value,
+                0,
+                Utils.math.RoundingMethod.Bankers,
+            );
             const i = -roundedValue;
             [p, q] = [p + i * l, q - i * k];
         }

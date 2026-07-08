@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPrimitiveLatticeVectorsFromConfig = void 0;
+exports.getPrimitiveLatticeVectorsFromConfig = getPrimitiveLatticeVectorsFromConfig;
 const utils_1 = require("@mat3ra/utils");
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const math = utils_1.Utils.math;
@@ -145,4 +145,3 @@ function getPrimitiveLatticeVectorsFromConfig(latticeConfig) {
     const [vectorA, vectorB, vectorC] = primitiveCellGenerator(latticeConfig);
     return [vectorA, vectorB, vectorC];
 }
-exports.getPrimitiveLatticeVectorsFromConfig = getPrimitiveLatticeVectorsFromConfig;
