@@ -34,7 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CombinatorialBasis = exports.WrongBasisFormat = void 0;
-const math_1 = require("@mat3ra/code/dist/js/math");
+const utils_1 = require("@mat3ra/utils");
 const lodash_1 = require("lodash");
 const s = __importStar(require("underscore.string"));
 const cell_1 = require("../cell/cell");
@@ -209,7 +209,7 @@ class CombinatorialBasis {
             dimensions.push(itemsSet);
         });
         // @ts-ignore // We're multiplying objects with math, not numbers. No type casting will help.
-        const basisSet = math_1.math.cartesianProduct.apply(null, dimensions);
+        const basisSet = utils_1.Utils.math.cartesianProduct.apply(null, dimensions);
         return basisSet.map((basis) => basis.filter((entry) => entry.element !== VACANCY_CHARACTER));
     }
     /**

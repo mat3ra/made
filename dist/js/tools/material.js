@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const math_1 = require("@mat3ra/code/dist/js/math");
+const utils_1 = require("@mat3ra/utils");
 const constants_1 = require("../constants");
 const lattice_1 = require("../lattice/lattice");
 /**
@@ -38,8 +38,8 @@ function translateAtomsToCenter(material) {
     material.toCartesian();
     const updatedBasis = material.Basis;
     const centerOfCoordinates = updatedBasis.centerOfCoordinatesPoint;
-    const centerOfLattice = math_1.math.multiply(0.5, material.Lattice.vectorArrays.reduce((a, b) => math_1.math.add(a, b)));
-    const translationVector = math_1.math.subtract(centerOfLattice, centerOfCoordinates);
+    const centerOfLattice = utils_1.Utils.math.multiply(0.5, material.Lattice.vectorArrays.reduce((a, b) => utils_1.Utils.math.add(a, b)));
+    const translationVector = utils_1.Utils.math.subtract(centerOfLattice, centerOfCoordinates);
     updatedBasis.translateByVector(translationVector);
     material.setBasis(updatedBasis.toJSON());
     if (originalUnits !== constants_1.ATOMIC_COORD_UNITS.cartesian)

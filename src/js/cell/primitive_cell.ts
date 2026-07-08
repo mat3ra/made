@@ -1,5 +1,5 @@
-import { math } from "@mat3ra/code/dist/js/math";
 import { LatticeSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
+import { Utils } from "@mat3ra/utils";
 
 /**
  * Routines for calculating primitive cell vectors from conventional cell Bravais parameters.
@@ -80,42 +80,45 @@ const PRIMITIVE_CELLS = {
 
     HEX: ({ a, c }: LatticeSchema): Matrix3X3Schema => {
         return [
-            [a / 2, (-a * math.sqrt(3)) / 2, 0],
-            [a / 2, (a * math.sqrt(3)) / 2, 0],
+            [a / 2, (-a * Number(Utils.math.sqrt(3))) / 2, 0],
+            [a / 2, (a * Number(Utils.math.sqrt(3))) / 2, 0],
             [0, 0, c],
         ];
     },
 
     RHL: ({ a, alpha }: LatticeSchema): Matrix3X3Schema => {
-        const cosAlpha = math.cos((alpha / 180) * math.PI);
-        const cosHalfAlpha = math.sqrt((1 / 2) * (1 + cosAlpha));
-        const sinHalfAlpha = math.sqrt((1 / 2) * (1 - cosAlpha));
+        const cosAlpha = Number(Utils.math.cos((alpha / 180) * Number(Utils.math.PI)));
+        const cosHalfAlpha = Number(Utils.math.sqrt((1 / 2) * (1 + cosAlpha)));
+        const sinHalfAlpha = Number(Utils.math.sqrt((1 / 2) * (1 - cosAlpha)));
         return [
             [a * cosHalfAlpha, -a * sinHalfAlpha, 0.0],
             [a * cosHalfAlpha, a * sinHalfAlpha, 0.0],
             [
                 (a * cosAlpha) / cosHalfAlpha,
                 0.0,
-                a * math.sqrt(1 - (cosAlpha * cosAlpha) / (cosHalfAlpha * cosHalfAlpha)),
+                a *
+                    Number(
+                        Utils.math.sqrt(1 - (cosAlpha * cosAlpha) / (cosHalfAlpha * cosHalfAlpha)),
+                    ),
             ],
         ];
     },
 
     MCL: ({ a, b, c, alpha }: LatticeSchema): Matrix3X3Schema => {
-        const cosAlpha = math.cos((alpha / 180) * math.PI);
+        const cosAlpha = Number(Utils.math.cos((alpha / 180) * Number(Utils.math.PI)));
         return [
             [a, 0, 0],
             [0, b, 0],
-            [0, c * cosAlpha, c * math.sqrt(1 - cosAlpha * cosAlpha)],
+            [0, c * cosAlpha, c * Number(Utils.math.sqrt(1 - cosAlpha * cosAlpha))],
         ];
     },
 
     MCLC: ({ a, b, c, alpha }: LatticeSchema): Matrix3X3Schema => {
-        const cosAlpha = math.cos((alpha / 180) * math.PI);
+        const cosAlpha = Number(Utils.math.cos((alpha / 180) * Number(Utils.math.PI)));
         return [
             [a / 2, b / 2, 0],
             [-a / 2, b / 2, 0],
-            [0, c * cosAlpha, c * math.sqrt(1 - cosAlpha * cosAlpha)],
+            [0, c * cosAlpha, c * Number(Utils.math.sqrt(1 - cosAlpha * cosAlpha))],
         ];
     },
 
@@ -123,22 +126,23 @@ const PRIMITIVE_CELLS = {
     TRI: ({ a, b, c, alpha, beta, gamma }: LatticeSchema): Matrix3X3Schema => {
         // convert angles to Radians
         // eslint-disable-next-line no-param-reassign
-        [alpha, beta, gamma] = [alpha, beta, gamma].map(
-            // @ts-ignore
-            (x) => math.unit(x, "degree").to("rad").value,
+        [alpha, beta, gamma] = [alpha, beta, gamma].map((x) =>
+            Number(Utils.math.unit(x, "degree").to("rad").value),
         );
 
-        const [cosAlpha, cosBeta, cosGamma] = [alpha, beta, gamma].map((x) => math.cos(x));
-        const [sinAlpha, sinBeta] = [alpha, beta].map((x) => math.sin(x));
+        const [cosAlpha, cosBeta, cosGamma] = [alpha, beta, gamma].map((x) =>
+            Number(Utils.math.cos(x)),
+        );
+        const [sinAlpha, sinBeta] = [alpha, beta].map((x) => Number(Utils.math.sin(x)));
         let acosArg = (cosAlpha * cosBeta - cosGamma) / (sinAlpha * sinBeta);
         if (acosArg < -1) {
             acosArg = -1;
         } else if (acosArg > 1) {
             acosArg = 1;
         }
-        const gammaStar = math.acos(acosArg);
-        const cosGammaStar = math.cos(gammaStar);
-        const sinGammaStar = math.sin(gammaStar);
+        const gammaStar = Number(Utils.math.acos(acosArg));
+        const cosGammaStar = Number(Utils.math.cos(gammaStar));
+        const sinGammaStar = Number(Utils.math.sin(gammaStar));
 
         return [
             [a * sinBeta, 0.0, a * cosBeta],
