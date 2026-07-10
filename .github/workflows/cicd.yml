@@ -12,24 +12,27 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
 
       - name: Checkout actions repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: Exabyte-io/actions
+          repository: mat3ra/actions
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: actions
 
       - name: Run ruff linter
         uses: ./actions/py/lint
+        with:
+          ruff-version: 0.15.20
 
   run-py-tests:
     needs: run-py-linter
     runs-on: ubuntu-24.04
     strategy:
+      fail-fast: false
       matrix:
         python-version:
           - 3.10.x
@@ -40,14 +43,14 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
 
       - name: Checkout actions repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: Exabyte-io/actions
+          repository: mat3ra/actions
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: actions
 
@@ -68,14 +71,14 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
 
       - name: Checkout actions repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: Exabyte-io/actions
+          repository: mat3ra/actions
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: actions
 
@@ -100,12 +103,12 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Checkout actions repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: Exabyte-io/actions
+          repository: mat3ra/actions
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: actions
 
@@ -129,14 +132,14 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           lfs: true
 
       - name: Checkout actions repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          repository: Exabyte-io/actions
+          repository: mat3ra/actions
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
           path: actions
 

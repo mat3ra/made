@@ -140,6 +140,16 @@ def test_calculate_hash(fixture_file):
     assert material.scaled_hash == fixture["scaledHash"]
 
 
+def test_calculate_hash_feo_standata():
+    from mat3ra.standata.materials import Materials
+
+    expected_hashes = load_fixture("hashes.json")["FeO"]
+    data = Materials.get_by_name_first_match("FeO")
+    material = Material.create(data)
+    assert material.hash == expected_hashes["hash"]
+    assert material.scaled_hash == expected_hashes["scaledHash"]
+
+
 def test_model_dump_includes_hashes():
     material = Material.create_default()
     serialized_material = material.model_dump()

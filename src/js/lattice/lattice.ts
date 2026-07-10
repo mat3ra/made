@@ -1,6 +1,4 @@
-import { HASH_TOLERANCE } from "@mat3ra/code/dist/js/constants";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { math } from "@mat3ra/code/dist/js/math";
 import {
     Coordinate3DSchema,
     LatticeSchema,
@@ -9,6 +7,7 @@ import {
     LatticeVectorsSchema,
     Matrix3X3Schema,
 } from "@mat3ra/esse/dist/js/types";
+import { Utils } from "@mat3ra/utils";
 import * as lodash from "lodash";
 
 import { Cell } from "../cell/cell";
@@ -16,6 +15,7 @@ import { getPrimitiveLatticeVectorsFromConfig } from "../cell/primitive_cell";
 import { LATTICE_TYPE_CONFIGS } from "./lattice_types";
 import { UnitCell, UnitCellProps } from "./unit_cell";
 
+const { HASH_TOLERANCE } = Utils.constants;
 /**
  * Scaling factor used to calculate the new lattice size for non-periodic systems.
  * The scaling factor ensures that a non-periodic structure will have have a lattice greater than the structures size.
@@ -86,19 +86,21 @@ export class Lattice extends InMemoryEntity implements LatticeSchema {
         const { b } = this;
         const { c } = this;
 
-        const alphaRad = math.unit(this.alpha, "deg").toNumber("rad");
-        const betaRad = math.unit(this.beta, "deg").toNumber("rad");
-        const gammaRad = math.unit(this.gamma, "deg").toNumber("rad");
+        const alphaRad = Utils.math.unit(this.alpha, "deg").toNumber("rad");
+        const betaRad = Utils.math.unit(this.beta, "deg").toNumber("rad");
+        const gammaRad = Utils.math.unit(this.gamma, "deg").toNumber("rad");
 
-        const cosAlpha = math.cos(alphaRad);
-        const cosBeta = math.cos(betaRad);
-        const cosGamma = math.cos(gammaRad);
-        const sinAlpha = math.sin(alphaRad);
-        const sinBeta = math.sin(betaRad);
+        const cosAlpha = Utils.math.cos(alphaRad);
+        const cosBeta = Utils.math.cos(betaRad);
+        const cosGamma = Utils.math.cos(gammaRad);
+        const sinAlpha = Utils.math.sin(alphaRad);
+        const sinBeta = Utils.math.sin(betaRad);
 
-        const gammaStar = math.acos((cosAlpha * cosBeta - cosGamma) / (sinAlpha * sinBeta));
-        const cosGammaStar = math.cos(gammaStar);
-        const sinGammaStar = math.sin(gammaStar);
+        const gammaStar = Utils.math.acos((cosAlpha * cosBeta - cosGamma) / (sinAlpha * sinBeta));
+        // @ts-ignore - mathjs v12 acos return type includes Complex, but inputs are always real
+        const cosGammaStar = Utils.math.cos(gammaStar);
+        // @ts-ignore
+        const sinGammaStar = Utils.math.sin(gammaStar);
 
         const vectorA: Coordinate3DSchema = [a * sinBeta, 0.0, a * cosBeta];
         const vectorB: Coordinate3DSchema = [
@@ -121,12 +123,12 @@ export class Lattice extends InMemoryEntity implements LatticeSchema {
         type: LatticeTypeEnum = "TRI",
     ): Lattice {
         const [aVec, bVec, cVec] = vectors;
-        const a = math.vlen(aVec);
-        const b = math.vlen(bVec);
-        const c = math.vlen(cVec);
-        const alpha = math.angle(bVec, cVec, "deg");
-        const beta = math.angle(aVec, cVec, "deg");
-        const gamma = math.angle(aVec, bVec, "deg");
+        const a = Utils.math.vlen(aVec);
+        const b = Utils.math.vlen(bVec);
+        const c = Utils.math.vlen(cVec);
+        const alpha = Utils.math.angle(bVec, cVec, "deg");
+        const beta = Utils.math.angle(aVec, cVec, "deg");
+        const gamma = Utils.math.angle(aVec, bVec, "deg");
 
         return new Lattice({
             a,
@@ -183,7 +185,7 @@ export class Lattice extends InMemoryEntity implements LatticeSchema {
      */
     get typeExtended(): LatticeTypeExtendedEnum {
         const { a, b, c, alpha, beta, gamma, type } = this;
-        const cosAlpha = math.cos((alpha / 180) * math.PI);
+        const cosAlpha = Utils.math.cos((alpha / 180) * Utils.math.PI);
 
         switch (type) {
             case "BCT":
@@ -220,7 +222,7 @@ export class Lattice extends InMemoryEntity implements LatticeSchema {
      * Calculate the volume of the lattice cell.
      */
     get volume(): number {
-        return math.abs(math.det(this.vectorArrays));
+        return Utils.math.abs(Utils.math.det(this.vectorArrays));
     }
 
     /*
@@ -228,7 +230,7 @@ export class Lattice extends InMemoryEntity implements LatticeSchema {
      * @param latticeConfig {Object} LatticeBravais config (see constructor)
      */
     static getDefaultPrimitiveLatticeConfigByType(latticeConfig: LatticeSchema) {
-        const f_ = math.roundArrayOrNumber;
+        const f_ = Utils.math.roundArrayOrNumber;
         // construct new primitive cell using lattice parameters and skip rounding the vectors
         const vectors = getPrimitiveLatticeVectorsFromConfig(latticeConfig);
         // create new lattice from primitive cell
@@ -268,7 +270,7 @@ export class Lattice extends InMemoryEntity implements LatticeSchema {
             scaledLattice.beta,
             scaledLattice.gamma,
         ]
-            .map((x) => math.round(x, HASH_TOLERANCE))
+            .map((x) => Utils.math.roundCustom(x, HASH_TOLERANCE))
             .join(";")};`;
     }
 

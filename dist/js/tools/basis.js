@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const math_1 = require("@mat3ra/code/dist/js/math");
+const utils_1 = require("@mat3ra/utils");
 const lodash_1 = require("lodash");
 const coordinates_1 = require("../basis/coordinates");
-const ADD = math_1.math.add;
-const MULT = math_1.math.multiply;
+const ADD = utils_1.Utils.math.add;
+const MULT = utils_1.Utils.math.multiply;
 /**
  * Returns a repeated basis of a crystal.
  * @param basis {Basis} Original basis.

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 
 import { Material } from "../../src/js/material";
-import { Graphene, Na4Cl4, Silicon } from "./fixtures";
+import { FeOStandata, Graphene, Na4Cl4, Silicon } from "./fixtures";
 
 const newBasisXYZ = `Si     0.000000    0.000000    0.000000
 Ge     0.250000    0.250000    0.250000
@@ -30,6 +30,13 @@ describe("Material", () => {
                 expect(material.calculateHash()).to.equal((fixture as any).hash);
                 expect(material.scaledHash).to.equal((fixture as any).scaledHash);
             });
+        });
+
+        it("should match expected hash for FeO (standata)", () => {
+            const expectedHashes = require("../../fixtures/hashes.json");
+            const material = new Material(FeOStandata);
+            expect(material.calculateHash()).to.equal(expectedHashes.FeO.hash);
+            expect(material.scaledHash).to.equal(expectedHashes.FeO.scaledHash);
         });
     });
 });

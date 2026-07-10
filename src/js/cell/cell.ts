@@ -1,17 +1,18 @@
 import { RoundedVector3D } from "@mat3ra/code";
-import { math } from "@mat3ra/code/dist/js/math";
 import {
     Coordinate3DSchema,
     LatticeVectorsSchema as CellSchema,
     Matrix3X3Schema,
     Vector3DSchema,
 } from "@mat3ra/esse/dist/js/types";
+import { Utils } from "@mat3ra/utils";
 
 import constants from "../constants";
 
-const MATRIX = math.matrix;
-const MULT = math.multiply;
-const INV = math.inv;
+
+const MATRIX = Utils.math.matrix;
+const MULT = Utils.math.multiply;
+const INV = Utils.math.inv;
 // @ts-ignore
 const MATRIX_MULT = (...args) => MULT(...args.map((x) => MATRIX(x))).toArray();
 
@@ -74,11 +75,11 @@ export class Cell implements CellSchema {
     }
 
     get volume(): number {
-        return math.det(this.vectorArrays);
+        return Utils.math.det(this.vectorArrays);
     }
 
     get volumeRounded(): number {
-        return math.roundArrayOrNumber(this.volume, Cell.roundPrecision) as number;
+        return Utils.math.roundArrayOrNumber(this.volume, Cell.roundPrecision) as number;
     }
 
     clone(): Cell {
@@ -103,7 +104,7 @@ export class Cell implements CellSchema {
         const { tolerance } = this.constructor as typeof Cell;
         return (
             this.convertPointToCrystal(point)
-                .map((c: number) => math.isBetweenZeroInclusiveAndOne(c, tolerance))
+                .map((c: number) => Utils.math.isBetweenZeroInclusiveAndOne(c, tolerance))
                 // @ts-ignore
                 .reduce((a: boolean, b: boolean): boolean => a && b)
         );
@@ -114,7 +115,7 @@ export class Cell implements CellSchema {
         const { tolerance } = this.constructor as typeof Cell;
         return (
             point
-                .map((c: number) => math.isBetweenZeroInclusiveAndOne(c, tolerance))
+                .map((c: number) => Utils.math.isBetweenZeroInclusiveAndOne(c, tolerance))
                 // @ts-ignore
                 .reduce((a: boolean, b: boolean): boolean => a && b)
         );
@@ -128,11 +129,12 @@ export class Cell implements CellSchema {
     }
 
     getMostCollinearVectorIndex(testVector: Vector3DSchema): number {
-        const angles = this.vectorArrays.map((v) => math.angleUpTo90(v, testVector, "deg"));
-        return angles.findIndex((el: number) => el === math.min(angles));
+        const angles = this.vectorArrays.map((v) => Utils.math.angleUpTo90(v, testVector, "deg"));
+        return angles.findIndex((el: number) => el === Utils.math.min(angles));
     }
 
     scaleByMatrix(matrix: number[][]) {
+        // @ts-ignore - mathjs v12 multiply return type is broader than runtime
         [this.a, this.b, this.c] = MATRIX_MULT(matrix, this.vectorArrays);
     }
 

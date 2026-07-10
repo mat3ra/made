@@ -4,14 +4,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.atomsCount = atomsCount;
-const math_1 = require("@mat3ra/code/dist/js/math");
 const utils_1 = require("@mat3ra/utils");
 const underscore_string_1 = __importDefault(require("underscore.string"));
 const constrained_basis_1 = require("../basis/constrained_basis");
 const cell_1 = require("../cell/cell");
 const constants_1 = require("../constants");
 const lattice_1 = require("../lattice/lattice");
-const _print = (x, printFormat = "%14.9f") => underscore_string_1.default.sprintf(printFormat, math_1.math.precise(x));
+const _print = (x, printFormat = "%14.9f") => underscore_string_1.default.sprintf(printFormat, utils_1.Utils.math.precise(x));
 const _latticeVectorsToString = (vectors) => vectors.map((v) => v.map((c) => _print(c)).join("\t")).join("\n");
 const atomicConstraintsCharFromBool = (bool) => (bool ? "T" : "F");
 /**

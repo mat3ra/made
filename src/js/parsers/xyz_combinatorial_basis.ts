@@ -1,5 +1,5 @@
-import { math } from "@mat3ra/code/dist/js/math";
 import { BasisSchema } from "@mat3ra/esse/dist/js/types";
+import { Utils } from "@mat3ra/utils";
 import { chain, last, map } from "lodash";
 import * as s from "underscore.string";
 
@@ -7,6 +7,7 @@ import { ElementsAndCoordinatesConfig } from "../basis/basis";
 import { AtomicCoordinateValue } from "../basis/coordinates";
 import { AtomicElementValue } from "../basis/elements";
 import { Cell } from "../cell/cell";
+
 
 /**
  * @summary Combinatorial XYZ basis class and related. Create and get all information about basis and elements in it.
@@ -224,7 +225,7 @@ export class CombinatorialBasis {
             dimensions.push(itemsSet);
         });
         // @ts-ignore // We're multiplying objects with math, not numbers. No type casting will help.
-        const basisSet = math.cartesianProduct.apply(null, dimensions) as ElementWithCoordinate[][];
+        const basisSet = Utils.math.cartesianProduct.apply(null, dimensions) as ElementWithCoordinate[][];
         return basisSet.map((basis: ElementWithCoordinate[]) =>
             basis.filter((entry) => entry.element !== VACANCY_CHARACTER),
         );
