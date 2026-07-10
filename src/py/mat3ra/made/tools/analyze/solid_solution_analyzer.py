@@ -4,15 +4,26 @@ from typing import List, Optional, Union
 import numpy as np
 from mat3ra.made.material import Material
 
-from mat3ra.made.tools.analyze import BaseMaterialAnalyzer
-from mat3ra.made.tools.analyze.utils import minimum_image_distances
-from mat3ra.made.tools.build.defective_structures.three_dimensional.solid_solution.enums import SiteSelectionMethodEnum
-from mat3ra.made.tools.build_components import MaterialWithBuildMetadata
-from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
+from ..analyze import BaseMaterialAnalyzer
+from ..analyze.utils import minimum_image_distances
+from ..build.defective_structures.three_dimensional.solid_solution.enums import SiteSelectionMethodEnum
+from ..build_components import MaterialWithBuildMetadata
+from ..build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
 
 
 def _most_isotropic_dimensions(total_cells: int) -> List[int]:
-    """Return the [a, b, c] repeat factors with minimum aspect ratio for total_cells."""
+    """
+    Find [a, b, c] repeat factors whose product equals total_cells with minimum aspect ratio.
+
+    Enumerates factor triples with a <= b <= c and returns the triple with the
+    smallest spread (c - a).
+
+    Args:
+        total_cells (int): Target number of unit cells in the supercell.
+
+    Returns:
+        List[int]: Repeat factors [a, b, c] along the three lattice directions.
+    """
     best_dimensions = [1, 1, total_cells]
     best_spread = total_cells - 1
     for factor_a in range(1, total_cells + 1):
@@ -45,13 +56,13 @@ def _select_sites_uniform(
     sites is largest, producing a maximally dispersed subset under PBC.
 
     Args:
-        material: Material with lattice and coordinates.
-        source_indices: Indices of candidate sites in the material basis.
-        number_to_select: Number of sites to select.
-        seed: Random seed for the initial site choice.
+        material (Union[Material, MaterialWithBuildMetadata]): Material with lattice and coordinates.
+        source_indices (List[int]): Indices of candidate sites in the material basis.
+        number_to_select (int): Number of sites to select.
+        seed (int, optional): Random seed for the initial site choice.
 
     Returns:
-        Sorted list of selected site indices.
+        List[int]: Sorted list of selected site indices.
     """
     if number_to_select <= 0:
         return []
@@ -61,9 +72,7 @@ def _select_sites_uniform(
     material.to_crystal()
     fractional_coordinates = np.array(material.basis.coordinates.values)
     lattice_vectors = np.array(material.lattice.vector_arrays)
-    distance_matrix = minimum_image_distances(
-        fractional_coordinates[source_indices], lattice_vectors
-    )
+    distance_matrix = minimum_image_distances(fractional_coordinates[source_indices], lattice_vectors)
 
     random_generator = random.Random(seed)
     initial_index = random_generator.randrange(len(source_indices))
@@ -98,7 +107,7 @@ class SolidSolutionAnalyzer(BaseMaterialAnalyzer):
     tolerance: float = 0.01
     max_supercell_cells: int = 128
     seed: Optional[int] = None
-    site_selection_method: SiteSelectionMethodEnum = SiteSelectionMethodEnum.RANDOM
+    site_selection_method: SiteSelectionMethodEnum = SiteSelectionMethodEnum.UNIFORM
 
     @property
     def source_element_count_per_cell(self) -> int:
@@ -114,9 +123,7 @@ class SolidSolutionAnalyzer(BaseMaterialAnalyzer):
         best_spread = self.max_supercell_cells
         for total_cells in range(1, self.max_supercell_cells + 1):
             source_count = source_count_per_cell * total_cells
-            replacement_count = max(
-                0, min(round(self.target_concentration * source_count), source_count)
-            )
+            replacement_count = max(0, min(round(self.target_concentration * source_count), source_count))
             if abs(replacement_count / source_count - self.target_concentration) > self.tolerance:
                 continue
             dimensions = _most_isotropic_dimensions(total_cells)
@@ -147,20 +154,14 @@ class SolidSolutionAnalyzer(BaseMaterialAnalyzer):
         supercell_material = MaterialWithBuildMetadata.create(supercell.to_dict())
         elements = supercell_material.basis.elements.values
         source_indices = [index for index, element in enumerate(elements) if element == self.source_element]
-        replacement_count = max(
-            0, min(round(self.actual_concentration * len(source_indices)), len(source_indices))
-        )
+        replacement_count = max(0, min(round(self.actual_concentration * len(source_indices)), len(source_indices)))
 
         if self.site_selection_method == SiteSelectionMethodEnum.UNIFORM:
             keep_count = len(source_indices) - replacement_count
             if keep_count < replacement_count:
-                kept_indices = _select_sites_uniform(
-                    supercell_material, source_indices, keep_count, self.seed
-                )
+                kept_indices = _select_sites_uniform(supercell_material, source_indices, keep_count, self.seed)
                 return sorted(set(source_indices) - set(kept_indices))
-            return _select_sites_uniform(
-                supercell_material, source_indices, replacement_count, self.seed
-            )
+            return _select_sites_uniform(supercell_material, source_indices, replacement_count, self.seed)
 
         random_generator = random.Random(self.seed)
         return sorted(random_generator.sample(source_indices, replacement_count))
