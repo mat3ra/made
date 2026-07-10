@@ -26,19 +26,18 @@ def _most_isotropic_dimensions(total_cells: int) -> List[int]:
     """
     best_dimensions = [1, 1, total_cells]
     best_spread = total_cells - 1
-    for factor_a in range(1, total_cells + 1):
-        if total_cells % factor_a != 0:
+    for a in range(1, total_cells + 1):
+        if total_cells % a:
             continue
-        remaining = total_cells // factor_a
-        for factor_b in range(factor_a, remaining + 1):
-            if remaining % factor_b != 0:
+        for b in range(a, total_cells // a + 1):
+            if (total_cells // a) % b:
                 continue
-            factor_c = remaining // factor_b
-            if factor_c < factor_b:
+            c = total_cells // (a * b)
+            if c < b:
                 continue
-            spread = factor_c - factor_a
+            spread = c - a
             if spread < best_spread:
-                best_dimensions = [factor_a, factor_b, factor_c]
+                best_dimensions = [a, b, c]
                 best_spread = spread
     return best_dimensions
 
@@ -72,24 +71,24 @@ def _select_sites_uniform(
     material.to_crystal()
     fractional_coordinates = np.array(material.basis.coordinates.values)
     lattice_vectors = np.array(material.lattice.vector_arrays)
-    distance_matrix = minimum_image_distances(fractional_coordinates[source_indices], lattice_vectors)
+    pairwise_distances = minimum_image_distances(fractional_coordinates[source_indices], lattice_vectors)
 
     random_generator = random.Random(seed)
-    initial_index = random_generator.randrange(len(source_indices))
-    selected_local_indices = [initial_index]
-    minimum_distances = distance_matrix[initial_index].copy()
-    # Sentinel excludes the seed site from subsequent farthest-point picks.
-    minimum_distances[initial_index] = -1.0
+    first_pick = random_generator.randrange(len(source_indices))
+    selected = [first_pick]
+    distance_to_selected = pairwise_distances[first_pick].copy()
+    is_candidate = np.ones(len(source_indices), dtype=bool)
+    is_candidate[first_pick] = False
 
     for _ in range(number_to_select - 1):
-        maximum_distance = np.max(minimum_distances)
-        candidate_local_indices = np.where(np.isclose(minimum_distances, maximum_distance))[0]
-        next_local_index = int(random_generator.choice(candidate_local_indices))
-        selected_local_indices.append(next_local_index)
-        np.minimum(minimum_distances, distance_matrix[next_local_index], out=minimum_distances)
-        minimum_distances[next_local_index] = -1.0
+        farthest_distance = np.max(distance_to_selected[is_candidate])
+        tied_candidates = np.where(is_candidate & np.isclose(distance_to_selected, farthest_distance))[0]
+        next_pick = int(random_generator.choice(tied_candidates))
+        selected.append(next_pick)
+        is_candidate[next_pick] = False
+        np.minimum(distance_to_selected, pairwise_distances[next_pick], out=distance_to_selected)
 
-    return sorted([source_indices[local_index] for local_index in selected_local_indices])
+    return sorted(source_indices[i] for i in selected)
 
 
 class SolidSolutionAnalyzer(BaseMaterialAnalyzer):
@@ -120,18 +119,20 @@ class SolidSolutionAnalyzer(BaseMaterialAnalyzer):
             raise ValueError(f"No {self.source_element} atoms found in the unit cell.")
 
         best_dimensions = None
-        best_spread = self.max_supercell_cells
-        for total_cells in range(1, self.max_supercell_cells + 1):
-            source_count = source_count_per_cell * total_cells
-            replacement_count = max(0, min(round(self.target_concentration * source_count), source_count))
-            if abs(replacement_count / source_count - self.target_concentration) > self.tolerance:
+        best_shape_spread = self.max_supercell_cells
+        for cell_count in range(1, self.max_supercell_cells + 1):
+            source_atoms = source_count_per_cell * cell_count
+            replacement_atoms = min(max(round(self.target_concentration * source_atoms), 0), source_atoms)
+            achieved_concentration = replacement_atoms / source_atoms
+            if abs(achieved_concentration - self.target_concentration) > self.tolerance:
                 continue
-            dimensions = _most_isotropic_dimensions(total_cells)
-            spread = dimensions[2] - dimensions[0]
-            if spread < best_spread:
+
+            dimensions = _most_isotropic_dimensions(cell_count)
+            shape_spread = dimensions[2] - dimensions[0]
+            if shape_spread < best_shape_spread:
                 best_dimensions = dimensions
-                best_spread = spread
-            if spread == 0:
+                best_shape_spread = shape_spread
+            if shape_spread == 0:
                 break
 
         if best_dimensions is None:
@@ -143,10 +144,10 @@ class SolidSolutionAnalyzer(BaseMaterialAnalyzer):
 
     @property
     def actual_concentration(self) -> float:
-        dimensions = self.optimal_supercell_dimensions
-        source_count = self.source_element_count_per_cell * dimensions[0] * dimensions[1] * dimensions[2]
-        replacement_count = max(0, min(round(self.target_concentration * source_count), source_count))
-        return replacement_count / source_count
+        a, b, c = self.optimal_supercell_dimensions
+        source_atoms = self.source_element_count_per_cell * a * b * c
+        replacement_atoms = min(max(round(self.target_concentration * source_atoms), 0), source_atoms)
+        return replacement_atoms / source_atoms
 
     @property
     def selected_site_indices(self) -> List[int]:
@@ -154,14 +155,17 @@ class SolidSolutionAnalyzer(BaseMaterialAnalyzer):
         supercell_material = MaterialWithBuildMetadata.create(supercell.to_dict())
         elements = supercell_material.basis.elements.values
         source_indices = [index for index, element in enumerate(elements) if element == self.source_element]
-        replacement_count = max(0, min(round(self.actual_concentration * len(source_indices)), len(source_indices)))
+        replacement_atoms = min(
+            max(round(self.actual_concentration * len(source_indices)), 0),
+            len(source_indices),
+        )
 
         if self.site_selection_method == SiteSelectionMethodEnum.UNIFORM:
-            keep_count = len(source_indices) - replacement_count
-            if keep_count < replacement_count:
-                kept_indices = _select_sites_uniform(supercell_material, source_indices, keep_count, self.seed)
+            keep_atoms = len(source_indices) - replacement_atoms
+            if keep_atoms < replacement_atoms:
+                kept_indices = _select_sites_uniform(supercell_material, source_indices, keep_atoms, self.seed)
                 return sorted(set(source_indices) - set(kept_indices))
-            return _select_sites_uniform(supercell_material, source_indices, replacement_count, self.seed)
+            return _select_sites_uniform(supercell_material, source_indices, replacement_atoms, self.seed)
 
         random_generator = random.Random(self.seed)
-        return sorted(random_generator.sample(source_indices, replacement_count))
+        return sorted(random_generator.sample(source_indices, replacement_atoms))
