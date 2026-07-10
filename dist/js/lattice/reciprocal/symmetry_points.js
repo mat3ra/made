@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.symmetryPoints = void 0;
+exports.symmetryPoints = symmetryPoints;
 const POINTS = {
     CUB: () => {
         return [
@@ -863,4 +863,3 @@ function symmetryPoints(lattice) {
         },
     ].concat(POINTS[lattice.type](lattice) || []);
 }
-exports.symmetryPoints = symmetryPoints;

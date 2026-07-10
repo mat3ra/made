@@ -27,8 +27,11 @@ class SolidSolutionBuilder(MergeBuilder):
         self, material: Union[Material, MaterialWithBuildMetadata], configuration: TypeConfiguration
     ) -> MaterialWithBuildMetadata:
         formula = get_chemical_formula_empirical(material)
-        pct = configuration.concentration * 100
-        src = configuration.source_element
-        tgt = configuration.target_element
-        material.name = f"{formula} - Solid Solution ({src}\u2192{tgt} {pct:.4g}%)"
+        concentration_percentage = configuration.actual_concentration * 100
+        source_element = configuration.source_element
+        target_element = configuration.target_element
+        material.name = (
+            f"{formula} - Solid Solution ({source_element}\u2192{target_element} "
+            f"{concentration_percentage:.4g}%)"
+        )
         return material

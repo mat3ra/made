@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPrimitiveLatticeVectorsFromConfig = void 0;
+exports.getPrimitiveLatticeVectorsFromConfig = getPrimitiveLatticeVectorsFromConfig;
 const math_1 = require("@mat3ra/code/dist/js/math");
 /**
  * Routines for calculating primitive cell vectors from conventional cell Bravais parameters.
@@ -143,4 +143,3 @@ function getPrimitiveLatticeVectorsFromConfig(latticeConfig) {
     const [vectorA, vectorB, vectorC] = primitiveCellGenerator(latticeConfig);
     return [vectorA, vectorB, vectorC];
 }
-exports.getPrimitiveLatticeVectorsFromConfig = getPrimitiveLatticeVectorsFromConfig;

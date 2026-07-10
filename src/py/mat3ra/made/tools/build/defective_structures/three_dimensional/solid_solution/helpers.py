@@ -1,9 +1,15 @@
 from typing import Optional, Union
 
+from mat3ra.esse.models.materials_category_components.entities.core.zero_dimensional.atom import AtomSchema
+from mat3ra.esse.models.materials_category_components.operations.core.combinations.merge import MergeMethodsEnum
 from mat3ra.made.material import Material
 
 from .....analyze.solid_solution_analyzer import SolidSolutionAnalyzer
 from .....build_components import MaterialWithBuildMetadata
+from .....build_components.entities.auxiliary.zero_dimensional.point_defect_site.configuration import (
+    PointDefectSiteConfiguration,
+)
+from .....build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
 from .builder import SolidSolutionBuilder
 from .configuration import SolidSolutionConfiguration
 from .enums import SiteSelectionMethodEnum
@@ -16,6 +22,7 @@ def create_solid_solution(
     concentration: float,
     seed: Optional[int] = None,
     tolerance: float = 0.01,
+    max_supercell_cells: int = 128,
     site_selection_method: SiteSelectionMethodEnum = SiteSelectionMethodEnum.UNIFORM,
 ) -> MaterialWithBuildMetadata:
     """
@@ -31,6 +38,7 @@ def create_solid_solution(
         concentration (float): Fraction of source_element to replace (0.0-1.0).
         seed (Optional[int]): Random seed for reproducible site selection.
         tolerance (float): Acceptable deviation from target concentration.
+        max_supercell_cells (int): Maximum supercell size to search.
         site_selection_method (SiteSelectionMethodEnum): RANDOM or UNIFORM (Farthest Point Sampling).
 
     Returns:
@@ -42,16 +50,27 @@ def create_solid_solution(
         target_element=target_element,
         target_concentration=concentration,
         tolerance=tolerance,
+        max_supercell_cells=max_supercell_cells,
         seed=seed,
         site_selection_method=site_selection_method,
     )
-    config = SolidSolutionConfiguration.from_parameters(
+    supercell = create_supercell(material, scaling_factor=analyzer.optimal_supercell_dimensions)
+    coordinates = supercell.basis.coordinates.values
+    site_configurations = [
+        PointDefectSiteConfiguration(
+            crystal=supercell,
+            coordinate=coordinates[site_index],
+            element=AtomSchema(chemical_element=target_element),
+        )
+        for site_index in analyzer.selected_site_indices
+    ]
+    configuration = SolidSolutionConfiguration(
         crystal=material,
-        supercell_material=analyzer.supercell_material,
         source_element=source_element,
         target_element=target_element,
-        concentration=analyzer.achievable_concentration,
-        selected_site_indices=analyzer.selected_site_indices,
+        target_concentration=concentration,
+        actual_concentration=analyzer.actual_concentration,
+        merge_components=[supercell] + site_configurations,
+        merge_method=MergeMethodsEnum.REPLACE,
     )
-    builder = SolidSolutionBuilder()
-    return builder.get_material(config)
+    return SolidSolutionBuilder().get_material(configuration)

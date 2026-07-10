@@ -68,3 +68,23 @@ def test_create_solid_solution_uniform(concentration, expected_min_distance):
         tolerance=0.001,
     )
     assert _min_nearest_neighbor_distance(result, "Zr") > expected_min_distance
+
+
+def test_create_solid_solution_records_target_and_actual_concentration():
+    material = Material.create(BULK_HfO2)
+    target_concentration = 0.37
+    result = create_solid_solution(
+        material,
+        "Hf",
+        "Zr",
+        target_concentration,
+        seed=42,
+        tolerance=0.01,
+        site_selection_method="uniform",
+    )
+    build_step = result.metadata.get_build_metadata_of_type("SolidSolutionConfiguration")
+    assert build_step is not None
+    configuration = build_step.configuration
+    assert configuration["target_concentration"] == target_concentration
+    assert configuration["actual_concentration"] == pytest.approx(0.375)
+    assert configuration["target_concentration"] != configuration["actual_concentration"]
