@@ -10,6 +10,11 @@ class MaterialBuildMetadata(BaseMetadata):
     # Other metadata fields can be added as needed
     build: List[BuildMetadata] = Field([])
 
+    def get_latest_build_metadata(self) -> BuildMetadata:
+        if not self.build:
+            raise ValueError("No metadata.build on the material.")
+        return self.build[-1]
+
     def get_build_metadata_of_type(self, configuration_type: str) -> Optional[BuildMetadata]:
         """
         Returns the first build configuration of the specified type.
