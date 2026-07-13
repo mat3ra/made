@@ -79,6 +79,15 @@ class MergeBuilder(BaseSingleBuilder):
         if len(materials) == 1:
             return materials[0]
 
+        # Optimization: when there are many materials to merge, combine all non-first
+        # materials into one before merging with the base to avoid N sequential merges.
+        if len(materials) > 2:
+            base = materials[0]
+            combined = materials[1]
+            for m in materials[2:]:
+                combined.basis.add_atoms_from_another_basis(m.basis)
+            materials = [base, combined]
+
         parameters = self.build_parameters or self._DefaultBuildParameters
         merge_method = getattr(configuration, "merge_method", None)
         return self._merge_by_method(materials, parameters, merge_method)
