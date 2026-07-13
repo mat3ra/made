@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "mat3ra-code",
-    "mat3ra-esse>=2026.6.30.post0",
+    "mat3ra-esse",
     "mat3ra-utils>=2026.7.3.post0",
     # new verison of numpy==2.0.0 is not handled by pymatgen yet
     "numpy<=1.26.4",
