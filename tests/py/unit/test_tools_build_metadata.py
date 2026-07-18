@@ -28,6 +28,16 @@ def test_metadata_empty_initialization():
     assert metadata.model_dump(exclude_none=True) == {"build": []}
 
 
+def test_get_latest_build_metadata():
+    metadata = MaterialBuildMetadata(build=[BuildMetadata(configuration={"type": "SlabConfiguration"})])
+    assert metadata.get_latest_build_metadata().configuration["type"] == "SlabConfiguration"
+
+
+def test_get_latest_build_metadata_raises_when_empty():
+    with pytest.raises(ValueError, match="No metadata.build"):
+        MaterialBuildMetadata().get_latest_build_metadata()
+
+
 @pytest.mark.parametrize(
     "config_object, expected_dict",
     [

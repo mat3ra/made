@@ -16,6 +16,8 @@ class BuildMetadataAnalyzer(BaseMaterialAnalyzer, Generic[TypeConfiguration, Typ
 
     @property
     def build_metadata(self) -> BuildMetadata:
+        if not self.material.metadata.build:
+            raise ValueError("No metadata.build on the material.")
         metadata = self.material.metadata.get_build_metadata_of_type(self.configuration_cls.__name__)
         if not metadata:
             raise ValueError(f"Build metadata for {self.configuration_cls.__name__} not found.")

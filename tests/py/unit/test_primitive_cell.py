@@ -3,7 +3,7 @@ import pytest
 
 from mat3ra.made.cell.primitive_cell import get_primitive_lattice_vectors_from_config
 from mat3ra.made.lattice import Lattice, LatticeTypeEnum
-from tests.py.unit.utils import assert_two_entities_deep_almost_equal
+from unit.utils import assert_two_entities_deep_almost_equal
 
 EXPECTED_PRIMITIVE_CELL_NA4CL4 = [
     [5.691694, 0.0, 0.0],
