@@ -2,20 +2,11 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
+from mat3ra.made.material import Material
+from mat3ra.made.utils import map_array_to_array_with_id_value, map_array_with_id_value_to_array
 from mat3ra.utils import remove_comments_from_source_code
 from mat3ra.utils.mixins import RoundNumericValuesMixin
 
-from mat3ra.made.material import Material
-from mat3ra.made.utils import (
-    map_array_to_array_with_id_value,
-    map_array_with_id_value_to_array,
-)
-from .utils import (
-    extract_labels_from_pymatgen_structure,
-    extract_metadata_from_pymatgen_structure,
-    extract_tags_from_ase_atoms,
-    calculate_padded_cell_simple_cubic,
-)
 from ..third_party import (
     ASEAtoms,
     PymatgenAseAtomsAdaptor,
@@ -23,6 +14,12 @@ from ..third_party import (
     PymatgenLattice,
     PymatgenPoscar,
     PymatgenStructure,
+)
+from .utils import (
+    calculate_padded_cell_simple_cubic,
+    extract_labels_from_pymatgen_structure,
+    extract_metadata_from_pymatgen_structure,
+    extract_tags_from_ase_atoms,
 )
 
 

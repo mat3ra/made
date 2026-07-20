@@ -16,9 +16,9 @@ Object.defineProperty(exports, "units", { enumerable: true, get: function () { r
 const constraints_1 = require("./constraints/constraints");
 Object.defineProperty(exports, "AtomicConstraints", { enumerable: true, get: function () { return constraints_1.AtomicConstraints; } });
 const lattice_1 = require("./lattice/lattice");
-Object.defineProperty(exports, "Lattice", { enumerable: true, get: function () { return lattice_1.Lattice; } });
 Object.defineProperty(exports, "defaultNonPeriodicMinimumLatticeSize", { enumerable: true, get: function () { return lattice_1.defaultNonPeriodicMinimumLatticeSize; } });
 Object.defineProperty(exports, "diatomicLatticePaddingFactor", { enumerable: true, get: function () { return lattice_1.diatomicLatticePaddingFactor; } });
+Object.defineProperty(exports, "Lattice", { enumerable: true, get: function () { return lattice_1.Lattice; } });
 Object.defineProperty(exports, "molecularLatticePaddingFactor", { enumerable: true, get: function () { return lattice_1.molecularLatticePaddingFactor; } });
 const lattice_types_1 = require("./lattice/lattice_types");
 Object.defineProperty(exports, "DEFAULT_LATTICE_UNITS", { enumerable: true, get: function () { return lattice_types_1.DEFAULT_LATTICE_UNITS; } });

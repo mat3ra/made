@@ -142,6 +142,40 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
         max_norm = max(norms)
         return [round(float(value / max_norm), 3) for value in norms]
 
+    @property
+    def type_extended(self) -> str:
+        """Get the extended lattice type classification.
+
+        For lattice types with subtypes (BCT, ORCF, RHL, MCLC, TRI),
+        returns the specific subtype based on lattice parameters.
+        For other types, returns the base type string.
+        """
+        a, b, c = self.a, self.b, self.c
+        alpha, beta, gamma = self.alpha, self.beta, self.gamma
+        cos_alpha = math.cos(math.radians(alpha))
+        lattice_type = self.type.value if hasattr(self.type, "value") else str(self.type)
+
+        if lattice_type == "BCT":
+            return "BCT-1" if c < a else "BCT-2"
+        elif lattice_type == "ORCF":
+            if 1 / (a * a) >= 1 / (b * b) + 1 / (c * c):
+                return "ORCF-1"
+            return "ORCF-2"
+        elif lattice_type == "RHL":
+            return "RHL-1" if cos_alpha > 0 else "RHL-2"
+        elif lattice_type == "MCLC":
+            if gamma >= 90:
+                return "MCLC-1"
+            if (b / c) * cos_alpha + (b * b / (a * a)) * (1 - cos_alpha * cos_alpha) <= 1:
+                return "MCLC-3"
+            return "MCLC-5"
+        elif lattice_type == "TRI":
+            if alpha > 90 and beta > 90 and gamma >= 90:
+                return "TRI_1a"
+            return "TRI_1b"
+        else:
+            return lattice_type
+
     def get_hash_string(self, is_scaled: bool = False) -> str:
         """Mirrors JS Lattice.getHashString(isScaled). Rounds to HASH_TOLERANCE decimal places."""
         scale = self.a if is_scaled else 1

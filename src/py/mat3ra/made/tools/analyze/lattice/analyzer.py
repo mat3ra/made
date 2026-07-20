@@ -1,9 +1,11 @@
-from .. import BaseMaterialAnalyzer
-from ..lattice_swap_analyzer import MaterialLatticeSwapAnalyzer
+from functools import cached_property
+
+from ....lattice import LatticeTypeEnum
 from ...build_components.metadata import MaterialWithBuildMetadata
 from ...convert import from_pymatgen, to_pymatgen
 from ...third_party import PymatgenSpacegroupAnalyzer
-from ....lattice import LatticeTypeEnum
+from .. import BaseMaterialAnalyzer
+from ..lattice_swap_analyzer import MaterialLatticeSwapAnalyzer
 
 
 class LatticeMaterialAnalyzer(BaseMaterialAnalyzer):
@@ -68,7 +70,7 @@ class LatticeMaterialAnalyzer(BaseMaterialAnalyzer):
         except Exception:
             return LatticeTypeEnum.TRI
 
-    @property
+    @cached_property
     def material_with_primitive_lattice(self: MaterialWithBuildMetadata) -> MaterialWithBuildMetadata:
         """
         Convert a structure to its primitive cell.
@@ -77,7 +79,7 @@ class LatticeMaterialAnalyzer(BaseMaterialAnalyzer):
             from_pymatgen(self.spacegroup_analyzer.get_primitive_standard_structure())
         )
 
-    @property
+    @cached_property
     def material_with_conventional_lattice(self: MaterialWithBuildMetadata) -> MaterialWithBuildMetadata:
         """
         Convert a structure to its conventional cell.

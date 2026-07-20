@@ -2,8 +2,8 @@ from typing import Type
 
 from mat3ra.made.tools.build_components.entities.reusable.base_builder import BaseBuilderParameters, BaseSingleBuilder
 
-from ..... import MaterialWithBuildMetadata
 from ......operations.core.unary import strain
+from ..... import MaterialWithBuildMetadata
 from .configuration import StrainConfiguration
 
 

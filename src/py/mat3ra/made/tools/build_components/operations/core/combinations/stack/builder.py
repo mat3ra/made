@@ -42,6 +42,11 @@ class StackNComponentsBuilder(BaseSingleBuilder):
         configuration: StackConfiguration,
         stack_component_build_parameters: Any = None,
     ) -> Optional[MaterialWithBuildMetadata]:
+        cache = getattr(self, "_stack_component_cache", None)
+        cache_key = id(stack_component_configuration_or_material)
+        if cache is not None and cache_key in cache:
+            return cache[cache_key]
+
         builder = self.stack_component_types_conversion_map.get(type(stack_component_configuration_or_material))
         pre_process_function = self.stack_component_types_conversion_pre_process_map.get(
             type(stack_component_configuration_or_material), lambda x, y: x
@@ -50,21 +55,29 @@ class StackNComponentsBuilder(BaseSingleBuilder):
             stack_component_configuration_or_material = pre_process_function(
                 stack_component_configuration_or_material, configuration
             )
-            return builder(build_parameters=stack_component_build_parameters).get_material(
+            result = builder(build_parameters=stack_component_build_parameters).get_material(
                 stack_component_configuration_or_material
             )
         else:
-            return stack_component_configuration_or_material
+            result = stack_component_configuration_or_material
+
+        if cache is not None:
+            cache[cache_key] = result
+        return result
 
     def _generate(self, configuration: TypeConfiguration) -> Material:
-        materials = []
-        for index, stack_component_config in enumerate(configuration.stack_components):
-            material = self._stack_component_to_material(stack_component_config, configuration)
-            gap = configuration.get_gap_by_id(index)
-            if gap is not None:
-                material = adjust_material_cell_to_set_gap_along_direction(material, gap, configuration.direction)
-            materials.append(material)
-        # Filter out None values in case some stack components are V
-        materials = [m for m in materials if m is not None]
-        stacked_material = stack(materials, configuration.direction or AxisEnum.z)
-        return stacked_material
+        self._stack_component_cache: Optional[dict] = {}
+        try:
+            materials = []
+            for index, stack_component_config in enumerate(configuration.stack_components):
+                material = self._stack_component_to_material(stack_component_config, configuration)
+                gap = configuration.get_gap_by_id(index)
+                if gap is not None:
+                    material = adjust_material_cell_to_set_gap_along_direction(material, gap, configuration.direction)
+                materials.append(material)
+            # Filter out None values in case some stack components are V
+            materials = [m for m in materials if m is not None]
+            stacked_material = stack(materials, configuration.direction or AxisEnum.z)
+            return stacked_material
+        finally:
+            self._stack_component_cache = None

@@ -5,10 +5,7 @@ from ase.build import molecule
 from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
-from mat3ra.made.tools.convert.utils import (
-    DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE,
-    calculate_padded_cell_simple_cubic,
-)
+from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 

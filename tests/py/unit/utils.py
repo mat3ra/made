@@ -1,13 +1,18 @@
+import copy
 import difflib
 import json
 import sys
 from enum import Enum
 from typing import Any, Dict
 
+from mat3ra.made.tools.convert import to_pymatgen
 from mat3ra.made.tools.third_party import PymatgenAseAtomsAdaptor
 from mat3ra.made.tools.utils import unwrap
 from mat3ra.utils import assertion as assertion_utils
+from pymatgen.analysis.structure_matcher import StructureMatcher
 from pymatgen.core.structure import Structure
+
+UPDATED_COORDINATE_TOLERANCE = 1e-6
 
 
 class OSPlatform(Enum):
@@ -111,3 +116,27 @@ def assert_two_entities_deep_almost_equal(entity1, entity2, rtol=1e-5, atol=1e-9
     except AssertionError as e:
         show_difference(expected_data, actual_data)
         raise e
+
+
+def assert_interfaces_almost_equal(interface1: Any, interface2: Any) -> None:
+    """
+    Assert that two interface structures are almost equal, checking bases permutation-invariantly.
+    """
+    obj1 = unwrap(interface1)
+    obj2 = unwrap(interface2)
+    s1 = to_pymatgen(obj1)
+    s2 = to_pymatgen(obj2)
+    matcher = StructureMatcher(ltol=1e-3, stol=1e-3, angle_tol=0.1, primitive_cell=False, scale=False)
+    if not matcher.fit(s1, s2):
+        print("\n=== STRUCTURE MATCHER FAILED ===")
+        print("s1 (actual):\n", s1)
+        print("s2 (expected):\n", s2)
+        assert False, "Bases are not structurally equivalent"
+    dict_1 = copy.deepcopy(json.loads(obj1.to_json()))
+    dict_2 = copy.deepcopy(obj2 if isinstance(obj2, dict) else json.loads(obj2.to_json()))
+    # Remove name, basis, and coordinate hashes (fragile under translations, rotation, or wrapping)
+    for d in [dict_1, dict_2]:
+        for key in ["basis", "name", "hash", "scaledHash"]:
+            if key in d:
+                del d[key]
+    assert_two_entities_deep_almost_equal(dict_1, dict_2, atol=UPDATED_COORDINATE_TOLERANCE)

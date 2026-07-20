@@ -1,5 +1,5 @@
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { BaseInMemoryEntitySchema, BasisSchema, Coordinate3DSchema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import { BasisSchema, Coordinate3DSchema, Vector3DSchema, BaseInMemoryEntitySchema } from "@mat3ra/esse/dist/js/types";
 import { Cell } from "../cell/cell";
 import { AtomicCoordinateValue, Coordinates } from "./coordinates";
 import { AtomicElementValue, Elements } from "./elements";

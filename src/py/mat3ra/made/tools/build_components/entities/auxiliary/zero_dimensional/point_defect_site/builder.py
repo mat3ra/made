@@ -1,3 +1,6 @@
+from mat3ra.code.array_with_ids import ArrayWithIds
+from mat3ra.made.basis import Basis, Coordinates
+
 from ......build_components import MaterialWithBuildMetadata
 from ..... import BaseSingleBuilder
 from .configuration import PointDefectSiteConfiguration
@@ -14,18 +17,16 @@ class PointDefectSiteBuilder(BaseSingleBuilder):
         if configuration.crystal is None:
             raise ValueError("Crystal configuration is required for PointDefectSiteBuilder")
 
-        new_material = MaterialWithBuildMetadata.create(
-            {
-                "name": configuration.crystal.name,
-                "lattice": configuration.crystal.lattice.to_dict(),
-                "basis": configuration.crystal.basis.to_dict(),
-            }
+        crystal = configuration.crystal
+        basis = Basis(
+            elements=ArrayWithIds(values=[], ids=[]),
+            coordinates=Coordinates(values=[], ids=[]),
+            units=crystal.basis.units,
+            cell=crystal.basis.cell,
         )
-        elements = configuration.crystal.basis.elements.values
-        new_material.basis.remove_atoms_by_elements(elements)
-        new_material.basis.add_atom(
+        basis.add_atom(
             element=configuration.element.chemical_element,
             coordinate=configuration.coordinate,
             label=configuration.host_atom_label,
         )
-        return new_material
+        return MaterialWithBuildMetadata(name=crystal.name, lattice=crystal.lattice, basis=basis)

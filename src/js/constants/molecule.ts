@@ -1,7 +1,7 @@
 /**
  * Constants for molecule handling and precision.
  * Source of truth: /constants.json at repository root
- * 
+ *
  * These values are duplicated here for TypeScript compilation.
  * When updating these, also update constants.json.
  */

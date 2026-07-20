@@ -1,6 +1,10 @@
+import copy
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
+from mat3ra.made.basis import Basis
+from mat3ra.made.lattice import COORDINATE_TOLERANCE
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.interface.zsl import ZSLInterfaceAnalyzer
 from mat3ra.made.tools.build.compound_pristine_structures.two_dimensional.interface.base.builder import InterfaceBuilder
@@ -22,7 +26,7 @@ from .fixtures.interface.gr_ni_111_top_hcp import (
 )
 from .fixtures.interface.zsl import DIAMOND_GaAs_INTERFACE, DIAMOND_GaAs_INTERFACE_GH
 from .fixtures.monolayer import GRAPHENE
-from .utils import OSPlatform, assert_two_entities_deep_almost_equal, get_platform_specific_value
+from .utils import OSPlatform, assert_interfaces_almost_equal, get_platform_specific_value
 
 GRAPHENE_NICKEL_TEST_CASE = (
     SimpleNamespace(
@@ -77,6 +81,70 @@ MAX_LENGTH_TOL = 0.05
 MAX_ANGLE_TOL = 0.02
 
 
+# The default comparison tolerance (atol=1e-9) in assert_two_entities_deep_almost_equal
+# is too strict for cross-platform floating-point variations in ZSL interface coordinate
+# calculations, which can differ on the order of 10**-8 to 10**-7 across different systems
+# and compilers. We instead use the coordinate tolerance defined in mat3ra.made.lattice,
+# which is 10**-COORDINATE_TOLERANCE (10**-6 = 1e-6).
+UPDATED_COORDINATE_TOLERANCE = 10**-COORDINATE_TOLERANCE
+
+
+def to_basis_obj(b_dict: dict) -> Basis:
+    """
+    Ensure a basis dictionary has sequential IDs and convert it to a Basis object.
+
+    Args:
+        b_dict (dict): The dictionary representation of a basis.
+
+    Returns:
+        Basis: The instantiated Basis object.
+    """
+    b_dict = copy.deepcopy(b_dict)
+    for key in ["elements", "coordinates"]:
+        if key in b_dict and isinstance(b_dict[key], list):
+            for idx, item in enumerate(b_dict[key]):
+                if isinstance(item, dict) and "id" not in item:
+                    item["id"] = idx
+    return Basis(**b_dict)
+
+
+def are_bases_almost_equal(b1: Basis, b2: Basis, atol: float) -> bool:
+    """
+    Compare two Basis objects for equality with permuted ordering and coordinate tolerance.
+
+    Args:
+        b1 (Basis): The first Basis object.
+        b2 (Basis): The second Basis object.
+        atol (float): Absolute tolerance for coordinate comparison.
+
+    Returns:
+        bool: True if the bases are physically equivalent within tolerance, False otherwise.
+    """
+    if b1.number_of_atoms != b2.number_of_atoms:
+        return False
+    n = b1.number_of_atoms
+    self_elements, other_elements = b1.elements.values, b2.elements.values
+    self_coords, other_coords = b1.coordinates.values, b2.coordinates.values
+    self_labels = b1.labels.values if (b1.labels and len(b1.labels.values) == n) else [None] * n
+    other_labels = b2.labels.values if (b2.labels and len(b2.labels.values) == n) else [None] * n
+    self_constraints = b1.constraints.values if (b1.constraints and len(b1.constraints.values) == n) else [None] * n
+    other_constraints = b2.constraints.values if (b2.constraints and len(b2.constraints.values) == n) else [None] * n
+
+    other_indices_left = set(range(n))
+    for i in range(n):
+        found = False
+        elem, coord, lbl, const = self_elements[i], self_coords[i], self_labels[i], self_constraints[i]
+        for j in list(other_indices_left):
+            if other_elements[j] == elem and other_labels[j] == lbl and other_constraints[j] == const:
+                if np.allclose(other_coords[j], coord, atol=atol):
+                    other_indices_left.remove(j)
+                    found = True
+                    break
+        if not found:
+            return False
+    return True
+
+
 @pytest.mark.parametrize(
     "substrate, film,gap, vacuum, max_area, expected_interface",
     [GRAPHENE_NICKEL_TEST_CASE, DIAMOND_GAAS_CSL_TEST_CASE],
@@ -123,7 +191,7 @@ def test_zsl_interface_builder(substrate, film, gap, vacuum, max_area, expected_
 
     assert interface.basis.number_of_atoms == expected_interface.basis.number_of_atoms
 
-    assert_two_entities_deep_almost_equal(interface, expected_interface)
+    assert_interfaces_almost_equal(interface, expected_interface)
 
 
 @pytest.mark.parametrize("substrate, film,gap, vacuum, max_area,  expected_interface", [GRAPHENE_NICKEL_TEST_CASE])
@@ -150,7 +218,7 @@ def test_create_zsl_interface(substrate, film, gap, vacuum, max_area, expected_i
     )
     interface.metadata.build = []
     expected_interface = get_platform_specific_value(expected_interface)
-    assert_two_entities_deep_almost_equal(interface, expected_interface)
+    assert_interfaces_almost_equal(interface, expected_interface)
 
 
 @pytest.mark.parametrize(
@@ -192,4 +260,4 @@ def test_create_zsl_interface_between_slabs(substrate, film, gap, vacuum, max_ar
         reduce_result_cell_to_primitive=True,
     )
     expected_interface = get_platform_specific_value(expected_interface)
-    assert_two_entities_deep_almost_equal(interface, expected_interface)
+    assert_interfaces_almost_equal(interface, expected_interface)

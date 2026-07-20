@@ -6,7 +6,7 @@ from mat3ra.made.tools.analyze.fingerprint import LayeredFingerprintAlongAxis
 from mat3ra.made.tools.operations.core.unary import supercell
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL
-from .fixtures.slab import SLAB_SrTiO3_011_TERMINATION_O2, SLAB_SrTiO3_011_TERMINATION_SrTiO, SI_CONVENTIONAL_SLAB_001
+from .fixtures.slab import SI_CONVENTIONAL_SLAB_001, SLAB_SrTiO3_011_TERMINATION_O2, SLAB_SrTiO3_011_TERMINATION_SrTiO
 
 
 @pytest.mark.parametrize(

@@ -58,6 +58,7 @@ def test_calculate_adhesion_energy():
     adhesion_energy = calculate_adhesion_energy(interface, nickel_slab, graphene_layer, calculator)
     assert np.isclose(adhesion_energy, 0.07345)
 
+
 @pytest.mark.skip(reason="This test is not working as expected")
 def test_calculate_interfacial_energy():
     interfacial_energy = calculate_interfacial_energy(

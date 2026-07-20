@@ -135,3 +135,28 @@ def calculate_von_mises_strain(strain_matrix: np.ndarray) -> float:
     e_von_mises = np.sqrt(exx**2 - exx * eyy + eyy**2 + 3 * exy**2)
 
     return abs(e_von_mises) * 100.0
+
+
+def minimum_image_distances(frac_coords: np.ndarray, lattice_vectors: np.ndarray) -> np.ndarray:
+    """
+    Compute pairwise distances between fractional coordinates under periodic boundary conditions.
+
+    Applies the minimum image convention: for each pair, the shortest distance
+    across all periodic images is returned.
+
+    Args:
+        frac_coords (np.ndarray): Fractional coordinates, shape (N, 3).
+        lattice_vectors (np.ndarray): Lattice vectors, shape (3, 3), rows are vectors.
+
+    Returns:
+        np.ndarray: Symmetric distance matrix, shape (N, N), in the same units as lattice_vectors.
+    """
+    n = len(frac_coords)
+    distances = np.zeros((n, n))
+    for i in range(n):
+        delta = frac_coords[i] - frac_coords[i + 1 :]
+        delta -= np.round(delta)
+        dists = np.linalg.norm(delta @ lattice_vectors, axis=1)
+        distances[i, i + 1 :] = dists
+        distances[i + 1 :, i] = dists
+    return distances

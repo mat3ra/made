@@ -1,16 +1,16 @@
-import { math } from "@mat3ra/code/dist/js/math";
 import { Coordinate3DSchema, Matrix3X3Schema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import { Utils } from "@mat3ra/utils";
 
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
 import { type MaterialConfig, Material } from "../material";
 import SupercellTools from "./supercell";
 
-const MULT = math.multiply;
-const ADD = math.add;
-const DOT = math.product;
+const MULT = Utils.math.multiply;
+const ADD = Utils.math.add;
+const DOT = Utils.math.product;
 const getMatrixInLeftHandedRepresentation = (matrix: Matrix3X3Schema) => {
-    return math.det(matrix) < 0 ? MULT(matrix, -1) : matrix;
+    return Utils.math.det(matrix) < 0 ? MULT(matrix, -1) : matrix;
 };
 
 /**
@@ -22,10 +22,10 @@ const getMatrixInLeftHandedRepresentation = (matrix: Matrix3X3Schema) => {
  */
 function extGCD(a: number, b: number): [number, number] {
     if (b === 0) return [1, 0];
-    if (math.mod(a, b) === 0) return [0, 1];
+    if (Utils.math.mod(a, b) === 0) return [0, 1];
 
-    const [x, y] = extGCD(b, math.mod(a, b));
-    return [y, x - y * math.floor(a / b)];
+    const [x, y] = extGCD(b, Utils.math.mod(a, b));
+    return [y, x - y * Utils.math.floor(a / b)];
 }
 
 /**
@@ -41,7 +41,7 @@ function getMillerScalingMatrix(
     millerIndices: Coordinate3DSchema,
     tol = 1e-8,
 ): Matrix3X3Schema {
-    if (!millerIndices.reduce((a, b) => math.abs(a) + math.abs(b)))
+    if (!millerIndices.reduce((a, b) => Utils.math.abs(a) + Utils.math.abs(b)))
         throw new Error("Miller indices are zeros.");
 
     let scalingMatrix;
@@ -89,20 +89,26 @@ function getMillerScalingMatrix(
         // @ts-ignore
         const k2 = DOT(ADD(MULT(l, z1), -MULT(k, z2)), z3);
 
-        if (math.abs(k2) > tol) {
+        // @ts-ignore
+        if (Utils.math.abs(k2) > tol) {
             // For mathjs version 3.20: round(-0.5) = -0
             // For mathjs version 5.10: round(-0.5) = -1
             // Here we specify rounding method to Bankers
             // For Python 3.11: round(-0.5) = 0
+            // @ts-ignore - mathjs v12 dot return type
             const value = k1 / k2;
-            const roundedValue = math.roundCustom(value, 0, math.RoundingMethod.Bankers);
+            const roundedValue = Utils.math.roundCustom(
+                value,
+                0,
+                Utils.math.RoundingMethod.Bankers,
+            );
             const i = -roundedValue;
             [p, q] = [p + i * l, q - i * k];
         }
 
         const [a, b] = extGCD(p * k + q * l, h);
         const c1 = [p * k + q * l, -p * h, -q * h];
-        const c2 = [0, l, -k].map((c) => math.trunc(c / math.gcd(l, k))); // floor division
+        const c2 = [0, l, -k].map((c) => Utils.math.trunc(c / Utils.math.gcd(l, k))); // floor division
         const c3 = [b, a * p, a * q];
 
         scalingMatrix = [c1, c2, c3];

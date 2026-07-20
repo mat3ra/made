@@ -29,9 +29,7 @@ def validate_heterostructure_inputs(stack_component_dicts: List[StackComponentDi
 
 
 def create_initial_slabs(
-    stack_component_dicts: List[StackComponentDict],
-    vacuum: float,
-    use_conventional_cell: bool
+    stack_component_dicts: List[StackComponentDict], vacuum: float, use_conventional_cell: bool
 ) -> List[MaterialWithBuildMetadata]:
     """Create initial slabs from stack components."""
     slabs = []
@@ -49,8 +47,7 @@ def create_initial_slabs(
 
 
 def find_common_supercell_matrix(
-    slabs: List[MaterialWithBuildMetadata],
-    optimize_layer_supercells: bool
+    slabs: List[MaterialWithBuildMetadata], optimize_layer_supercells: bool
 ) -> SupercellMatrix2DSchema:
     """Find common supercell matrix for all materials."""
     reference_substrate = slabs[0]
@@ -68,13 +65,14 @@ def find_common_supercell_matrix(
             film_build_parameters=film_analyzer.build_parameters,
             optimize_film_supercell=optimize_layer_supercells,
         )
+        analyzer.__dict__["substrate_material"] = reference_substrate
+        analyzer.__dict__["film_material"] = film_slab
 
         return analyzer.film_strained_configuration.xy_supercell_matrix
 
 
 def create_strained_substrate(
-    reference_substrate: MaterialWithBuildMetadata,
-    common_supercell_matrix: SupercellMatrix2DSchema
+    reference_substrate: MaterialWithBuildMetadata, common_supercell_matrix: SupercellMatrix2DSchema
 ) -> MaterialWithBuildMetadata:
     """Create strained substrate with common supercell."""
     substrate_analyzer = SlabMaterialAnalyzer(material=reference_substrate)
@@ -92,7 +90,7 @@ def create_strained_substrate(
 def create_strained_films(
     slabs: List[MaterialWithBuildMetadata],
     common_supercell_matrix: SupercellMatrix2DSchema,
-    optimize_layer_supercells: bool
+    optimize_layer_supercells: bool,
 ) -> List[MaterialWithBuildMetadata]:
     """Create strained films with common supercell."""
     reference_substrate = slabs[0]
@@ -112,10 +110,12 @@ def create_strained_films(
             film_build_parameters=film_analyzer.build_parameters,
             optimize_film_supercell=optimize_layer_supercells,
         )
+        analyzer.__dict__["substrate_material"] = reference_substrate
+        analyzer.__dict__["film_material"] = film_slab
 
         film_config = analyzer.film_strained_configuration
         film_config_dict = film_config.model_dump()
-        film_config_dict['xy_supercell_matrix'] = common_supercell_matrix
+        film_config_dict["xy_supercell_matrix"] = common_supercell_matrix
         film_config_common = SlabStrainedSupercellConfiguration(**film_config_dict)
 
         strained_film = builder.get_material(film_config_common)
@@ -125,8 +125,7 @@ def create_strained_films(
 
 
 def apply_gaps_and_stack(
-    strained_slabs: List[MaterialWithBuildMetadata],
-    gaps: List[float]
+    strained_slabs: List[MaterialWithBuildMetadata], gaps: List[float]
 ) -> MaterialWithBuildMetadata:
     """Apply gaps and stack materials."""
     stacked_materials = []

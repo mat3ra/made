@@ -1,6 +1,5 @@
 import pytest
 from mat3ra.code.entity import InMemoryEntityPydantic
-
 from mat3ra.made.tools.build_components.metadata import BuildMetadata, MaterialBuildMetadata
 
 
@@ -27,6 +26,16 @@ def test_metadata_initialization_with_data():
 def test_metadata_empty_initialization():
     metadata = MaterialBuildMetadata()
     assert metadata.model_dump(exclude_none=True) == {"build": []}
+
+
+def test_get_latest_build_metadata():
+    metadata = MaterialBuildMetadata(build=[BuildMetadata(configuration={"type": "SlabConfiguration"})])
+    assert metadata.get_latest_build_metadata().configuration["type"] == "SlabConfiguration"
+
+
+def test_get_latest_build_metadata_raises_when_empty():
+    with pytest.raises(ValueError, match="No metadata.build"):
+        MaterialBuildMetadata().get_latest_build_metadata()
 
 
 @pytest.mark.parametrize(

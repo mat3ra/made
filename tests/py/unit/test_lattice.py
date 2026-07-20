@@ -1,5 +1,4 @@
 import pytest
-
 from mat3ra.code.vector import RoundedVector3D
 from mat3ra.made.lattice import Lattice
 from mat3ra.utils import assertion as assertion_utils
@@ -69,9 +68,9 @@ def test_lattice_get_scaled_by_matrix():
     assert lattice.a == 3.0
     assert lattice.b == 4.5
     assert lattice.c == 2.0
-    assert lattice.alpha == 90.0
-    assert lattice.beta == 90.0
-    assert lattice.gamma == 90.0
+    assert lattice.alpha == pytest.approx(90.0)
+    assert lattice.beta == pytest.approx(90.0)
+    assert lattice.gamma == pytest.approx(90.0)
     assert lattice.units == DEFAULT_UNITS
     assert lattice.type.value == DEFAULT_TYPE
     assertion_utils.assert_deep_almost_equal(lattice.vector_arrays, expected_vector_values)

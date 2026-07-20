@@ -2,8 +2,9 @@ from typing import Optional
 
 from ...material import Material
 from ..analyze.other import get_surface_area
-from ..build.compound_pristine_structures.two_dimensional.interface import InterfaceConfiguration, get_slab
-from ..build_components import MaterialBuildMetadata, MaterialWithBuildMetadata
+from ..analyze.interface_material import get_interface_bulk_crystal
+from ..build.compound_pristine_structures.two_dimensional.interface import get_slab
+from ..build_components.metadata import MaterialWithBuildMetadata
 from ..convert import decorator_convert_material_args_kwargs_to_atoms
 from ..third_party import ASEAtoms, ASECalculator, ASECalculatorEMT
 from .calculators import InterfaceMaterialCalculatorParameters
@@ -114,19 +115,14 @@ def calculate_interfacial_energy(
     substrate_slab = get_slab(interface, part="substrate") if substrate_slab is None else substrate_slab
     film_slab = get_slab(interface, part="film") if film_slab is None else film_slab
 
-    metadata = (
-        interface.metadata
-        if isinstance(interface, MaterialWithBuildMetadata)
-        else MaterialBuildMetadata(**interface.metadata)
-    )
-    build_configuration = metadata.build[-1].configuration if metadata.build else {}
-    config = InterfaceConfiguration(**build_configuration)
-
     try:
-        substrate_bulk = config.substrate_configuration.atomic_layers.crystal
-        film_bulk = config.film_configuration.atomic_layers.crystal
-    except KeyError:
-        raise ValueError("The substrate and film bulk materials must be provided or defined in the interface metadata.")
+        interface_with_metadata = MaterialWithBuildMetadata.create(interface.to_dict())
+        substrate_bulk = Material.create(get_interface_bulk_crystal(interface_with_metadata, part="substrate"))
+        film_bulk = Material.create(get_interface_bulk_crystal(interface_with_metadata, part="film"))
+    except ValueError as exc:
+        raise ValueError(
+            "The substrate and film bulk materials must be provided or defined in the interface metadata."
+        ) from exc
     surface_energy_substrate = calculate_surface_energy(substrate_slab, substrate_bulk, calculator)
     surface_energy_film = calculate_surface_energy(film_slab, film_bulk, calculator)
     adhesion_energy = calculate_adhesion_energy(interface, substrate_slab, film_slab, calculator)

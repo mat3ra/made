@@ -1,9 +1,9 @@
 import numpy as np
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
-
 from mat3ra.made.material import Material
-from ..core.unary import strain
+
 from ...modify import wrap_to_unit_cell
+from ..core.unary import strain
 
 
 def transform_material_by_matrix(material: Material, matrix: np.ndarray) -> Material:

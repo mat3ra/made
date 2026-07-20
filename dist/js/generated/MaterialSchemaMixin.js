@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.materialSchemaMixin = void 0;
+exports.materialSchemaMixin = materialSchemaMixin;
 function materialSchemaMixin(item) {
     // @ts-expect-error
     const properties = {
@@ -73,4 +73,3 @@ function materialSchemaMixin(item) {
     };
     Object.defineProperties(item, Object.getOwnPropertyDescriptors(properties));
 }
-exports.materialSchemaMixin = materialSchemaMixin;

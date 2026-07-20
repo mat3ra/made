@@ -57,4 +57,3 @@ def generate_heterostructure_name(stack_component_dicts: List[StackComponentDict
         components.append(f"{formula}({miller_str})")
 
     return f"Heterostructure [{'-'.join(components)}]"
-

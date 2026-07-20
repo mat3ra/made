@@ -1,6 +1,5 @@
 from ase.build import bulk, molecule
 
-
 BULK_SI_LATTICE_A = 3.8395
 BULK_SI_LATTICE_ALPHA = 60
 BULK_SI_LABELS = [{"id": 0, "value": 0}, {"id": 1, "value": 1}]

@@ -13,7 +13,11 @@ from .twisted import (
     TwistedNanoribbonsInterfaceConfiguration,
     create_interface_twisted,
 )
-from .utils import get_optimal_film_displacement, get_slab, remove_duplicate_interfaces
+from .utils import (
+    get_optimal_film_displacement,
+    get_slab,
+    remove_duplicate_interfaces,
+)
 from .zsl import (
     create_interface_zsl,
     create_interface_zsl_between_slabs,

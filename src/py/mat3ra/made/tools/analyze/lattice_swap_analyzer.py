@@ -2,13 +2,13 @@ from typing import Union
 
 import numpy as np
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
+from mat3ra.made.material import Material
 from pydantic import BaseModel, Field
 
-from mat3ra.made.material import Material
-from .basis import BasisMaterialAnalyzer
-from .enums import POSSIBLE_TRANSFORMATION_MATRICES
 from ..build_components.metadata.material_with_build_metadata import MaterialWithBuildMetadata
 from ..operations.reusable.unary import transform_material_by_matrix
+from .basis import BasisMaterialAnalyzer
+from .enums import POSSIBLE_TRANSFORMATION_MATRICES
 
 
 class LatticeSwapDetectionResult(BaseModel):

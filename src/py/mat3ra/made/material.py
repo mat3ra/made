@@ -55,7 +55,7 @@ defaultMaterialConfig = {
 # TODO: replace `-Pydantic` with actual class in the next PR
 class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemoryEntityPydantic):
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
-    
+
     __default_config__ = defaultMaterialConfig
     __schema__ = MaterialSchema
 
@@ -132,4 +132,3 @@ class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemory
     @property
     def scaled_hash(self) -> str:
         return self.calculate_hash(is_scaled=True)
-

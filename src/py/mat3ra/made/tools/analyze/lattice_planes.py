@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import List, Tuple, Union
 
 from mat3ra.code.vector import Vector3D
@@ -45,7 +46,7 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
             primitive=make_primitive,
         )
 
-    @property
+    @cached_property
     def pymatgen_slab_generator_with_vacuum(self) -> PymatgenSlabGenerator:
         # This generator is used to create slabs with vacuum and thick enough to allow for all terminations to be found.
         return self.get_pymatgen_slab_generator(
@@ -53,14 +54,14 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
             min_vacuum_size=self.DEFAULT_VACUUM_SIZE_FOR_TERMINATIONS,
         )
 
-    @property
+    @cached_property
     def pymatgen_slab_generator_without_vacuum(self) -> PymatgenSlabGenerator:
         # This generator is used to create slabs without vacuum and with a single layer thickness.
         return self.get_pymatgen_slab_generator(
             min_slab_size=self.DEFAULT_THICKNESS_FOR_GENERATION, min_vacuum_size=self.DEFAULT_VACUUM_SIZE_FOR_GENERATION
         )
 
-    @property
+    @cached_property
     def all_planes_as_pymatgen_slabs_with_vacuum(self) -> List[PymatgenSlab]:
         return [
             *self.pymatgen_slab_generator_with_vacuum.get_slabs(symmetrize=True),
@@ -69,7 +70,7 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
             # *self.pymatgen_slab_generator_with_vacuum.get_slabs(symmetrize=False),
         ]
 
-    @property
+    @cached_property
     def all_planes_as_pymatgen_slabs_without_vacuum(self) -> List[PymatgenSlab]:
         return [
             *self.pymatgen_slab_generator_without_vacuum.get_slabs(symmetrize=self.DEFAULT_SYMMETRIZE),
@@ -85,7 +86,7 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
         and returns empty slab lists (e.g., some nanoribbons, thin 2D materials).
 
         Returns:
-            TerminationHolder: A basic termination using the material's chemical formula
+             TerminationHolder: A basic termination using the material's chemical formula
         """
         formula = self.formula
         fallback_termination = Termination(chemical_elements=formula, space_group_symmetry_label="")
@@ -97,7 +98,7 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
             shift_without_vacuum=0.0,
         )
 
-    @property
+    @cached_property
     def termination_holders(self):
         termination_holders = []
         slabs_with_vacuum = self.all_planes_as_pymatgen_slabs_with_vacuum
@@ -136,15 +137,15 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
 
         return termination_holders
 
-    @property
+    @cached_property
     def terminations_with_vacuum(self) -> List[Termination]:
         return [holder.termination_with_vacuum for holder in self.termination_holders]
 
-    @property
+    @cached_property
     def terminations_without_vacuum(self) -> List[Termination]:
         return [holder.termination_without_vacuum for holder in self.termination_holders]
 
-    @property
+    @cached_property
     def terminations(self):
         return self.terminations_with_vacuum
 

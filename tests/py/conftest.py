@@ -26,7 +26,7 @@ def custom_warn(message, category=None, *args, **kwargs):
     # These warnings always appear to come from inside spglib itself.
     # This patch intercepts `warnings.warn` to ignore only those specific messages.
 
-    if isinstance(message, str) and "SpglibDataset" in message and category == DeprecationWarning:
+    if isinstance(message, str) and "SpglibDataset" in message and category is DeprecationWarning:
         return  # suppress
     return _orig_warn(message, category, *args, **kwargs)
 

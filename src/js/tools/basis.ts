@@ -1,12 +1,13 @@
-import { math } from "@mat3ra/code/dist/js/math";
 import { Coordinate3DSchema } from "@mat3ra/esse/dist/js/types";
+import { Utils } from "@mat3ra/utils";
 import { chunk, flatten } from "lodash";
 
 import { Basis } from "../basis/basis";
 import { AtomicCoordinateValue, Coordinate } from "../basis/coordinates";
 
-const ADD = math.add;
-const MULT = math.multiply;
+
+const ADD = Utils.math.add;
+const MULT = Utils.math.multiply;
 
 /**
  * Returns a repeated basis of a crystal.

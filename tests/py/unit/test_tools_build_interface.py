@@ -23,11 +23,10 @@ from mat3ra.made.tools.build.compound_pristine_structures.two_dimensional.interf
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.nanoribbon.helpers import create_nanoribbon
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import SlabBuilder, SlabConfiguration
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.helpers import create_slab
-from mat3ra.made.tools.helpers import create_interface_simple, create_interface_simple_between_slabs
-
 from mat3ra.made.tools.build_components.entities.reusable.one_dimensional.crystal_lattice_lines.edge_types import (
     EdgeTypesEnum,
 )
+from mat3ra.made.tools.helpers import create_interface_simple, create_interface_simple_between_slabs
 from unit.fixtures.bulk import BULK_Ge_CONVENTIONAL, BULK_Ni_PRIMITIVE, BULK_Si_CONVENTIONAL
 
 from .fixtures.interface.commensurate import INTERFACE_GRAPHENE_GRAPHENE_X, INTERFACE_GRAPHENE_GRAPHENE_Z
