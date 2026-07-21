@@ -879,7 +879,7 @@ const POINTS = {
 export function symmetryPoints(lattice: Lattice) {
     return [
         {
-            point: "Г",
+            point: "Γ",
             coordinates: [0.0, 0.0, 0.0],
         },
     ].concat(POINTS[lattice.type](lattice) || []);

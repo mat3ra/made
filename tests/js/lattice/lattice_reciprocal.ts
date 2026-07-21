@@ -14,7 +14,7 @@ describe("Lattice Reciprocal", () => {
         const lattice = new ReciprocalLattice(Na4Cl4.lattice as LatticeSchema);
         const expectedPath = [
             {
-                point: "Г",
+                point: "Γ",
                 steps: 0,
                 coordinates: [0, 0, 0],
             },
@@ -54,7 +54,7 @@ describe("Lattice Reciprocal", () => {
         const actualPoints = lattice.symmetryPoints;
         const expectedPoints = [
             {
-                point: "Г",
+                point: "Γ",
                 coordinates: [0, 0, 0],
             },
             {

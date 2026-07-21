@@ -367,7 +367,7 @@ def get_symmetry_points(lattice: Any) -> List[dict]:
     """
     lattice_type = lattice.type.value if hasattr(lattice.type, "value") else str(lattice.type)
 
-    gamma_point = [{"point": "Г", "coordinates": [0.0, 0.0, 0.0]}]
+    gamma_point = [{"point": "Γ", "coordinates": [0.0, 0.0, 0.0]}]
 
     points_fn = POINTS.get(lattice_type)
     if points_fn is None:

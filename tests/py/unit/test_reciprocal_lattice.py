@@ -5,18 +5,18 @@ from mat3ra.utils import assertion as assertion_utils
 
 
 def test_reciprocal_lattice_symmetry_points_cub():
-    """CUB lattice should have Г, R, X, M symmetry points."""
+    """CUB lattice should have Γ, R, X, M symmetry points."""
     lattice = ReciprocalLattice(a=5.64, b=5.64, c=5.64, type="CUB")
     points = lattice.symmetry_points
     labels = [p["point"] for p in points]
-    assert labels == ["Г", "R", "X", "M"]
+    assert labels == ["Γ", "R", "X", "M"]
 
 
 def test_reciprocal_lattice_default_kpoint_path_cub():
     lattice = ReciprocalLattice(a=5.64, b=5.64, c=5.64, type="CUB")
     path = lattice.default_kpoint_path
     labels = [p["point"] for p in path]
-    assert labels == ["Г", "X", "M", "Г", "R", "X", "M", "R"]
+    assert labels == ["Γ", "X", "M", "Γ", "R", "X", "M", "R"]
 
 
 def test_reciprocal_lattice_default_kpoint_path_bct():
@@ -32,7 +32,7 @@ def test_reciprocal_lattice_extract_kpoint_path():
     data_points = [[0, 0, 0], [0.5, 0.5, 0.5]]
     result = lattice.extract_kpoint_path(data_points)
     assert len(result) == 2
-    assert result[0]["point"] == "Г"
+    assert result[0]["point"] == "Γ"
     assert result[0]["steps"] == 0
     assert result[1]["point"] == "R"
     assert result[1]["steps"] == 1
