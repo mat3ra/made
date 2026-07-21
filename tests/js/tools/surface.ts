@@ -9,8 +9,7 @@ import { Silicon, SiSlab100, SiSlab111, SiSlab111NoVacuum } from "../fixtures";
 const { assertDeepAlmostEqual } = Utils.assertion;
 
 const toJSONWithoutHash = (material: Material) => {
-    const { hash: _, ...json } = material.toJSON();
-    return json;
+    return material.toJSON();
 };
 
 const generateSlabWithVacuum = (slabConfig: SlabConfigSchema, vacuumRatio: number) => {

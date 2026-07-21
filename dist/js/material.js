@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Material = exports.defaultMaterialConfig = void 0;
 const entity_1 = require("@mat3ra/code/dist/js/entity");
 const DefaultableMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/DefaultableMixin");
-const HashedEntityMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/HashedEntityMixin");
 const HasMetadataMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/HasMetadataMixin");
 const NamedEntityMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin");
 const crypto_js_1 = __importDefault(require("crypto-js"));
@@ -72,7 +71,6 @@ class BaseMaterial extends entity_1.InMemoryEntity {
 (0, NamedEntityMixin_1.namedEntityMixin)(BaseMaterial.prototype);
 (0, DefaultableMixin_1.defaultableEntityMixin)(BaseMaterial);
 (0, HasMetadataMixin_1.hasMetadataMixin)(BaseMaterial.prototype);
-(0, HashedEntityMixin_1.hashedEntityMixin)(BaseMaterial.prototype);
 class Material extends BaseMaterial {
     static get defaultConfig() {
         return exports.defaultMaterialConfig;
@@ -86,27 +84,22 @@ class Material extends BaseMaterial {
         };
     }
     constructor(config, constraints = []) {
-        var _a, _b, _c, _d, _e, _f;
+        var _a, _b, _c, _d;
         super({
             ...config,
             formula: (_a = config.formula) !== null && _a !== void 0 ? _a : "",
             name: (_c = (_b = config.name) !== null && _b !== void 0 ? _b : config.formula) !== null && _c !== void 0 ? _c : "",
             metadata: (_d = config.metadata) !== null && _d !== void 0 ? _d : {},
-            hash: (_e = config.hash) !== null && _e !== void 0 ? _e : "",
         });
         this.constraints = [];
         this.formula = config.formula || this.getBasis().formula;
         this.name = this.name || this.formula;
         this.constraints = constraints;
-        this.hash = (_f = config.hash) !== null && _f !== void 0 ? _f : this.calculateHash("", false, this.isNonPeriodic);
     }
     updateFormula() {
         const basis = this.getBasis();
         this.formula = basis.formula;
         this.unitCellFormula = basis.unitCellFormula;
-    }
-    updateHash() {
-        this.hash = this.calculateHash("", false, this.isNonPeriodic);
     }
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
@@ -132,7 +125,6 @@ class Material extends BaseMaterial {
         this.constraints = constraints;
         this.unsetFileProps();
         this.updateFormula();
-        this.updateHash();
     }
     getBasis(constraints) {
         const basisData = this.basis;
@@ -153,7 +145,6 @@ class Material extends BaseMaterial {
         this.basis = basis.toJSON();
         this.lattice = lattice;
         this.unsetFileProps();
-        this.updateHash();
     }
     getLattice() {
         return new lattice_1.Lattice(this.lattice);
@@ -206,7 +197,6 @@ class Material extends BaseMaterial {
      */
     toCrystal(constraints = []) {
         this.basis = this.getBasis(constraints).toCrystal().toJSON();
-        this.updateHash();
     }
     /**
      * Converts current material's basis coordinates to cartesian.
@@ -214,7 +204,6 @@ class Material extends BaseMaterial {
      */
     toCartesian(constraints = []) {
         this.basis = this.getBasis(constraints).toCartesian().toJSON();
-        this.updateHash();
     }
     /**
      * Returns material's basis in XYZ format.

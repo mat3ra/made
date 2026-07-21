@@ -7,6 +7,7 @@ import { DEFAULT_LATTICE_UNITS, LATTICE_TYPE_CONFIGS } from "./lattice/lattice_t
 import { ReciprocalLattice } from "./lattice/reciprocal/lattice_reciprocal";
 import { UnitCell } from "./lattice/unit_cell";
 import { defaultMaterialConfig, Material } from "./material";
+import { MaterialHashed } from "./material_hashed";
 import parsers from "./parsers/parsers";
 import tools from "./tools/index";
 export declare const Made: {
@@ -33,6 +34,7 @@ export declare const Made: {
         cartesian: string;
     };
     Material: typeof Material;
+    MaterialHashed: typeof MaterialHashed;
     defaultMaterialConfig: import("./material").MaterialConfig;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
@@ -101,4 +103,4 @@ export declare const Made: {
         };
     };
 };
-export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, defaultMaterialConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };
+export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, MaterialHashed, defaultMaterialConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };

@@ -35,10 +35,10 @@
         "@babel/runtime-corejs3": "^7.29.7",
         "@exabyte-io/eslint-config": "^2026.7.3-0",
         "@mat3ra/code": "https://github.com/Exabyte-io/code/archive/e5f03b02102f51a5792e0b8c4fedac3860aaf7ed.tar.gz",
-        "@mat3ra/esse": "https://github.com/mat3ra/esse/tarball/55306425f1d697aa150ee5ed8cf5cbca3cfa5b5e",
+        "@mat3ra/esse": "https://github.com/mat3ra/esse/archive/197e69ec146d9903f39c093ae21f5fd7e1e4229e.tar.gz",
+        "@mat3ra/standata": "2026.6.30-0",
         "@mat3ra/tsconfig": "^2024.6.3-0",
         "@mat3ra/utils": "^2026.7.8-0",
-        "@mat3ra/standata": "2026.6.30-0",
         "@types/crypto-js": "^4.2.2",
         "@typescript-eslint/eslint-plugin": "^5.62.0",
         "@typescript-eslint/parser": "^5.62.0",
@@ -60,8 +60,8 @@
         "husky": "^7.0.4",
         "lint-staged": "^12.5.0",
         "mocha": "10.8.2",
-        "prettier": "^2.8.8",
-        "nyc": "^15.1.0"
+        "nyc": "^15.1.0",
+        "prettier": "^2.8.8"
     },
     "dependencies": {
         "@babel/core": "^7.29.7",
