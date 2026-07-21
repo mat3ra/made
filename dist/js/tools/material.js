@@ -15,7 +15,7 @@ function scaleOneLatticeVector(material, key = "a", factor = 1.0) {
         throw new Error("Lattice vectors are undefined");
     }
     lattice.vectors[key] = lattice.vectors[key].map((v) => v * factor);
-    material.lattice = lattice_1.Lattice.fromVectors(lattice.vectors).toJSON();
+    material.setLattice(lattice_1.Lattice.fromVectors(lattice.vectors).toJSON());
 }
 /**
  * Updates the size of a materials lattice using the minimumLatticeSize function.
@@ -23,10 +23,10 @@ function scaleOneLatticeVector(material, key = "a", factor = 1.0) {
  * @param material {Material}
  */
 function scaleLatticeToMakeNonPeriodic(material) {
-    material.lattice = lattice_1.Lattice.fromConfigPartial({
-        a: material.Basis.getMinimumLatticeSize(),
+    material.setLattice(lattice_1.Lattice.fromConfigPartial({
+        a: material.getBasis().getMinimumLatticeSize(),
         type: "CUB",
-    }).toJSON();
+    }).toJSON());
 }
 /**
  * Updates the basis of a material by translating the coordinates
@@ -34,11 +34,12 @@ function scaleLatticeToMakeNonPeriodic(material) {
  * @param material {Material}
  * */
 function translateAtomsToCenter(material) {
-    const originalUnits = material.Basis.units;
+    const basis = material.getBasis();
+    const originalUnits = basis.units;
     material.toCartesian();
-    const updatedBasis = material.Basis;
+    const updatedBasis = basis.toCartesian();
     const centerOfCoordinates = updatedBasis.centerOfCoordinatesPoint;
-    const centerOfLattice = utils_1.Utils.math.multiply(0.5, material.Lattice.vectorArrays.reduce((a, b) => utils_1.Utils.math.add(a, b)));
+    const centerOfLattice = utils_1.Utils.math.multiply(0.5, material.getLattice().vectorArrays.reduce((a, b) => utils_1.Utils.math.add(a, b)));
     const translationVector = utils_1.Utils.math.subtract(centerOfLattice, centerOfCoordinates);
     updatedBasis.translateByVector(translationVector);
     material.setBasis(updatedBasis.toJSON());

@@ -1,4 +1,8 @@
-import { Coordinate3DSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
+import {
+    type MaterialSchema,
+    Coordinate3DSchema,
+    Matrix3X3Schema,
+} from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
 import { Basis } from "../basis/basis";
@@ -7,7 +11,6 @@ import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
 import type { Material } from "../material";
 import cellTools from "./cell";
-
 
 const ADD = Utils.math.add;
 
@@ -53,18 +56,19 @@ function generateNewBasisWithinSupercell(
 
 /**
  * @summary Generates supercell config for the specified material.
- * @param material
- * @param supercellMatrix {Number[][]}
  */
-function generateConfig(material: Material, supercellMatrix: Matrix3X3Schema) {
+function generateConfig<S extends MaterialSchema = MaterialSchema>(
+    material: Material<S>,
+    supercellMatrix: Matrix3X3Schema,
+) {
     const det = Utils.math.det(supercellMatrix);
     if (det === 0) {
         throw new Error("Scaling matrix is degenerate.");
     }
-    const cell = material.Lattice.vectors;
+    const cell = material.getLattice().vectors;
     const supercell = cell.cloneAndScaleByMatrix(supercellMatrix);
     const newBasis = generateNewBasisWithinSupercell(
-        material.Basis,
+        material.getBasis(),
         cell,
         supercell,
         supercellMatrix,

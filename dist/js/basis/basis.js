@@ -84,8 +84,6 @@ class Basis extends entity_1.InMemoryEntity {
     set labels(labels) {
         this._labels = labels_1.Labels.fromObjects(labels || []);
     }
-    // TODO: figure out how to override toJSON in the parent class with generic classes
-    // @ts-ignore
     toJSON(exclude = ["cell"]) {
         var _a;
         return {
@@ -96,7 +94,6 @@ class Basis extends entity_1.InMemoryEntity {
             ...(((_a = this.labels) === null || _a === void 0 ? void 0 : _a.length) ? { labels: this.labels } : {}),
         };
     }
-    // @ts-ignore
     clone() {
         const instance = super.clone();
         instance.cell = this.cell.clone();
@@ -127,15 +124,17 @@ class Basis extends entity_1.InMemoryEntity {
     }
     toCartesian() {
         if (this.isInCartesianUnits)
-            return;
+            return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCartesian(point));
         this.units = constants_1.ATOMIC_COORD_UNITS.cartesian;
+        return this;
     }
     toCrystal() {
         if (this.isInCrystalUnits)
-            return;
+            return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCrystal(point));
         this.units = constants_1.ATOMIC_COORD_UNITS.crystal;
+        return this;
     }
     getElementByIndex(idx) {
         return this._elements.getElementValueByIndex(idx);

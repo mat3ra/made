@@ -1,5 +1,5 @@
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { BasisSchema, Coordinate3DSchema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import { BasisSchema, Coordinate3DSchema, Vector3DSchema, BaseInMemoryEntitySchema } from "@mat3ra/esse/dist/js/types";
 import { Cell } from "../cell/cell";
 import { AtomicCoordinateValue, Coordinates } from "./coordinates";
 import { AtomicElementValue, Elements } from "./elements";
@@ -30,7 +30,8 @@ export interface ElementsAndCoordinatesConfig {
     units?: BasisSchema["units"];
     cell?: Cell;
 }
-export declare class Basis extends InMemoryEntity implements BasisSchema {
+type BasisEntitySchema = BasisConfig & BaseInMemoryEntitySchema;
+export declare class Basis extends InMemoryEntity<BasisEntitySchema> implements BasisSchema {
     static defaultConfig: BasisSchema;
     units: BasisSchema["units"];
     cell: Cell;
@@ -46,8 +47,8 @@ export declare class Basis extends InMemoryEntity implements BasisSchema {
     set coordinates(coordinates: BasisSchema["coordinates"]);
     get labels(): BasisSchema["labels"];
     set labels(labels: BasisSchema["labels"]);
-    toJSON(exclude?: string[]): BasisSchema;
-    clone(): Basis;
+    toJSON(exclude?: (keyof BasisConfig)[]): BasisSchema;
+    clone(): this;
     removeAllAtoms(): void;
     get cellRounded(): import("@mat3ra/esse/dist/js/types").Matrix3X3Schema;
     get elementsArray(): object[];
@@ -55,8 +56,8 @@ export declare class Basis extends InMemoryEntity implements BasisSchema {
     get coordinatesAsArray(): Coordinate3DSchema[];
     get isInCartesianUnits(): boolean;
     get isInCrystalUnits(): boolean;
-    toCartesian(): void;
-    toCrystal(): void;
+    toCartesian(): this;
+    toCrystal(): this;
     getElementByIndex(idx: number): AtomicElementValue;
     getElementById(id: number): AtomicElementValue;
     getCoordinateValueByIndex(idx: number): AtomicCoordinateValue;

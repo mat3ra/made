@@ -1,38 +1,27 @@
-import { type DefaultableInMemoryEntity, InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { type HasConsistencyChecks } from "@mat3ra/code/dist/js/entity/mixins/HasConsistencyChecksMixin";
+import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
+import { type Defaultable } from "@mat3ra/code/dist/js/entity/mixins/DefaultableMixin";
 import { type HasMetadata } from "@mat3ra/code/dist/js/entity/mixins/HasMetadataMixin";
-import type { AnyObject } from "@mat3ra/esse/dist/js/esse/types";
-import type { AtomicConstraintsSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { type NamedEntity } from "@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin";
+import type { AtomicConstraintsSchema, BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import type { BasisConfig } from "./basis/basis";
-import { type ConstrainedBasisConfig, ConstrainedBasis } from "./basis/constrained_basis";
-import { Constraint } from "./constraints/constraints";
+import { ConstrainedBasis } from "./basis/constrained_basis";
+import { type MaterialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
-interface Material extends HasConsistencyChecks, DefaultableInMemoryEntity, Required<HasMetadata<MaterialSchema["metadata"]>> {
+export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+type Schema = MaterialSchema;
+export type MaterialConfig<S extends Schema = Schema> = PartialBy<S, "name" | "metadata">;
+export declare const defaultMaterialConfig: Schema;
+interface BaseMaterial extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<Schema["metadata"]>> {
 }
-type MaterialSchemaWithConsistencyChecksAsString = Omit<MaterialSchema, "consistencyChecks"> & {
-    consistencyChecks?: ConsistencyCheck[];
-};
-type OptionallyConstrainedBasisConfig = BasisConfig & Partial<Pick<ConstrainedBasisConfig, "constraints">>;
-type Schema = MaterialSchemaWithConsistencyChecksAsString;
-export declare const defaultMaterialConfig: MaterialSchema;
-declare class Material extends InMemoryEntity implements Schema {
+declare class BaseMaterial<S extends Schema = Schema> extends InMemoryEntity<S> {
+}
+declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Schema {
     static createDefault: () => Material;
-    static get defaultConfig(): MaterialSchema;
+    static get defaultConfig(): MaterialConfig;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
-    get name(): string;
-    set name(name: string);
-    get src(): FileSourceSchema | undefined;
-    set src(src: FileSourceSchema | undefined);
+    private constraints;
+    constructor(config: NoInfer<MaterialConfig<S>>, constraints?: AtomicConstraintsSchema);
     updateFormula(): void;
-    /**
-     * Gets Bolean value for whether or not a material is non-periodic vs periodic.
-     * False = periodic, True = non-periodic
-     */
-    get isNonPeriodic(): boolean;
-    /**
-     * @summary Sets the value of isNonPeriodic based on Boolean value passed as an argument.
-     */
-    set isNonPeriodic(bool: boolean);
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
      */
@@ -71,29 +60,16 @@ declare class Material extends InMemoryEntity implements Schema {
      * @summary Returns the derived properties array for a material.
      */
     getDerivedProperties(): DerivedPropertiesSchema;
-    /**
-     * Gets material's formula
-     */
-    get formula(): string;
-    get unitCellFormula(): string;
     unsetFileProps(): void;
-    /**
-     * @param textOrObject Basis text or JSON object.
-     * @param format Format (xyz, etc.)
-     * @param unitz crystal/cartesian
-     */
-    setBasis(textOrObject: string | BasisConfig, format?: string, unitz?: string): void;
-    setBasisConstraints(constraints: Constraint[]): void;
-    setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema): void;
-    get basis(): OptionallyConstrainedBasisConfig;
-    get Basis(): ConstrainedBasis;
+    setBasis(basis: BasisConfig): void;
+    setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
+    getBasis(constraints?: AtomicConstraintsSchema): ConstrainedBasis;
+    setLattice(lattice: LatticeSchema): void;
+    getLattice(): Lattice;
     /**
      * High-level access to unique elements from material instead of basis.
      */
     get uniqueElements(): ("H" | "He" | "Li" | "Be" | "B" | "C" | "N" | "O" | "F" | "Ne" | "Na" | "Mg" | "Al" | "Si" | "P" | "S" | "Cl" | "Ar" | "K" | "Ca" | "Sc" | "Ti" | "V" | "Cr" | "Mn" | "Fe" | "Co" | "Ni" | "Cu" | "Zn" | "Ga" | "Ge" | "As" | "Se" | "Br" | "Kr" | "Rb" | "Sr" | "Y" | "Zr" | "Nb" | "Mo" | "Tc" | "Ru" | "Rh" | "Pd" | "Ag" | "Cd" | "In" | "Sn" | "Sb" | "Te" | "I" | "Xe" | "Cs" | "Ba" | "La" | "Ce" | "Pr" | "Nd" | "Pm" | "Sm" | "Eu" | "Gd" | "Tb" | "Dy" | "Ho" | "Er" | "Tm" | "Yb" | "Lu" | "Hf" | "Ta" | "W" | "Re" | "Os" | "Ir" | "Pt" | "Au" | "Hg" | "Tl" | "Pb" | "Bi" | "Po" | "At" | "Rn" | "Fr" | "Ra" | "Ac" | "Th" | "Pa" | "U" | "Np" | "Pu" | "Am" | "Cm" | "Bk" | "Cf" | "Es" | "Fm" | "Md" | "No" | "Lr" | "Rf" | "Db" | "Sg" | "Bh" | "Hs" | "Mt" | "Ds" | "Rg" | "Cn" | "Nh" | "Fl" | "Mc" | "Lv" | "Ts" | "Og" | "X" | "Vac")[];
-    get lattice(): LatticeSchema;
-    set lattice(config: LatticeSchema);
-    get Lattice(): Lattice;
     /**
      * Returns the inchi string from the derivedProperties for a non-periodic material, or throws an error if the
      *  inchi cannot be found.
@@ -111,23 +87,15 @@ declare class Material extends InMemoryEntity implements Schema {
      * @param isScaled Whether to scale the lattice parameter 'a' to 1.
      */
     calculateHash(salt?: string, isScaled?: boolean, bypassNonPeriodicCheck?: boolean): string;
-    set hash(hash: string);
-    get hash(): string;
-    /**
-     * Calculates hash from basis and lattice as above + scales lattice properties to make lattice.a = 1
-     */
-    get scaledHash(): string;
-    get external(): MaterialSchema["external"];
-    set external(external: MaterialSchema["external"]);
     /**
      * Converts basis to crystal/fractional coordinates.
      */
-    toCrystal(): void;
+    toCrystal(constraints?: AtomicConstraintsSchema): void;
     /**
      * Converts current material's basis coordinates to cartesian.
      * No changes if coordinates already cartesian.
      */
-    toCartesian(): void;
+    toCartesian(constraints?: AtomicConstraintsSchema): void;
     /**
      * Returns material's basis in XYZ format.
      */
@@ -164,6 +132,6 @@ declare class Material extends InMemoryEntity implements Schema {
      * @returns Array of checks results
      */
     getBasisConsistencyChecks(): ConsistencyCheck[];
-    toJSON(): MaterialSchema & AnyObject;
+    toJSON(): S;
 }
 export { Material };

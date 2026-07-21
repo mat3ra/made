@@ -7,6 +7,7 @@ import { DEFAULT_LATTICE_UNITS, LATTICE_TYPE_CONFIGS } from "./lattice/lattice_t
 import { ReciprocalLattice } from "./lattice/reciprocal/lattice_reciprocal";
 import { UnitCell } from "./lattice/unit_cell";
 import { defaultMaterialConfig, Material } from "./material";
+import { MaterialHashed } from "./material_hashed";
 import parsers from "./parsers/parsers";
 import tools from "./tools/index";
 export declare const Made: {
@@ -33,6 +34,7 @@ export declare const Made: {
         cartesian: string;
     };
     Material: typeof Material;
+    MaterialHashed: typeof MaterialHashed;
     defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
@@ -71,10 +73,10 @@ export declare const Made: {
     };
     tools: {
         surface: {
-            generateConfig: (material: Material, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
+            generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: Material<S>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
         };
         supercell: {
-            generateConfig: (material: Material, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
+            generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: Material<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
                 name: string;
                 basis: import("@mat3ra/esse/dist/js/types").BasisSchema;
                 lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;
@@ -101,4 +103,4 @@ export declare const Made: {
         };
     };
 };
-export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, defaultMaterialConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };
+export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, MaterialHashed, defaultMaterialConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };

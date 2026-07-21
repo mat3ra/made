@@ -258,8 +258,7 @@ class Lattice extends entity_1.InMemoryEntity {
         }
         return object;
     }
-    // @ts-ignore
-    toJSON(exclude) {
+    toJSON(exclude = []) {
         return {
             ...super.toJSON(exclude),
             vectors: this.vectors.toJSON(),

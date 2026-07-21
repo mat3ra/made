@@ -15,7 +15,7 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
  * @extends Basis
  */
 export declare class ConstrainedBasis extends Basis {
-    _constraints: AtomicConstraints;
+    private _constraints;
     constructor(config: ConstrainedBasisConfig);
     static fromElementsCoordinatesAndConstraints(config: ElementsCoordinatesAndConstraintsConfig): ConstrainedBasis;
     get constraints(): AtomicConstraintsSchema;

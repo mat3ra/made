@@ -1,6 +1,6 @@
 import {
+    type MaterialSchema,
     Coordinate3DSchema,
-    MaterialSchema,
     Matrix3X3Schema,
     Vector3DSchema,
 } from "@mat3ra/esse/dist/js/types";
@@ -8,7 +8,7 @@ import { Utils } from "@mat3ra/utils";
 
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
-import { Material } from "../material";
+import { type MaterialConfig, Material } from "../material";
 import SupercellTools from "./supercell";
 
 const MULT = Utils.math.multiply;
@@ -158,7 +158,7 @@ function getDimensionsScalingMatrix(
     return transformationMatrix as Matrix3X3Schema;
 }
 
-export type SlabConfigSchema = MaterialSchema & {
+export type SlabConfigSchema = MaterialConfig & {
     outOfPlaneAxisIndex: number;
 };
 
@@ -171,8 +171,8 @@ export type SlabConfigSchema = MaterialSchema & {
  * @param vy {Number} Size of lateral supercell along the direction of the second (y) cell vector (Positive Integer).
  * @return {Object}
  */
-function generateConfig(
-    material: Material,
+function generateConfig<S extends MaterialSchema = MaterialSchema>(
+    material: Material<S>,
     millerIndices: Coordinate3DSchema,
     numberOfLayers = 1,
     vx = 1,
@@ -181,7 +181,7 @@ function generateConfig(
     if (numberOfLayers < 1)
         throw new Error("Made.tools.surface.generateConfig: number of layers < 1.");
 
-    const cell = material.Lattice.vectors;
+    const cell = material.getLattice().vectors;
     const millerScalingMatrix = getMillerScalingMatrix(cell, millerIndices);
     const millerSupercell = cell.cloneAndScaleByMatrix(millerScalingMatrix);
     const millerPlanePseudoNormal = cell.convertPointToCartesian(millerIndices);
@@ -195,7 +195,7 @@ function generateConfig(
     );
     const supercellMatrix = MULT(dimensionsScalingMatrix, millerScalingMatrix);
     const supercell = millerSupercell.cloneAndScaleByMatrix(dimensionsScalingMatrix);
-    const tempBasis = material.Basis.clone();
+    const tempBasis = material.getBasis().clone();
     const newBasis = SupercellTools.generateNewBasisWithinSupercell(
         tempBasis,
         cell,

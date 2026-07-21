@@ -6,15 +6,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Material = exports.defaultMaterialConfig = void 0;
 const entity_1 = require("@mat3ra/code/dist/js/entity");
 const DefaultableMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/DefaultableMixin");
-const HasConsistencyChecksMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/HasConsistencyChecksMixin");
 const HasMetadataMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/HasMetadataMixin");
+const NamedEntityMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin");
 const crypto_js_1 = __importDefault(require("crypto-js"));
 const constrained_basis_1 = require("./basis/constrained_basis");
 const conventional_cell_1 = require("./cell/conventional_cell");
-const constraints_1 = require("./constraints/constraints");
+const MaterialSchemaMixin_1 = require("./generated/MaterialSchemaMixin");
 const lattice_1 = require("./lattice/lattice");
 const parsers_1 = __importDefault(require("./parsers/parsers"));
 const supercell_1 = __importDefault(require("./tools/supercell"));
+function parseBasis(textOrObject, format, unitz) {
+    if (typeof textOrObject === "string") {
+        if (format !== "xyz") {
+            throw new Error("Invalid format");
+        }
+        return parsers_1.default.xyz.toBasisConfig(textOrObject, unitz);
+    }
+    return { constraints: [], ...textOrObject };
+}
 exports.defaultMaterialConfig = {
     name: "Silicon FCC",
     basis: {
@@ -56,7 +65,13 @@ exports.defaultMaterialConfig = {
     },
     metadata: {},
 };
-class Material extends entity_1.InMemoryEntity {
+class BaseMaterial extends entity_1.InMemoryEntity {
+}
+(0, MaterialSchemaMixin_1.materialSchemaMixin)(BaseMaterial.prototype);
+(0, NamedEntityMixin_1.namedEntityMixin)(BaseMaterial.prototype);
+(0, DefaultableMixin_1.defaultableEntityMixin)(BaseMaterial);
+(0, HasMetadataMixin_1.hasMetadataMixin)(BaseMaterial.prototype);
+class Material extends BaseMaterial {
     static get defaultConfig() {
         return exports.defaultMaterialConfig;
     }
@@ -68,35 +83,24 @@ class Material extends entity_1.InMemoryEntity {
             hash: crypto_js_1.default.MD5(fileContent).toString(),
         };
     }
-    get name() {
-        var _a;
-        return (_a = this.prop("name")) !== null && _a !== void 0 ? _a : this.formula; // if name is not set, use formula, but keep empty string
-    }
-    set name(name) {
-        this.setProp("name", name);
-    }
-    get src() {
-        return this.prop("src");
-    }
-    set src(src) {
-        this.setProp("src", src);
+    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
+    constructor(config, constraints = []) {
+        var _a, _b, _c, _d;
+        super({
+            ...config,
+            formula: (_a = config.formula) !== null && _a !== void 0 ? _a : "",
+            name: (_c = (_b = config.name) !== null && _b !== void 0 ? _b : config.formula) !== null && _c !== void 0 ? _c : "",
+            metadata: (_d = config.metadata) !== null && _d !== void 0 ? _d : {},
+        });
+        this.constraints = [];
+        this.formula = config.formula || this.getBasis().formula;
+        this.name = this.name || this.formula;
+        this.constraints = constraints;
     }
     updateFormula() {
-        this.setProp("formula", this.Basis.formula);
-        this.setProp("unitCellFormula", this.Basis.unitCellFormula);
-    }
-    /**
-     * Gets Bolean value for whether or not a material is non-periodic vs periodic.
-     * False = periodic, True = non-periodic
-     */
-    get isNonPeriodic() {
-        return this.prop("isNonPeriodic", false);
-    }
-    /**
-     * @summary Sets the value of isNonPeriodic based on Boolean value passed as an argument.
-     */
-    set isNonPeriodic(bool) {
-        this.setProp("isNonPeriodic", bool);
+        const basis = this.getBasis();
+        this.formula = basis.formula;
+        this.unitCellFormula = basis.unitCellFormula;
     }
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
@@ -108,89 +112,49 @@ class Material extends entity_1.InMemoryEntity {
      * @summary Returns the derived properties array for a material.
      */
     getDerivedProperties() {
-        return this.prop("derivedProperties", []);
-    }
-    /**
-     * Gets material's formula
-     */
-    get formula() {
-        return this.prop("formula") || this.Basis.formula;
-    }
-    get unitCellFormula() {
-        return this.prop("unitCellFormula") || this.Basis.unitCellFormula;
+        var _a;
+        return (_a = this.derivedProperties) !== null && _a !== void 0 ? _a : [];
     }
     unsetFileProps() {
         this.unsetProp("src");
         this.unsetProp("icsdId");
         this.unsetProp("external");
     }
-    /**
-     * @param textOrObject Basis text or JSON object.
-     * @param format Format (xyz, etc.)
-     * @param unitz crystal/cartesian
-     */
     setBasis(textOrObject, format, unitz) {
-        let basis;
-        if (typeof textOrObject === "string" && format === "xyz") {
-            basis = parsers_1.default.xyz.toBasisConfig(textOrObject, unitz);
-        }
-        else {
-            basis = textOrObject;
-        }
-        this.setProp("basis", basis);
+        const { constraints, ...basis } = parseBasis(textOrObject, format, unitz);
+        this.basis = basis;
+        this.constraints = constraints;
         this.unsetFileProps();
         this.updateFormula();
     }
-    setBasisConstraints(constraints) {
-        const basisWithConstraints = {
-            ...this.basis,
-            constraints: constraints.map((c) => c.toJSON()),
-        };
-        this.setBasis(basisWithConstraints);
-    }
-    setBasisConstraintsFromArrayOfObjects(constraints) {
-        const constraintsInstances = constraints.map((c) => {
-            return constraints_1.Constraint.fromValueAndId(c.value, c.id);
-        });
-        this.setBasisConstraints(constraintsInstances);
-    }
-    get basis() {
-        return this.requiredProp("basis");
-    }
-    // returns the instance of {ConstrainedBasis} class
-    get Basis() {
+    getBasis(constraints) {
         const basisData = this.basis;
         return new constrained_basis_1.ConstrainedBasis({
             ...basisData,
-            cell: this.Lattice.vectors,
-            constraints: basisData.constraints || [],
+            cell: this.getLattice().vectors,
+            constraints: constraints !== null && constraints !== void 0 ? constraints : this.constraints,
         });
+    }
+    setLattice(lattice) {
+        const basis = this.getBasis();
+        const originalIsInCrystalUnits = basis.isInCrystalUnits;
+        basis.toCartesian();
+        basis.cell = new lattice_1.Lattice(lattice).vectors;
+        if (originalIsInCrystalUnits) {
+            basis.toCrystal();
+        }
+        this.basis = basis.toJSON();
+        this.lattice = lattice;
+        this.unsetFileProps();
+    }
+    getLattice() {
+        return new lattice_1.Lattice(this.lattice);
     }
     /**
      * High-level access to unique elements from material instead of basis.
      */
     get uniqueElements() {
-        return this.Basis.uniqueElements;
-    }
-    get lattice() {
-        return this.prop("lattice");
-    }
-    set lattice(config) {
-        const originalIsInCrystalUnits = this.Basis.isInCrystalUnits;
-        const basis = this.Basis;
-        basis.toCartesian();
-        const newLattice = new lattice_1.Lattice(config);
-        basis.cell = newLattice.vectors;
-        if (originalIsInCrystalUnits)
-            basis.toCrystal();
-        // Preserve all properties from the original basis to ensure constraints are included
-        const newBasisConfig = basis.toJSON();
-        this.setProp("basis", newBasisConfig);
-        this.setProp("lattice", config);
-        this.unsetFileProps();
-    }
-    get Lattice() {
-        return new lattice_1.Lattice(this.lattice);
+        return this.getBasis().uniqueElements;
     }
     /**
      * Returns the inchi string from the derivedProperties for a non-periodic material, or throws an error if the
@@ -218,47 +182,29 @@ class Material extends entity_1.InMemoryEntity {
         let message;
         if (!this.isNonPeriodic || bypassNonPeriodicCheck) {
             message =
-                this.Basis.hashString + "#" + this.Lattice.getHashString(isScaled) + "#" + salt;
+                this.getBasis().hashString +
+                    "#" +
+                    this.getLattice().getHashString(isScaled) +
+                    "#" +
+                    salt;
         }
         else {
             message = this.getInchiStringForHash();
         }
         return crypto_js_1.default.MD5(message).toString();
     }
-    set hash(hash) {
-        this.setProp("hash", hash);
-    }
-    get hash() {
-        return this.prop("hash");
-    }
-    /**
-     * Calculates hash from basis and lattice as above + scales lattice properties to make lattice.a = 1
-     */
-    get scaledHash() {
-        return this.calculateHash("", true);
-    }
-    get external() {
-        return this.prop("external");
-    }
-    set external(external) {
-        this.setProp("external", external);
-    }
     /**
      * Converts basis to crystal/fractional coordinates.
      */
-    toCrystal() {
-        const basis = this.Basis;
-        basis.toCrystal();
-        this.setProp("basis", basis.toJSON());
+    toCrystal(constraints = []) {
+        this.basis = this.getBasis(constraints).toCrystal().toJSON();
     }
     /**
      * Converts current material's basis coordinates to cartesian.
      * No changes if coordinates already cartesian.
      */
-    toCartesian() {
-        const basis = this.Basis;
-        basis.toCartesian();
-        this.setProp("basis", basis.toJSON());
+    toCartesian(constraints = []) {
+        this.basis = this.getBasis(constraints).toCartesian().toJSON();
     }
     /**
      * Returns material's basis in XYZ format.
@@ -298,12 +244,13 @@ class Material extends entity_1.InMemoryEntity {
      */
     getACopyWithConventionalCell() {
         const material = this.clone();
+        const lattice = this.getLattice();
         // if conventional and primitive cells are the same => return a copy.
-        if ((0, conventional_cell_1.isConventionalCellSameAsPrimitiveForLatticeType)(this.Lattice.type)) {
+        if ((0, conventional_cell_1.isConventionalCellSameAsPrimitiveForLatticeType)(lattice.type)) {
             return material;
         }
-        const conventionalSupercellMatrix = conventional_cell_1.PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS[this.Lattice.type];
-        const conventionalLatticeType = conventional_cell_1.PRIMITIVE_TO_CONVENTIONAL_CELL_LATTICE_TYPES[this.Lattice.type];
+        const conventionalSupercellMatrix = conventional_cell_1.PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS[lattice.type];
+        const conventionalLatticeType = conventional_cell_1.PRIMITIVE_TO_CONVENTIONAL_CELL_LATTICE_TYPES[lattice.type];
         const config = supercell_1.default.generateConfig(this, conventionalSupercellMatrix);
         config.lattice.type = conventionalLatticeType;
         config.name = `${this.name} - conventional cell`;
@@ -326,8 +273,8 @@ class Material extends entity_1.InMemoryEntity {
     getBasisConsistencyChecks() {
         const checks = [];
         const limit = 1000;
-        const basis = this.Basis;
-        if (this.Basis.elements.length < limit) {
+        const basis = this.getBasis();
+        if (basis.elements.length < limit) {
             const overlappingAtomsGroups = basis.getOverlappingAtoms();
             overlappingAtomsGroups.forEach(({ id1, id2, element1, element2 }) => {
                 checks.push({
@@ -346,17 +293,14 @@ class Material extends entity_1.InMemoryEntity {
         return checks;
     }
     toJSON() {
-        // validation intoJSON() method will fail if name is not set in _json
-        this.name = this.name || this.formula;
+        const lattice = this.getLattice();
+        const basis = this.getBasis();
         return {
             ...super.toJSON(),
-            lattice: this.Lattice.toJSON(),
-            basis: this.Basis.toJSON(),
+            lattice: lattice.toJSON(),
+            basis: basis.toJSON(),
             isNonPeriodic: this.isNonPeriodic,
         };
     }
 }
 exports.Material = Material;
-(0, DefaultableMixin_1.defaultableEntityMixin)(Material);
-(0, HasConsistencyChecksMixin_1.hasConsistencyChecksMixin)(Material.prototype);
-(0, HasMetadataMixin_1.hasMetadataMixin)(Material.prototype);

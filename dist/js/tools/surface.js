@@ -135,7 +135,7 @@ function getDimensionsScalingMatrix(outOfPlaneAxisIndex, thickness, vx, vy) {
 function generateConfig(material, millerIndices, numberOfLayers = 1, vx = 1, vy = 1) {
     if (numberOfLayers < 1)
         throw new Error("Made.tools.surface.generateConfig: number of layers < 1.");
-    const cell = material.Lattice.vectors;
+    const cell = material.getLattice().vectors;
     const millerScalingMatrix = getMillerScalingMatrix(cell, millerIndices);
     const millerSupercell = cell.cloneAndScaleByMatrix(millerScalingMatrix);
     const millerPlanePseudoNormal = cell.convertPointToCartesian(millerIndices);
@@ -143,7 +143,7 @@ function generateConfig(material, millerIndices, numberOfLayers = 1, vx = 1, vy 
     const dimensionsScalingMatrix = getDimensionsScalingMatrix(outOfPlaneAxisIndex, numberOfLayers, vx, vy);
     const supercellMatrix = MULT(dimensionsScalingMatrix, millerScalingMatrix);
     const supercell = millerSupercell.cloneAndScaleByMatrix(dimensionsScalingMatrix);
-    const tempBasis = material.Basis.clone();
+    const tempBasis = material.getBasis().clone();
     const newBasis = supercell_1.default.generateNewBasisWithinSupercell(tempBasis, cell, supercell, supercellMatrix);
     const newLattice = lattice_1.Lattice.fromVectors({
         a: supercell.vectorArrays[0],

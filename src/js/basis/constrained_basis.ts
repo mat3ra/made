@@ -20,12 +20,11 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
  * @extends Basis
  */
 export class ConstrainedBasis extends Basis {
-    _constraints: AtomicConstraints;
+    private _constraints: AtomicConstraints;
 
     constructor(config: ConstrainedBasisConfig) {
         super(config);
-        const { constraints } = config;
-        this._constraints = AtomicConstraints.fromObjects(constraints || []); // `constraints` is an Array with ids
+        this._constraints = AtomicConstraints.fromObjects(config.constraints); // `constraints` is an Array with ids
     }
 
     static fromElementsCoordinatesAndConstraints(

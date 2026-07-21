@@ -1,7 +1,14 @@
 // @ts-ignore
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { BasisSchema, Coordinate3DSchema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+// import { math } from "@mat3ra/code/dist/js/math";
+// import {
+//     BaseInMemoryEntitySchema,
+//     BasisSchema,
+//     Coordinate3DSchema,
+//     Vector3DSchema,
+// } from "@mat3ra/esse/dist/js/types";
+import { BasisSchema, Coordinate3DSchema, Vector3DSchema, BaseInMemoryEntitySchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { chain, toPairs, uniq, values } from "lodash";
 
@@ -72,7 +79,9 @@ const DEFAULT_BASIS_CONFIG = {
     units: "crystal",
 };
 
-export class Basis extends InMemoryEntity implements BasisSchema {
+type BasisEntitySchema = BasisConfig & BaseInMemoryEntitySchema;
+
+export class Basis extends InMemoryEntity<BasisEntitySchema> implements BasisSchema {
     static defaultConfig: BasisSchema = DEFAULT_BASIS_CONFIG as BasisSchema;
 
     units: BasisSchema["units"];
@@ -156,9 +165,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         this._labels = Labels.fromObjects(labels || []);
     }
 
-    // TODO: figure out how to override toJSON in the parent class with generic classes
-    // @ts-ignore
-    toJSON(exclude: string[] = ["cell"]): BasisSchema {
+    toJSON(exclude: (keyof BasisConfig)[] = ["cell"]): BasisSchema {
         return {
             ...super.toJSON(exclude),
             elements: this.elements,
@@ -168,8 +175,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         };
     }
 
-    // @ts-ignore
-    override clone(): Basis {
+    override clone(): this {
         const instance = super.clone();
         instance.cell = this.cell.clone();
         return instance;
@@ -205,16 +211,18 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         return this.units === ATOMIC_COORD_UNITS.crystal;
     }
 
-    toCartesian(): void {
-        if (this.isInCartesianUnits) return;
+    toCartesian() {
+        if (this.isInCartesianUnits) return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCartesian(point));
         this.units = ATOMIC_COORD_UNITS.cartesian as BasisSchema["units"];
+        return this;
     }
 
-    toCrystal(): void {
-        if (this.isInCrystalUnits) return;
+    toCrystal() {
+        if (this.isInCrystalUnits) return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCrystal(point));
         this.units = ATOMIC_COORD_UNITS.crystal as BasisSchema["units"];
+        return this;
     }
 
     getElementByIndex(idx: number): AtomicElementValue {
