@@ -83,6 +83,7 @@ class Material extends BaseMaterial {
             hash: crypto_js_1.default.MD5(fileContent).toString(),
         };
     }
+    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
     constructor(config, constraints = []) {
         var _a, _b, _c, _d;
         super({

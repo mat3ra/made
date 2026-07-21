@@ -7,10 +7,15 @@ class MaterialHashed extends material_1.Material {
     static get defaultConfig() {
         return material_1.defaultMaterialConfig;
     }
+    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
     constructor(config, constraints = []) {
-        var _a;
-        super(config, constraints);
-        this.hash = (_a = config.hash) !== null && _a !== void 0 ? _a : this.calculateHash("", false, this.isNonPeriodic);
+        var _a, _b;
+        // MaterialConfig<S> still requires hash; use a placeholder until calculateHash can run.
+        super({
+            ...config,
+            hash: (_a = config.hash) !== null && _a !== void 0 ? _a : "",
+        }, constraints);
+        this.hash = (_b = config.hash) !== null && _b !== void 0 ? _b : this.calculateHash("", false, this.isNonPeriodic);
     }
     get basis() {
         return super.basis;

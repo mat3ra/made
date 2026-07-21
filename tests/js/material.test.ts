@@ -1,3 +1,4 @@
+import type { MaterialHashedSchema } from "@mat3ra/esse/dist/js/types";
 import { expect } from "chai";
 
 import { Material } from "../../src/js/material";
@@ -83,6 +84,26 @@ describe("MaterialHashed", () => {
             });
             expect(material.hash).to.equal(material.calculateHash());
             expect(material.hash).to.not.equal(previousHash);
+        });
+    });
+
+    describe("generic schema wrapper", () => {
+        type WiderMaterialHashedSchema = MaterialHashedSchema & { webappOnly?: string };
+
+        class WiderMaterialHashed extends MaterialHashed<WiderMaterialHashedSchema> {}
+
+        it("allows subclasses to widen _json typing and storage", () => {
+            const material = new WiderMaterialHashed(Silicon);
+
+            material._json.webappOnly = "webapp-value";
+            expect(material._json.webappOnly).to.equal("webapp-value");
+
+            // toJSON rebuilds from schema-shaped fields; _json retains widened keys.
+            expect(material.toJSON().name).to.equal(Silicon.name);
+            expect(material._json.webappOnly).to.equal("webapp-value");
+
+            material._json.webappOnly = "updated";
+            expect(material._json.webappOnly).to.equal("updated");
         });
     });
 });

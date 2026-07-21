@@ -8,22 +8,38 @@ import type {
     MaterialSchema,
 } from "@mat3ra/esse/dist/js/types";
 
-import { type PartialBy, defaultMaterialConfig, Material } from "./material";
+import { type MaterialConfig, type PartialBy, defaultMaterialConfig, Material } from "./material";
 
-export type MaterialHashedConfig = PartialBy<MaterialHashedSchema, "name" | "metadata" | "hash">;
+type Schema = MaterialHashedSchema;
+
+export type MaterialHashedConfig<S extends Schema = Schema> = PartialBy<
+    S,
+    "name" | "metadata" | "hash"
+>;
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface MaterialHashed extends HashedSchemaMixin {}
 
-class MaterialHashed extends Material implements MaterialHashedSchema {
+class MaterialHashed<S extends Schema = Schema> extends Material<S> implements Schema {
     declare static createDefault: () => MaterialHashed;
 
     static get defaultConfig(): MaterialHashedConfig {
         return defaultMaterialConfig;
     }
 
-    constructor(config: MaterialHashedConfig, constraints: AtomicConstraintsSchema = []) {
-        super(config, constraints);
+    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
+    constructor(
+        config: NoInfer<MaterialHashedConfig<S>>,
+        constraints: AtomicConstraintsSchema = [],
+    ) {
+        // MaterialConfig<S> still requires hash; use a placeholder until calculateHash can run.
+        super(
+            {
+                ...config,
+                hash: config.hash ?? "",
+            } as MaterialConfig<S>,
+            constraints,
+        );
         this.hash = config.hash ?? this.calculateHash("", false, this.isNonPeriodic);
     }
 
@@ -49,11 +65,11 @@ class MaterialHashed extends Material implements MaterialHashedSchema {
         this.hash = this.calculateHash("", false, this.isNonPeriodic);
     }
 
-    toJSON(): MaterialHashedSchema {
+    toJSON(): S {
         return {
             ...super.toJSON(),
             hash: this.hash,
-        } as MaterialHashedSchema;
+        } as S;
     }
 }
 

@@ -8,18 +8,19 @@ import { ConstrainedBasis } from "./basis/constrained_basis";
 import { type MaterialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-export type MaterialConfig = PartialBy<MaterialSchema, "name" | "metadata">;
+type Schema = MaterialSchema;
+export type MaterialConfig<S extends Schema = Schema> = PartialBy<S, "name" | "metadata">;
 export declare const defaultMaterialConfig: MaterialConfig;
-interface BaseMaterial extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<MaterialSchema["metadata"]>> {
+interface BaseMaterial extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<Schema["metadata"]>> {
 }
-declare class BaseMaterial extends InMemoryEntity<MaterialSchema> {
+declare class BaseMaterial<S extends Schema = Schema> extends InMemoryEntity<S> {
 }
-declare class Material extends BaseMaterial implements MaterialSchema {
+declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Schema {
     static createDefault: () => Material;
     static get defaultConfig(): MaterialConfig;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
     private constraints;
-    constructor(config: MaterialConfig, constraints?: AtomicConstraintsSchema);
+    constructor(config: NoInfer<MaterialConfig<S>>, constraints?: AtomicConstraintsSchema);
     updateFormula(): void;
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
@@ -131,6 +132,6 @@ declare class Material extends BaseMaterial implements MaterialSchema {
      * @returns Array of checks results
      */
     getBasisConsistencyChecks(): ConsistencyCheck[];
-    toJSON(): MaterialSchema;
+    toJSON(): S;
 }
 export { Material };

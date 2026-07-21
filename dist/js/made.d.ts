@@ -35,7 +35,7 @@ export declare const Made: {
     };
     Material: typeof Material;
     MaterialHashed: typeof MaterialHashed;
-    defaultMaterialConfig: import("./material").MaterialConfig;
+    defaultMaterialConfig: import("./material").MaterialConfig<import("@mat3ra/esse/dist/js/types").MaterialSchema>;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
     UnitCell: typeof UnitCell;
@@ -73,10 +73,10 @@ export declare const Made: {
     };
     tools: {
         surface: {
-            generateConfig: (material: Material, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
+            generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: Material<S>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
         };
         supercell: {
-            generateConfig: (material: Material, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
+            generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: Material<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
                 name: string;
                 basis: import("@mat3ra/esse/dist/js/types").BasisSchema;
                 lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;

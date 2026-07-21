@@ -1,4 +1,4 @@
-import { Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
+import { type MaterialSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
 import { Basis } from "../basis/basis";
 import { ConstrainedBasis } from "../basis/constrained_basis";
 import { Cell } from "../cell/cell";
@@ -10,7 +10,7 @@ declare function generateNewBasisWithinSupercell(basis: Basis | ConstrainedBasis
 /**
  * @summary Generates supercell config for the specified material.
  */
-declare function generateConfig(material: Material, supercellMatrix: Matrix3X3Schema): {
+declare function generateConfig<S extends MaterialSchema = MaterialSchema>(material: Material<S>, supercellMatrix: Matrix3X3Schema): {
     name: string;
     basis: import("@mat3ra/esse/dist/js/types").BasisSchema;
     lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;

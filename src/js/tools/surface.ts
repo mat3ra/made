@@ -1,4 +1,9 @@
-import { Coordinate3DSchema, Matrix3X3Schema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import {
+    type MaterialSchema,
+    Coordinate3DSchema,
+    Matrix3X3Schema,
+    Vector3DSchema,
+} from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
 import { Cell } from "../cell/cell";
@@ -166,8 +171,8 @@ export type SlabConfigSchema = MaterialConfig & {
  * @param vy {Number} Size of lateral supercell along the direction of the second (y) cell vector (Positive Integer).
  * @return {Object}
  */
-function generateConfig(
-    material: Material,
+function generateConfig<S extends MaterialSchema = MaterialSchema>(
+    material: Material<S>,
     millerIndices: Coordinate3DSchema,
     numberOfLayers = 1,
     vx = 1,

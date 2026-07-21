@@ -51,7 +51,9 @@ function parseBasis(
 
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
-export type MaterialConfig = PartialBy<MaterialSchema, "name" | "metadata">;
+type Schema = MaterialSchema;
+
+export type MaterialConfig<S extends Schema = Schema> = PartialBy<S, "name" | "metadata">;
 
 export const defaultMaterialConfig: MaterialConfig = {
     name: "Silicon FCC",
@@ -99,16 +101,16 @@ interface BaseMaterial
     extends MaterialSchemaMixin,
         NamedEntity,
         Defaultable,
-        Required<HasMetadata<MaterialSchema["metadata"]>> {}
+        Required<HasMetadata<Schema["metadata"]>> {}
 
-class BaseMaterial extends InMemoryEntity<MaterialSchema> {}
+class BaseMaterial<S extends Schema = Schema> extends InMemoryEntity<S> {}
 
 materialSchemaMixin(BaseMaterial.prototype);
 namedEntityMixin(BaseMaterial.prototype);
 defaultableEntityMixin(BaseMaterial);
 hasMetadataMixin(BaseMaterial.prototype);
 
-class Material extends BaseMaterial implements MaterialSchema {
+class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Schema {
     declare static createDefault: () => Material;
 
     static get defaultConfig(): MaterialConfig {
@@ -130,13 +132,14 @@ class Material extends BaseMaterial implements MaterialSchema {
 
     private constraints: AtomicConstraintsSchema = [];
 
-    constructor(config: MaterialConfig, constraints: AtomicConstraintsSchema = []) {
+    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
+    constructor(config: NoInfer<MaterialConfig<S>>, constraints: AtomicConstraintsSchema = []) {
         super({
             ...config,
             formula: config.formula ?? "",
             name: config.name ?? config.formula ?? "",
             metadata: config.metadata ?? {},
-        });
+        } as S);
 
         this.formula = config.formula || this.getBasis().formula;
         this.name = this.name || this.formula;
@@ -381,7 +384,7 @@ class Material extends BaseMaterial implements MaterialSchema {
         return checks;
     }
 
-    toJSON(): MaterialSchema {
+    toJSON(): S {
         const lattice = this.getLattice();
         const basis = this.getBasis();
 
@@ -390,7 +393,7 @@ class Material extends BaseMaterial implements MaterialSchema {
             lattice: lattice.toJSON(),
             basis: basis.toJSON(),
             isNonPeriodic: this.isNonPeriodic,
-        } as MaterialSchema;
+        } as S;
     }
 }
 
