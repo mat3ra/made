@@ -55,7 +55,7 @@ type Schema = MaterialSchema;
 
 export type MaterialConfig<S extends Schema = Schema> = PartialBy<S, "name" | "metadata">;
 
-export const defaultMaterialConfig: MaterialConfig = {
+export const defaultMaterialConfig: Schema = {
     name: "Silicon FCC",
     basis: {
         elements: [

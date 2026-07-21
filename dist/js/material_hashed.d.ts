@@ -14,6 +14,5 @@ declare class MaterialHashed<S extends Schema = Schema> extends Material<S> impl
     get lattice(): MaterialSchema["lattice"];
     set lattice(value: MaterialSchema["lattice"]);
     updateHash(): void;
-    toJSON(): S;
 }
 export { MaterialHashed };

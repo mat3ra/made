@@ -34,12 +34,6 @@ class MaterialHashed extends material_1.Material {
     updateHash() {
         this.hash = this.calculateHash("", false, this.isNonPeriodic);
     }
-    toJSON() {
-        return {
-            ...super.toJSON(),
-            hash: this.hash,
-        };
-    }
 }
 exports.MaterialHashed = MaterialHashed;
 (0, HashedSchemaMixin_1.hashedSchemaMixin)(MaterialHashed.prototype);

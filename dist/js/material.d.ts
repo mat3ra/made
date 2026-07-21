@@ -10,7 +10,7 @@ import { Lattice } from "./lattice/lattice";
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 type Schema = MaterialSchema;
 export type MaterialConfig<S extends Schema = Schema> = PartialBy<S, "name" | "metadata">;
-export declare const defaultMaterialConfig: MaterialConfig;
+export declare const defaultMaterialConfig: Schema;
 interface BaseMaterial extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<Schema["metadata"]>> {
 }
 declare class BaseMaterial<S extends Schema = Schema> extends InMemoryEntity<S> {

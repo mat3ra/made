@@ -35,7 +35,7 @@ export declare const Made: {
     };
     Material: typeof Material;
     MaterialHashed: typeof MaterialHashed;
-    defaultMaterialConfig: import("./material").MaterialConfig<import("@mat3ra/esse/dist/js/types").MaterialSchema>;
+    defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
     UnitCell: typeof UnitCell;

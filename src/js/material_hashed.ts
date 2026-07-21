@@ -64,13 +64,6 @@ class MaterialHashed<S extends Schema = Schema> extends Material<S> implements S
     updateHash() {
         this.hash = this.calculateHash("", false, this.isNonPeriodic);
     }
-
-    toJSON(): S {
-        return {
-            ...super.toJSON(),
-            hash: this.hash,
-        } as S;
-    }
 }
 
 hashedSchemaMixin(MaterialHashed.prototype);
