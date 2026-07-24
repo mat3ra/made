@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 from ...material import Material
 from ..analyze.other import get_surface_area
@@ -88,6 +88,31 @@ def calculate_adhesion_energy(
     return (energy_substrate_slab + energy_film_slab - energy_interface) / area
 
 
+def _get_interface_with_build_metadata(interface: Material) -> MaterialWithBuildMetadata:
+    if isinstance(interface, MaterialWithBuildMetadata):
+        return interface
+    return MaterialWithBuildMetadata.create(interface.to_dict())
+
+
+def _resolve_interface_bulk_materials(
+    interface: Material,
+    substrate_bulk: Optional[Material],
+    film_bulk: Optional[Material],
+) -> Tuple[Optional[Material], Optional[Material]]:
+    """Resolve missing bulks from interface build metadata (handles BoundaryConditions metadata)."""
+    try:
+        interface_with_metadata = _get_interface_with_build_metadata(interface)
+        if substrate_bulk is None:
+            substrate_bulk = Material.create(get_interface_bulk_crystal(interface_with_metadata, part="substrate"))
+        if film_bulk is None:
+            film_bulk = Material.create(get_interface_bulk_crystal(interface_with_metadata, part="film"))
+    except (ValueError, TypeError) as exc:
+        raise ValueError(
+            "The substrate and film bulk materials must be provided or defined in the interface metadata."
+        ) from exc
+    return substrate_bulk, film_bulk
+
+
 def calculate_interfacial_energy(
     interface: Material,
     substrate_slab: Optional[Material] = None,
@@ -115,14 +140,9 @@ def calculate_interfacial_energy(
     substrate_slab = get_slab(interface, part="substrate") if substrate_slab is None else substrate_slab
     film_slab = get_slab(interface, part="film") if film_slab is None else film_slab
 
-    try:
-        interface_with_metadata = MaterialWithBuildMetadata.create(interface.to_dict())
-        substrate_bulk = Material.create(get_interface_bulk_crystal(interface_with_metadata, part="substrate"))
-        film_bulk = Material.create(get_interface_bulk_crystal(interface_with_metadata, part="film"))
-    except ValueError as exc:
-        raise ValueError(
-            "The substrate and film bulk materials must be provided or defined in the interface metadata."
-        ) from exc
+    if substrate_bulk is None or film_bulk is None:
+        substrate_bulk, film_bulk = _resolve_interface_bulk_materials(interface, substrate_bulk, film_bulk)
+
     surface_energy_substrate = calculate_surface_energy(substrate_slab, substrate_bulk, calculator)
     surface_energy_film = calculate_surface_energy(film_slab, film_bulk, calculator)
     adhesion_energy = calculate_adhesion_energy(interface, substrate_slab, film_slab, calculator)
