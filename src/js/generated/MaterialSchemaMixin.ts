@@ -3,8 +3,6 @@ import type { MaterialPropertiesSchema } from "@mat3ra/esse/dist/js/types";
 
 export type MaterialSchemaMixin = MaterialPropertiesSchema;
 
-export type MaterialInMemoryEntity = InMemoryEntity & MaterialSchemaMixin;
-
 export function materialSchemaMixin<T extends InMemoryEntity>(
     item: InMemoryEntity,
 ): asserts item is T & MaterialSchemaMixin {
