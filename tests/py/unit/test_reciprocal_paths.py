@@ -49,16 +49,16 @@ def test_reciprocal_paths_entry_structure():
 def test_reciprocal_paths_cub():
     path = RECIPROCAL_PATHS["CUB"]
     labels = [p["point"] for p in path]
-    assert labels == ["Г", "X", "M", "Г", "R", "X", "M", "R"]
+    assert labels == ["Γ", "X", "M", "Γ", "R", "X", "M", "R"]
 
 
 def test_reciprocal_paths_fcc():
     path = RECIPROCAL_PATHS["FCC"]
     labels = [p["point"] for p in path]
-    assert labels == ["Г", "X", "W", "K", "Г", "L", "U", "W", "L", "U", "X"]
+    assert labels == ["Γ", "X", "W", "K", "Γ", "L", "U", "W", "L", "U", "X"]
 
 
 def test_reciprocal_paths_hex():
     path = RECIPROCAL_PATHS["HEX"]
     labels = [p["point"] for p in path]
-    assert labels == ["Г", "M", "K", "Г", "A", "L", "H", "A", "L", "M", "K", "H"]
+    assert labels == ["Γ", "M", "K", "Γ", "A", "L", "H", "A", "L", "M", "K", "H"]
