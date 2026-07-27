@@ -5,6 +5,7 @@ import { type NamedEntity } from "@mat3ra/code/dist/js/entity/mixins/NamedEntity
 import type { AtomicConstraintsSchema, BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import type { BasisConfig } from "./basis/basis";
 import { ConstrainedBasis } from "./basis/constrained_basis";
+import { Constraint } from "./constraints/constraints";
 import { type MaterialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -63,6 +64,8 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     unsetFileProps(): void;
     setBasis(basis: BasisConfig): void;
     setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
+    setBasisConstraints(constraints: Constraint[]): void;
+    setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema): void;
     getBasis(constraints?: AtomicConstraintsSchema): ConstrainedBasis;
     setLattice(lattice: LatticeSchema): void;
     getLattice(): Lattice;

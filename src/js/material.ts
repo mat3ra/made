@@ -30,6 +30,7 @@ import {
     PRIMITIVE_TO_CONVENTIONAL_CELL_LATTICE_TYPES,
     PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS,
 } from "./cell/conventional_cell";
+import { Constraint } from "./constraints/constraints";
 import { type MaterialSchemaMixin, materialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 import parsers from "./parsers/parsers";
@@ -183,6 +184,21 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         this.constraints = constraints;
         this.unsetFileProps();
         this.updateFormula();
+    }
+
+    setBasisConstraints(constraints: Constraint[]) {
+        const basisWithConstraints = {
+            ...this.basis,
+            constraints: constraints.map((c) => c.toJSON()),
+        };
+        this.setBasis(basisWithConstraints);
+    }
+
+    setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema) {
+        const constraintsInstances = constraints.map((c) => {
+            return Constraint.fromValueAndId(c.value, c.id);
+        });
+        this.setBasisConstraints(constraintsInstances);
     }
 
     getBasis(constraints?: AtomicConstraintsSchema) {

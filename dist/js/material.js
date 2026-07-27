@@ -11,6 +11,7 @@ const NamedEntityMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/NamedEnti
 const crypto_js_1 = __importDefault(require("crypto-js"));
 const constrained_basis_1 = require("./basis/constrained_basis");
 const conventional_cell_1 = require("./cell/conventional_cell");
+const constraints_1 = require("./constraints/constraints");
 const MaterialSchemaMixin_1 = require("./generated/MaterialSchemaMixin");
 const lattice_1 = require("./lattice/lattice");
 const parsers_1 = __importDefault(require("./parsers/parsers"));
@@ -126,6 +127,19 @@ class Material extends BaseMaterial {
         this.constraints = constraints;
         this.unsetFileProps();
         this.updateFormula();
+    }
+    setBasisConstraints(constraints) {
+        const basisWithConstraints = {
+            ...this.basis,
+            constraints: constraints.map((c) => c.toJSON()),
+        };
+        this.setBasis(basisWithConstraints);
+    }
+    setBasisConstraintsFromArrayOfObjects(constraints) {
+        const constraintsInstances = constraints.map((c) => {
+            return constraints_1.Constraint.fromValueAndId(c.value, c.id);
+        });
+        this.setBasisConstraints(constraintsInstances);
     }
     getBasis(constraints) {
         const basisData = this.basis;
