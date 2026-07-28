@@ -181,7 +181,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         const { constraints, ...basis } = parseBasis(textOrObject, format, unitz);
 
         this.basis = basis;
-        this.constraints = constraints;
+        this.constraints = constraints ?? [];
         this.unsetFileProps();
         this.updateFormula();
     }

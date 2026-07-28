@@ -124,7 +124,7 @@ class Material extends BaseMaterial {
     setBasis(textOrObject, format, unitz) {
         const { constraints, ...basis } = parseBasis(textOrObject, format, unitz);
         this.basis = basis;
-        this.constraints = constraints;
+        this.constraints = constraints !== null && constraints !== void 0 ? constraints : [];
         this.unsetFileProps();
         this.updateFormula();
     }

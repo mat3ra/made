@@ -8,7 +8,7 @@ import { ElementWithLabel } from "./helpers";
 import { AtomicLabelValue } from "./labels";
 
 export interface ConstrainedBasisConfig extends BasisConfig {
-    constraints: AtomicConstraintsSchema;
+    constraints?: AtomicConstraintsSchema;
 }
 
 export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoordinatesConfig {
@@ -24,7 +24,7 @@ export class ConstrainedBasis extends Basis {
 
     constructor(config: ConstrainedBasisConfig) {
         super(config);
-        this._constraints = AtomicConstraints.fromObjects(config.constraints); // `constraints` is an Array with ids
+        this._constraints = AtomicConstraints.fromObjects(config.constraints ?? []); // `constraints` is an Array with ids
     }
 
     static fromElementsCoordinatesAndConstraints(

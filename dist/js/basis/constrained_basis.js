@@ -11,8 +11,9 @@ const helpers_1 = require("./helpers");
  */
 class ConstrainedBasis extends basis_1.Basis {
     constructor(config) {
+        var _a;
         super(config);
-        this._constraints = constraints_1.AtomicConstraints.fromObjects(config.constraints); // `constraints` is an Array with ids
+        this._constraints = constraints_1.AtomicConstraints.fromObjects((_a = config.constraints) !== null && _a !== void 0 ? _a : []); // `constraints` is an Array with ids
     }
     static fromElementsCoordinatesAndConstraints(config) {
         const basisConfig = this._convertValuesToConfig(config);

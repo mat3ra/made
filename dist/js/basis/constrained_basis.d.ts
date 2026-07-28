@@ -5,7 +5,7 @@ import { AtomicCoordinateValue } from "./coordinates";
 import { AtomicElementValue } from "./elements";
 import { AtomicLabelValue } from "./labels";
 export interface ConstrainedBasisConfig extends BasisConfig {
-    constraints: AtomicConstraintsSchema;
+    constraints?: AtomicConstraintsSchema;
 }
 export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoordinatesConfig {
     constraints: AtomicConstraintValue[];
