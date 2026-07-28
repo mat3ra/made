@@ -22,9 +22,12 @@ def supercell(material: MaterialWithBuildMetadata, supercell_matrix) -> Material
     atoms = to_ase(material)
 
     supercell_atoms = ase_make_supercell(atoms, supercell_matrix)
-    new_material = MaterialWithBuildMetadata.create(from_ase(supercell_atoms))
-    # if material.metadata:
-    #     new_material.metadata.update(**material.metadata.to_dict())
+    material_config = from_ase(supercell_atoms)
+    # ASE make_supercell drops atoms.info; merge prior build/boundaryConditions when present.
+    source_metadata = material.to_dict().get("metadata") or {}
+    if source_metadata:
+        material_config["metadata"] = {**material_config.get("metadata", {}), **source_metadata}
+    new_material = MaterialWithBuildMetadata.create(material_config)
     new_material.name = material.name
     return new_material
 

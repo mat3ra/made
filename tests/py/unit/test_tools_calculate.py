@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 from ase.build import add_adsorbate, bulk, fcc111, graphene, surface
 from ase.calculators import emt
 from mat3ra.made.material import Material
@@ -20,15 +19,14 @@ graphene_layer.cell = nickel_slab.cell
 interface = nickel_slab.copy()
 add_adsorbate(interface, graphene_layer, height=2, position="ontop")
 
-# Material objects setup
+# Material.create yields MaterialMetadataBoundaryConditions; bulks are resolved from nested build.
 interface_material = Material.create(GRAPHENE_NICKEL_INTERFACE)
 nickel_slab_material = Material.create(from_ase(nickel_slab))
-nickel_bulk_material = Material.create(from_ase(bulk("Ni", "fcc", a=3.52)))
-graphene_layer_material = Material.create(from_ase(graphene_layer))
-graphene_bulk_material = graphene_layer
 
 # Calculator setup
 calculator = emt.EMT()
+
+EXPECTED_INTERFACIAL_ENERGY = -0.78488
 
 
 def test_calculate_total_energy():
@@ -59,17 +57,11 @@ def test_calculate_adhesion_energy():
     assert np.isclose(adhesion_energy, 0.07345)
 
 
-@pytest.mark.skip(reason="This test is not working as expected")
 def test_calculate_interfacial_energy():
     interfacial_energy = calculate_interfacial_energy(
         interface_material,
-        nickel_slab_material,
-        nickel_bulk_material,
-        graphene_layer,
-        graphene_bulk_material,
-        calculator,
+        substrate_slab=nickel_slab_material,
+        film_slab=graphene_layer,
+        calculator=calculator,
     )
-    assert np.isclose(
-        interfacial_energy,
-        -0.78488,
-    )
+    assert np.isclose(interfacial_energy, EXPECTED_INTERFACIAL_ENERGY)
