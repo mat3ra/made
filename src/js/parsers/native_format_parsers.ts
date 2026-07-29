@@ -1,4 +1,4 @@
-import Poscar from "./poscar";
+import Poscar, { type MaterialSchemaWithConstraints } from "./poscar";
 
 const NATIVE_FORMAT = {
     JSON: "json",
@@ -7,13 +7,13 @@ const NATIVE_FORMAT = {
     PWX: "pwx",
     XYZ: "xyz",
     UNKNOWN: "unknown",
-};
+} as const;
 
 /**
  * @summary Detects the format of the input string
- * @throws {Error} - If the input string is unknown format
- * @param {string} text -  input string to detect format
- * @returns {NATIVE_FORMAT} - Format of the input string
+ * @throws If the input string is unknown format
+ * @param text input string to detect format
+ * @returns Format of the input string
  */
 function detectFormat(text: string) {
     const jsonRegex = /^\s*\{/;
@@ -25,11 +25,11 @@ function detectFormat(text: string) {
 
 /**
  * @summary Function to handle conversion from native formats
- * @param {String} text - input string to detect format and convert
- * @throws {Error} - If the input string is of unknown format
- * @return {Object} - Material config
+ * @param text - input string to detect format and convert
+ * @throws If the input string is of unknown format
+ * @return Material config
  */
-function convertFromNativeFormat(text: string) {
+function convertFromNativeFormat(text: string): MaterialSchemaWithConstraints {
     const format = detectFormat(text);
 
     switch (format) {

@@ -1,4 +1,5 @@
 import { Utils } from "@mat3ra/utils";
+import { expect } from "chai";
 
 import parsers from "../../../src/js/parsers/parsers";
 import { FeO, Silicon } from "../fixtures";
@@ -21,12 +22,20 @@ describe("Parsers:XYZ", () => {
             "Fe2  0.50  0.50  0.50  1 1 1\n" +
             "O    0.25  0.25  0.25  1 1 1\n" +
             "O    0.75  0.75  0.75  1 1 1";
-        assertDeepAlmostEqual(parsers.xyz.toBasisConfig(text), FeO.basis, ["cell", "units"]);
+        assertDeepAlmostEqual(parsers.xyz.toBasisConfig(text), FeO.basis, [
+            "constraints",
+            "cell",
+            "units",
+        ]);
     });
 
     it("should return [true, true, true] as constraints for the line without any constraints", () => {
         const text = "Si 0 0 0 0 1 1\n Si 0.25 0.25 0.25";
         const basis = parsers.xyz.toBasisConfig(text);
+        expect(basis.constraints).to.be.an("array").with.lengthOf(2);
+        if (!basis.constraints) {
+            throw new Error("expected constraints on parsed XYZ basis");
+        }
         assertDeepAlmostEqual(basis.constraints[0].value, [false, true, true]);
         assertDeepAlmostEqual(basis.constraints[1].value, [true, true, true]);
     });

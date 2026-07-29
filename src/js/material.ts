@@ -131,9 +131,10 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         };
     }
 
-    private constraints: AtomicConstraintsSchema = [];
+    constraints: AtomicConstraintsSchema = [];
 
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
+    // Atomic constraints are accepted only via the second argument (not on config.basis).
     constructor(config: NoInfer<MaterialConfig<S>>, constraints: AtomicConstraintsSchema = []) {
         super({
             ...config,
@@ -187,11 +188,8 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
     }
 
     setBasisConstraints(constraints: Constraint[]) {
-        const basisWithConstraints = {
-            ...this.basis,
-            constraints: constraints.map((c) => c.toJSON()),
-        };
-        this.setBasis(basisWithConstraints);
+        this.constraints = constraints.map((c) => ({ id: c.id, value: c.value }));
+        this.unsetFileProps();
     }
 
     setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema) {
@@ -222,7 +220,9 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
             basis.toCrystal();
         }
 
-        this.basis = basis.toJSON();
+        const { constraints: nextConstraints, ...basisWithoutConstraints } = basis.toJSON();
+        this.basis = basisWithoutConstraints;
+        this.constraints = nextConstraints ?? this.constraints;
         this.lattice = lattice;
 
         this.unsetFileProps();
@@ -280,23 +280,24 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
     /**
      * Converts basis to crystal/fractional coordinates.
      */
-    toCrystal(constraints: AtomicConstraintsSchema = []) {
-        this.basis = this.getBasis(constraints).toCrystal().toJSON();
+    toCrystal(constraints?: AtomicConstraintsSchema) {
+        this.setBasis(this.getBasis(constraints).toCrystal().toJSON());
     }
 
     /**
      * Converts current material's basis coordinates to cartesian.
      * No changes if coordinates already cartesian.
      */
-    toCartesian(constraints: AtomicConstraintsSchema = []) {
-        this.basis = this.getBasis(constraints).toCartesian().toJSON();
+    toCartesian(constraints?: AtomicConstraintsSchema) {
+        this.setBasis(this.getBasis(constraints).toCartesian().toJSON());
     }
 
     /**
      * Returns material's basis in XYZ format.
+     * Uses ESSE material JSON plus constraints separately (same contract as POSCAR/QE serializers).
      */
     getBasisAsXyz(fractional = false): string {
-        return parsers.xyz.fromMaterial(this.toJSON(), fractional);
+        return parsers.xyz.fromMaterial(this.toJSON(), fractional, this.constraints);
     }
 
     /**
@@ -313,7 +314,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
      * ```
      */
     getAsQEFormat(): string {
-        return parsers.espresso.toEspressoFormat(this.toJSON());
+        return parsers.espresso.toEspressoFormat(this.toJSON(), this.constraints);
     }
 
     /**
@@ -324,7 +325,25 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         if (this.src?.extension === "poscar" && !ignoreOriginal) {
             return this.src.text;
         }
-        return parsers.poscar.toPoscar(this.toJSON(), omitConstraints);
+        return parsers.poscar.toPoscar(this.toJSON(), this.constraints, omitConstraints);
+    }
+
+    /**
+     * Preserve private constraints via the second constructor argument (never on basis JSON).
+     */
+    clone(extraContext?: object): this {
+        type ThisType = typeof this;
+        type ThisConstructor = {
+            new (o: object, constraints?: AtomicConstraintsSchema): ThisType;
+        };
+
+        return new (this.constructor as ThisConstructor)(
+            {
+                ...this.toJSON(),
+                ...extraContext,
+            },
+            this.constraints,
+        );
     }
 
     /**
@@ -348,8 +367,12 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         config.lattice.type = conventionalLatticeType;
         config.name = `${this.name} - conventional cell`;
 
-        // @ts-expect-error
-        return new this.constructor(config) as this;
+        type ThisType = typeof this;
+        type ThisConstructor = {
+            new (o: object, constraints?: AtomicConstraintsSchema): ThisType;
+        };
+
+        return new (this.constructor as ThisConstructor)(config, this.constraints);
     }
 
     /**
@@ -401,13 +424,12 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
     }
 
     toJSON(): S {
-        const lattice = this.getLattice();
-        const basis = this.getBasis();
+        const { constraints, ...basis } = this.getBasis().toJSON();
 
         return {
             ...super.toJSON(),
-            lattice: lattice.toJSON(),
-            basis: basis.toJSON(),
+            lattice: this.getLattice().toJSON(),
+            basis,
             isNonPeriodic: this.isNonPeriodic,
         } as S;
     }

@@ -37,7 +37,8 @@ describe("Basis", () => {
 
     it("should return jsonified basis", () => {
         const basis = new Material(Na4Cl4).getBasis();
-        expect(basis.toJSON()).to.be.deep.almost.equal(Na4Cl4.basis);
+        const { constraints: _, ...basisJson } = basis.toJSON();
+        expect(basisJson).to.be.deep.almost.equal(Na4Cl4.basis);
     });
 
     it("should return true if cells are equal", () => {
@@ -195,7 +196,9 @@ describe("Basis", () => {
 
     it("should return standard representation", () => {
         const basis = new Material(Na4Cl4Cartesian).getBasis();
-        expect(basis.standardRepresentation).to.be.deep.almost.equal(Na4Cl4.basis);
+        const standardRepresentation = { ...basis.standardRepresentation };
+        delete (standardRepresentation as { constraints?: unknown }).constraints;
+        expect(standardRepresentation).to.be.deep.almost.equal(Na4Cl4.basis);
     });
 
     /**

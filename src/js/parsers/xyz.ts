@@ -1,4 +1,4 @@
-import { MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { AtomicConstraintsSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { isEmpty, isNaN, map } from "lodash";
 import s from "underscore.string";
 
@@ -161,16 +161,19 @@ function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: st
 
 /**
  * Create XYZ from Material class instance (or its JSON config).
- * @param materialOrConfig Material.
- * @param fractional Coordinate units as fractional.
- * @return Class Instance
+ * Constraints are not part of ESSE basis — pass them separately.
+ * Prefer fromBasis when you already have a ConstrainedBasis instance.
  */
-function fromMaterial(materialOrConfig: MaterialSchema, fractional = false): string {
+function fromMaterial(
+    materialOrConfig: MaterialSchema,
+    fractional = false,
+    constraints: AtomicConstraintsSchema = [],
+): string {
     const lattice = new Lattice(materialOrConfig.lattice);
-    // @ts-ignore
     const basis = new ConstrainedBasis({
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
+        constraints,
     });
     if (fractional) {
         basis.toCrystal();

@@ -5,7 +5,7 @@ declare const _default: {
     supercell: {
         generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: import("../material").Material<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
             name: string;
-            basis: import("@mat3ra/esse/dist/js/types").BasisSchema;
+            basis: import("../basis/basis").BasisConfig & import("@mat3ra/esse/dist/js/types").BaseInMemoryEntitySchema;
             lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;
         };
         generateNewBasisWithinSupercell: (basis: import("../made").Basis | import("../basis/constrained_basis").ConstrainedBasis, cell: import("../made").Cell, supercell: import("../made").Cell, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => import("../made").Basis;
@@ -17,7 +17,7 @@ declare const _default: {
     };
     basis: {
         repeat: (basis: import("../made").Basis, repetitions: number[]) => import("../made").Basis;
-        interpolate: (initialBasis: import("../made").Basis, finalBasis: import("../made").Basis, numberOfSteps?: number) => import("../made").Basis[];
+        interpolate: (initialBasis: import("../made").Basis, finalBasis: import("../made").Basis, numberOfSteps?: number) => import("../made").Basis<import("../basis/basis").BasisConfig>[];
     };
 };
 export default _default;

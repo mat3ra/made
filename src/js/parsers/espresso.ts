@@ -1,4 +1,4 @@
-import { MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { AtomicConstraintsSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { map } from "lodash";
 import s from "underscore.string";
 
@@ -7,9 +7,12 @@ import xyz from "./xyz";
 
 /**
  * Construct textual representation of a materialOrConfig according to Quantum ESPRESSO pw.x input format.
- * @param materialOrConfig - material class instance or its config object
+ * Constraints are not part of ESSE basis — pass them separately.
  */
-function toEspressoFormat(materialOrConfig: MaterialSchema): string {
+function toEspressoFormat(
+    materialOrConfig: MaterialSchema,
+    constraints: AtomicConstraintsSchema = [],
+): string {
     const l = new Lattice(materialOrConfig.lattice);
     const vectors = l.vectorArrays;
     const vectorsAsString = map(vectors, (v) => {
@@ -21,7 +24,7 @@ function toEspressoFormat(materialOrConfig: MaterialSchema): string {
     return s.sprintf(
         "CELL_PARAMETERS (angstroms)\n%s\n\nATOMIC_POSITIONS (crystal)\n%s",
         vectorsAsString,
-        xyz.fromMaterial(materialOrConfig),
+        xyz.fromMaterial(materialOrConfig, false, constraints),
     );
 }
 

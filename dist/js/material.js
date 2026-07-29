@@ -85,6 +85,7 @@ class Material extends BaseMaterial {
         };
     }
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
+    // Atomic constraints are accepted only via the second argument (not on config.basis).
     constructor(config, constraints = []) {
         var _a, _b, _c, _d;
         super({
@@ -129,11 +130,8 @@ class Material extends BaseMaterial {
         this.updateFormula();
     }
     setBasisConstraints(constraints) {
-        const basisWithConstraints = {
-            ...this.basis,
-            constraints: constraints.map((c) => c.toJSON()),
-        };
-        this.setBasis(basisWithConstraints);
+        this.constraints = constraints.map((c) => ({ id: c.id, value: c.value }));
+        this.unsetFileProps();
     }
     setBasisConstraintsFromArrayOfObjects(constraints) {
         const constraintsInstances = constraints.map((c) => {
@@ -157,7 +155,9 @@ class Material extends BaseMaterial {
         if (originalIsInCrystalUnits) {
             basis.toCrystal();
         }
-        this.basis = basis.toJSON();
+        const { constraints: nextConstraints, ...basisWithoutConstraints } = basis.toJSON();
+        this.basis = basisWithoutConstraints;
+        this.constraints = nextConstraints !== null && nextConstraints !== void 0 ? nextConstraints : this.constraints;
         this.lattice = lattice;
         this.unsetFileProps();
     }
@@ -210,21 +210,22 @@ class Material extends BaseMaterial {
     /**
      * Converts basis to crystal/fractional coordinates.
      */
-    toCrystal(constraints = []) {
-        this.basis = this.getBasis(constraints).toCrystal().toJSON();
+    toCrystal(constraints) {
+        this.setBasis(this.getBasis(constraints).toCrystal().toJSON());
     }
     /**
      * Converts current material's basis coordinates to cartesian.
      * No changes if coordinates already cartesian.
      */
-    toCartesian(constraints = []) {
-        this.basis = this.getBasis(constraints).toCartesian().toJSON();
+    toCartesian(constraints) {
+        this.setBasis(this.getBasis(constraints).toCartesian().toJSON());
     }
     /**
      * Returns material's basis in XYZ format.
+     * Uses ESSE material JSON plus constraints separately (same contract as POSCAR/QE serializers).
      */
     getBasisAsXyz(fractional = false) {
-        return parsers_1.default.xyz.fromMaterial(this.toJSON(), fractional);
+        return parsers_1.default.xyz.fromMaterial(this.toJSON(), fractional, this.constraints);
     }
     /**
      * Returns material in Quantum Espresso output format:
@@ -240,7 +241,7 @@ class Material extends BaseMaterial {
      * ```
      */
     getAsQEFormat() {
-        return parsers_1.default.espresso.toEspressoFormat(this.toJSON());
+        return parsers_1.default.espresso.toEspressoFormat(this.toJSON(), this.constraints);
     }
     /**
      * Returns material in POSCAR format. Pass `true` to ignore original poscar source and re-serialize.
@@ -251,7 +252,16 @@ class Material extends BaseMaterial {
         if (((_a = this.src) === null || _a === void 0 ? void 0 : _a.extension) === "poscar" && !ignoreOriginal) {
             return this.src.text;
         }
-        return parsers_1.default.poscar.toPoscar(this.toJSON(), omitConstraints);
+        return parsers_1.default.poscar.toPoscar(this.toJSON(), this.constraints, omitConstraints);
+    }
+    /**
+     * Preserve private constraints via the second constructor argument (never on basis JSON).
+     */
+    clone(extraContext) {
+        return new this.constructor({
+            ...this.toJSON(),
+            ...extraContext,
+        }, this.constraints);
     }
     /**
      * Returns a copy of the material with conventional cell constructed instead of primitive.
@@ -268,8 +278,7 @@ class Material extends BaseMaterial {
         const config = supercell_1.default.generateConfig(this, conventionalSupercellMatrix);
         config.lattice.type = conventionalLatticeType;
         config.name = `${this.name} - conventional cell`;
-        // @ts-expect-error
-        return new this.constructor(config);
+        return new this.constructor(config, this.constraints);
     }
     /**
      * @summary a series of checks for the material and returns an array of results in ConsistencyChecks format.
@@ -307,12 +316,11 @@ class Material extends BaseMaterial {
         return checks;
     }
     toJSON() {
-        const lattice = this.getLattice();
-        const basis = this.getBasis();
+        const { constraints, ...basis } = this.getBasis().toJSON();
         return {
             ...super.toJSON(),
-            lattice: lattice.toJSON(),
-            basis: basis.toJSON(),
+            lattice: this.getLattice().toJSON(),
+            basis,
             isNonPeriodic: this.isNonPeriodic,
         };
     }

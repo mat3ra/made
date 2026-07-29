@@ -12,8 +12,10 @@ import atomicConstraints_JSON from "../fixtures/atomic-constraints.json";
 import C2H4_JSON from "../fixtures/C2H4.json";
 import C2H4Translated_JSON from "../fixtures/C2H4-translated.json";
 import FeLiSiBasis_JSON from "../fixtures/FeLiSi-basis.json";
+import FeOConstraints_JSON from "../fixtures/FeO.constraints.json";
 import FeO_JSON from "../fixtures/FeO.json";
 import Ge2Basis_JSON from "../fixtures/Ge2-basis.json";
+import GrapheneConstraints_JSON from "../fixtures/Graphene.constraints.json";
 import Graphene_JSON from "../fixtures/Graphene.json";
 import H2HFinal_JSON from "../fixtures/H2+H-final.json";
 import H2HImage_JSON from "../fixtures/H2+H-image.json";
@@ -36,7 +38,8 @@ import Si2Basis_JSON from "../fixtures/Si2-basis.json";
 import Si2BasisRepeated_JSON from "../fixtures/Si2-basis-repeated.json";
 import Zr1H23Zr1H1_JSON from "../fixtures/Zr1H23Zr1H1.json";
 
-// Material (fixtures include hash; typed as MaterialHashedSchema for hash assertions)
+// Material (fixtures include hash; typed as MaterialHashedSchema for hash assertions).
+// Atomic constraints live in sibling `*.constraints.json` files when non-empty — never on basis.
 const Silicon = Silicon_JSON as unknown as MaterialHashedSchema;
 const SiSupercell = SiSupercell_JSON as unknown as MaterialHashedSchema;
 const SiSlab = SiSlab_JSON as unknown as MaterialHashedSchema;
@@ -45,6 +48,7 @@ const SiSlab111 = SiSlab111_JSON as unknown as MaterialHashedSchema;
 const SiSlab111Gamma120 = SiSlab111Gamma120_JSON as unknown as MaterialHashedSchema;
 const SiSlab111NoVacuum = SiSlab111NoVacuum_JSON as unknown as MaterialHashedSchema;
 const FeO = FeO_JSON as unknown as MaterialHashedSchema;
+const FeOConstraints = FeOConstraints_JSON as AtomicConstraintsSchema;
 const FeOStandata = MaterialStandata.getRuntimeDataConfigs().find((m: any) =>
     m.name?.includes("FeO"),
 ) as MaterialHashedSchema;
@@ -58,6 +62,7 @@ const H2HFinal = H2HFinal_JSON as unknown as MaterialHashedSchema;
 const H2HImage = H2HImage_JSON as unknown as MaterialHashedSchema;
 const Zr1H23Zr1H1 = Zr1H23Zr1H1_JSON as unknown as MaterialHashedSchema;
 const Graphene = Graphene_JSON as unknown as MaterialHashedSchema;
+const GrapheneConstraints = GrapheneConstraints_JSON as AtomicConstraintsSchema;
 const NiHex = NiHex_JSON as unknown as MaterialHashedSchema;
 
 // Basis
@@ -86,6 +91,7 @@ export {
     Si2BasisRepeated,
     // Other
     FeO,
+    FeOConstraints,
     FeOStandata,
     Na4Cl4,
     Na4Cl4Cartesian,
@@ -104,6 +110,7 @@ export {
     H2HImage,
     Zr1H23Zr1H1,
     Graphene,
+    GrapheneConstraints,
     NiHex,
 };
 

@@ -19,7 +19,7 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
  * @summary Extension of the Basis class able to deal with atomic constraints.
  * @extends Basis
  */
-export class ConstrainedBasis extends Basis {
+export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     private _constraints: AtomicConstraints;
 
     constructor(config: ConstrainedBasisConfig) {
@@ -50,9 +50,9 @@ export class ConstrainedBasis extends Basis {
         return AtomicConstraints.fromObjects(this.constraints);
     }
 
-    override toJSON(): ConstrainedBasisConfig {
+    override toJSON(exclude: (keyof ConstrainedBasisConfig)[] = ["cell"]): ConstrainedBasisConfig {
         return {
-            ...super.toJSON(),
+            ...super.toJSON(exclude as (keyof ConstrainedBasisConfig)[]),
             constraints: this.constraints,
         };
     }
@@ -74,7 +74,7 @@ export class ConstrainedBasis extends Basis {
         AtomicCoordinateValue,
         AtomicConstraintValue,
     ][] {
-        return this._elements.values.map((element: any, idx: number) => {
+        return this._elements.values.map((element: AtomicElementValue, idx: number) => {
             const coordinate = this.getCoordinateValueByIndex(idx);
             const constraint = this.getConstraintByIndex(idx);
             const label = this.atomicLabelsArray[idx];

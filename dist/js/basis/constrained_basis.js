@@ -32,9 +32,9 @@ class ConstrainedBasis extends basis_1.Basis {
     get AtomicConstraints() {
         return constraints_1.AtomicConstraints.fromObjects(this.constraints);
     }
-    toJSON() {
+    toJSON(exclude = ["cell"]) {
         return {
-            ...super.toJSON(),
+            ...super.toJSON(exclude),
             constraints: this.constraints,
         };
     }

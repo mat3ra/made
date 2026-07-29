@@ -12,7 +12,7 @@ declare function generateNewBasisWithinSupercell(basis: Basis | ConstrainedBasis
  */
 declare function generateConfig<S extends MaterialSchema = MaterialSchema>(material: Material<S>, supercellMatrix: Matrix3X3Schema): {
     name: string;
-    basis: import("@mat3ra/esse/dist/js/types").BasisSchema;
+    basis: import("../basis/basis").BasisConfig & import("@mat3ra/esse/dist/js/types").BaseInMemoryEntitySchema;
     lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;
 };
 declare const _default: {

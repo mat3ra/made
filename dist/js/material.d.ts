@@ -20,7 +20,7 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     static createDefault: () => Material;
     static get defaultConfig(): MaterialConfig;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
-    private constraints;
+    constraints: AtomicConstraintsSchema;
     constructor(config: NoInfer<MaterialConfig<S>>, constraints?: AtomicConstraintsSchema);
     updateFormula(): void;
     /**
@@ -101,6 +101,7 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     toCartesian(constraints?: AtomicConstraintsSchema): void;
     /**
      * Returns material's basis in XYZ format.
+     * Uses ESSE material JSON plus constraints separately (same contract as POSCAR/QE serializers).
      */
     getBasisAsXyz(fractional?: boolean): string;
     /**
@@ -121,6 +122,10 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
      * Returns material in POSCAR format. Pass `true` to ignore original poscar source and re-serialize.
      */
     getAsPOSCAR(ignoreOriginal?: boolean, omitConstraints?: boolean): string;
+    /**
+     * Preserve private constraints via the second constructor argument (never on basis JSON).
+     */
+    clone(extraContext?: object): this;
     /**
      * Returns a copy of the material with conventional cell constructed instead of primitive.
      */

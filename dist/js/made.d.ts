@@ -48,15 +48,15 @@ export declare const Made: {
     parsers: {
         xyz: {
             validate: typeof import("./parsers/xyz").validate;
-            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, fractional?: boolean) => string;
+            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, fractional?: boolean, constraints?: import("@mat3ra/esse/dist/js/types").AtomicConstraintsSchema) => string;
             toBasisConfig: (txt: string, units?: string, cell?: Cell) => import("./basis/constrained_basis").ConstrainedBasisConfig;
             fromBasis: (basisClsInstance: import("./basis/constrained_basis").ConstrainedBasis, coordinatePrintFormat: string) => string;
             CombinatorialBasis: typeof import("./parsers/xyz_combinatorial_basis").CombinatorialBasis;
         };
         poscar: {
             isPoscar: (text: string) => boolean;
-            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, omitConstraints?: boolean) => string;
-            fromPoscar: (fileContent: string) => object;
+            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, constraints?: import("@mat3ra/esse/dist/js/types").AtomicConstraintsSchema, omitConstraints?: boolean) => string;
+            fromPoscar: (fileContent: string) => import("./parsers/poscar").MaterialSchemaWithConstraints;
             atomicConstraintsCharFromBool: (bool: boolean) => string;
             atomsCount: typeof import("./parsers/poscar").atomsCount;
         };
@@ -64,11 +64,11 @@ export declare const Made: {
             parseMeta: (txt: string) => import("./parsers/cif").Meta;
         };
         espresso: {
-            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema) => string;
+            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, constraints?: import("@mat3ra/esse/dist/js/types").AtomicConstraintsSchema) => string;
         };
         nativeFormatParsers: {
-            detectFormat: (text: string) => string;
-            convertFromNativeFormat: (text: string) => any;
+            detectFormat: (text: string) => "json" | "poscar" | "unknown";
+            convertFromNativeFormat: (text: string) => import("./parsers/poscar").MaterialSchemaWithConstraints;
         };
     };
     tools: {
@@ -78,7 +78,7 @@ export declare const Made: {
         supercell: {
             generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: Material<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
                 name: string;
-                basis: import("@mat3ra/esse/dist/js/types").BasisSchema;
+                basis: import("./basis/basis").BasisConfig & import("@mat3ra/esse/dist/js/types").BaseInMemoryEntitySchema;
                 lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;
             };
             generateNewBasisWithinSupercell: (basis: Basis | import("./basis/constrained_basis").ConstrainedBasis, cell: Cell, supercell: Cell, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => Basis;
@@ -90,7 +90,7 @@ export declare const Made: {
         };
         basis: {
             repeat: (basis: Basis, repetitions: number[]) => Basis;
-            interpolate: (initialBasis: Basis, finalBasis: Basis, numberOfSteps?: number) => Basis[];
+            interpolate: (initialBasis: Basis, finalBasis: Basis, numberOfSteps?: number) => Basis<import("./basis/basis").BasisConfig>[];
         };
     };
     LATTICE_TYPE_CONFIGS: import("./lattice/lattice_types").LatticeTypeConfig[];

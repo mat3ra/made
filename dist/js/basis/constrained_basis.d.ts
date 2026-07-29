@@ -14,14 +14,14 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
  * @summary Extension of the Basis class able to deal with atomic constraints.
  * @extends Basis
  */
-export declare class ConstrainedBasis extends Basis {
+export declare class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     private _constraints;
     constructor(config: ConstrainedBasisConfig);
     static fromElementsCoordinatesAndConstraints(config: ElementsCoordinatesAndConstraintsConfig): ConstrainedBasis;
     get constraints(): AtomicConstraintsSchema;
     set constraints(constraints: AtomicConstraintsSchema);
     get AtomicConstraints(): AtomicConstraints;
-    toJSON(): ConstrainedBasisConfig;
+    toJSON(exclude?: (keyof ConstrainedBasisConfig)[]): ConstrainedBasisConfig;
     getConstraintByIndex(idx: number): AtomicConstraintValue;
     getConstraintById(id: number): AtomicConstraintValue;
     /**

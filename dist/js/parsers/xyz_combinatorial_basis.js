@@ -209,7 +209,9 @@ class CombinatorialBasis {
             dimensions.push(itemsSet);
         });
         // @ts-ignore // We're multiplying objects with math, not numbers. No type casting will help.
-        const basisSet = utils_1.Utils.math.cartesianProduct.apply(null, dimensions);
+        const basisSet = utils_1.Utils.math.cartesianProduct.apply(null, 
+        // @ts-ignore
+        dimensions);
         return basisSet.map((basis) => basis.filter((entry) => entry.element !== VACANCY_CHARACTER));
     }
     /**

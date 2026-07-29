@@ -1,4 +1,5 @@
 import {
+    AtomicConstraintsSchema,
     BasisSchema,
     Coordinate3DSchema,
     MaterialSchema,
@@ -15,7 +16,6 @@ import { ATOMIC_COORD_UNITS } from "../constants";
 import { AtomicConstraintValue } from "../constraints/constraints";
 import { Lattice } from "../lattice/lattice";
 
-
 const _print = (x: number, printFormat = "%14.9f") => s.sprintf(printFormat, Utils.math.precise(x));
 const _latticeVectorsToString = (vectors: Vector3DSchema[]) =>
     vectors.map((v) => v.map((c) => _print(c)).join("\t")).join("\n");
@@ -23,16 +23,21 @@ const atomicConstraintsCharFromBool = (bool: boolean): string => (bool ? "T" : "
 
 /**
  * Obtain a textual representation of a material in POSCAR format.
- * @param materialOrConfig - material class instance or config object.
- * @param omitConstraints - whether to discard constraints passed with material.
+ * @param materialOrConfig - material class instance or config object (ESSE basis; no constraints).
+ * @param constraints - atomic constraints, separate from material config.
+ * @param omitConstraints - whether to discard constraints when serializing.
  */
-function toPoscar(materialOrConfig: MaterialSchema, omitConstraints = false): string {
+function toPoscar(
+    materialOrConfig: MaterialSchema,
+    constraints: AtomicConstraintsSchema = [],
+    omitConstraints = false,
+): string {
     const lattice = new Lattice(materialOrConfig.lattice);
     const vectorsAsString = _latticeVectorsToString(lattice.vectorArrays);
-    // @ts-ignore
     const basis = new ConstrainedBasis({
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
+        constraints: omitConstraints ? [] : constraints,
     });
     const BasisLines: string[] = [];
     let addSelectiveDynamics = false;
@@ -73,12 +78,17 @@ export function atomsCount(poscarFileContent: string): number {
     return atomsLine.map((x) => parseInt(x, 10)).reduce((a, b) => a + b);
 }
 
+export type MaterialSchemaWithConstraints = Omit<MaterialSchema, "metadata"> & {
+    metadata?: MaterialSchema["metadata"];
+    constraints?: AtomicConstraintsSchema;
+};
+
 /**
  * Parses POSCAR file into a Material config object.
  * @param fileContent - POSCAR file content.
  * @return Material config.
  */
-function fromPoscar(fileContent: string): object {
+function fromPoscar(fileContent: string): MaterialSchemaWithConstraints {
     const cleanContent = Utils.str.removeCommentsFromSourceCode(fileContent, "fortran");
     const lines = cleanContent.split("\n");
 
@@ -151,11 +161,15 @@ function fromPoscar(fileContent: string): object {
         constraints,
     });
 
+    const basisJson = basis.toJSON();
+    const { constraints: atomicConstraints, ...basisWithoutConstraints } = basisJson;
+
     const materialConfig = {
         lattice: lattice.toJSON(),
-        basis: basis.toJSON(),
+        basis: basisWithoutConstraints,
         name: comment,
         isNonPeriodic: false,
+        ...(atomicConstraints?.length ? { constraints: atomicConstraints } : {}),
     };
 
     return materialConfig;
