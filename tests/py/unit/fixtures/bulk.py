@@ -5,7 +5,7 @@ from mat3ra.standata.materials import Materials
 BULK_SrTiO3 = Materials.get_by_name_first_match("SrTiO3")
 BULK_GRAPHITE = Materials.get_by_name_first_match("Graphite")
 BULK_SiO2 = Materials.get_by_name_first_match("SiO2")
-BULK_Hf2O_MCL = Materials.get_by_name_first_match("Hafnium.*MCL")
+BULK_Hf2O_MCL = Materials.get_by_name_first_match("Hafnium IV Oxide, MCL")
 BULK_TiN = Materials.get_by_name_first_match("TiN")
 BULK_Ni_PRIMITIVE = Materials.get_by_name_first_match("Nickel")
 BULK_GRAPHENE = Materials.get_by_name_first_match("Graphene")
