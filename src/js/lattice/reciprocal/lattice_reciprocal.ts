@@ -7,7 +7,6 @@ import { Lattice } from "../lattice";
 import { paths } from "./paths";
 import { symmetryPoints } from "./symmetry_points";
 
-
 export type KPointCoordinates = number[];
 export type KPointPath = Array<{
     point: string;
@@ -47,9 +46,18 @@ export class ReciprocalLattice extends Lattice {
                 Utils.math.cross(vectors_[1], vectors_[2]),
             ) as unknown as number) / a;
         return [
-            Utils.math.multiply(Utils.math.cross(vectors_[1], vectors_[2]), 1 / divider) as Vector3DSchema,
-            Utils.math.multiply(Utils.math.cross(vectors_[2], vectors_[0]), 1 / divider) as Vector3DSchema,
-            Utils.math.multiply(Utils.math.cross(vectors_[0], vectors_[1]), 1 / divider) as Vector3DSchema,
+            Utils.math.multiply(
+                Utils.math.cross(vectors_[1], vectors_[2]),
+                1 / divider,
+            ) as Vector3DSchema,
+            Utils.math.multiply(
+                Utils.math.cross(vectors_[2], vectors_[0]),
+                1 / divider,
+            ) as Vector3DSchema,
+            Utils.math.multiply(
+                Utils.math.cross(vectors_[0], vectors_[1]),
+                1 / divider,
+            ) as Vector3DSchema,
         ];
     }
 
@@ -57,7 +65,9 @@ export class ReciprocalLattice extends Lattice {
      * Norms of reciprocal vectors.
      */
     get reciprocalVectorNorms(): Vector3DSchema {
-        return this.reciprocalVectors.map((vec) => Utils.math.norm(vec) as number) as Vector3DSchema;
+        return this.reciprocalVectors.map(
+            (vec) => Utils.math.norm(vec) as number,
+        ) as Vector3DSchema;
     }
 
     /**
@@ -167,7 +177,10 @@ export class ReciprocalLattice extends Lattice {
     getDimensionsFromSpacing(spacing: number, units: string = ATOMIC_COORD_UNITS.cartesian) {
         const factor: number = this.conversionTable[units][ATOMIC_COORD_UNITS.cartesian] || 1;
         return this.reciprocalVectorNorms.map((norm: number) => {
-            return Utils.math.max(1, Utils.math.ceil(lodash.round(norm / (spacing * factor), 4))) as number;
+            return Utils.math.max(
+                1,
+                Utils.math.ceil(lodash.round(norm / (spacing * factor), 4)),
+            ) as number;
         }) as Vector3DSchema;
     }
 

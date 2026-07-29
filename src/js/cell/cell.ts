@@ -9,7 +9,6 @@ import { Utils } from "@mat3ra/utils";
 
 import constants from "../constants";
 
-
 const MATRIX = Utils.math.matrix;
 const MULT = Utils.math.multiply;
 const INV = Utils.math.inv;

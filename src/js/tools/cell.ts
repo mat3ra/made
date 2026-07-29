@@ -3,7 +3,6 @@ import { Utils } from "@mat3ra/utils";
 
 import { Cell } from "../cell/cell";
 
-
 /**
  * Returns the list of points on the original lattice contained in the supercell in fractional coordinates.
  * Source: https://pymatgen.org/_modules/pymatgen/util/coord.html
