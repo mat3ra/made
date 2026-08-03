@@ -34,7 +34,7 @@
         "@babel/register": "^7.29.7",
         "@babel/runtime-corejs3": "^7.29.7",
         "@exabyte-io/eslint-config": "^2026.7.3-0",
-        "@mat3ra/code": "https://github.com/Exabyte-io/code/archive/923890274d775e36904674ceed755c9c542cf201.tar.gz",
+        "@mat3ra/code": "https://github.com/Exabyte-io/code/archive/3676047aad7d15bbbaebbfaafec35b8664a2308b.tar.gz",
         "@mat3ra/esse": "https://github.com/mat3ra/esse/archive/de8538cf2bd31bdcc240c209f78ab42811add289.tar.gz",
         "@mat3ra/standata": "2026.6.30-0",
         "@mat3ra/tsconfig": "^2024.6.3-0",
