@@ -5,7 +5,9 @@ from mat3ra.standata.materials import Materials
 BULK_SrTiO3 = Materials.get_by_name_first_match("SrTiO3")
 BULK_GRAPHITE = Materials.get_by_name_first_match("Graphite")
 BULK_SiO2 = Materials.get_by_name_first_match("SiO2")
-BULK_Hf2O_MCL = Materials.get_by_name_first_match("Hafnium.*MCL")
+# Prefer a Materials Project id: standata get_by_name is ranked search (not regex), and
+# queries like "Hafnium.*MCL" lose the MCL part via Path().stem and can resolve to Hf HEX.
+BULK_Hf2O_MCL = Materials.get_by_name_first_match("HfO2-[Hafnium_IV_Oxide]-MCL_[P2_1%2Fc]_3D_[Bulk]-[mp-352].json")
 BULK_TiN = Materials.get_by_name_first_match("TiN")
 BULK_Ni_PRIMITIVE = Materials.get_by_name_first_match("Nickel")
 BULK_GRAPHENE = Materials.get_by_name_first_match("Graphene")
