@@ -1,4 +1,4 @@
-import { Material } from "../material";
+import Material from "../Material";
 /**
  * Scales one lattice vector for the given material
  * @param material {Material} The material acted upon.

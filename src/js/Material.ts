@@ -12,7 +12,6 @@ import {
     namedEntityMixin,
 } from "@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin";
 import type {
-    AtomicConstraintsSchema,
     BasisSchema,
     ConsistencyCheck,
     DerivedPropertiesSchema,
@@ -23,14 +22,13 @@ import type {
 } from "@mat3ra/esse/dist/js/types";
 import CryptoJS from "crypto-js";
 
-import type { BasisConfig } from "./basis/basis";
-import { type ConstrainedBasisConfig, ConstrainedBasis } from "./basis/constrained_basis";
+import { type BasisConfig, Basis } from "./basis/basis";
+import type { ConstrainedBasis } from "./basis/constrained_basis";
 import {
     isConventionalCellSameAsPrimitiveForLatticeType,
     PRIMITIVE_TO_CONVENTIONAL_CELL_LATTICE_TYPES,
     PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS,
 } from "./cell/conventional_cell";
-import { Constraint } from "./constraints/constraints";
 import { type MaterialSchemaMixin, materialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 import parsers from "./parsers/parsers";
@@ -40,14 +38,20 @@ function parseBasis(
     textOrObject: string | BasisConfig,
     format?: "xyz",
     unitz?: BasisSchema["units"],
-): ConstrainedBasisConfig {
+): BasisConfig {
     if (typeof textOrObject === "string") {
         if (format !== "xyz") {
             throw new Error("Invalid format");
         }
-        return parsers.xyz.toBasisConfig(textOrObject, unitz);
+        const parsedBasis = parsers.xyz.toBasisConfig(textOrObject, unitz);
+        return {
+            elements: parsedBasis.elements,
+            coordinates: parsedBasis.coordinates,
+            units: parsedBasis.units,
+            ...(parsedBasis.labels?.length ? { labels: parsedBasis.labels } : {}),
+        };
     }
-    return { constraints: [], ...textOrObject };
+    return textOrObject;
 }
 
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -131,11 +135,8 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         };
     }
 
-    constraints: AtomicConstraintsSchema = [];
-
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
-    // Atomic constraints are accepted only via the second argument (not on config.basis).
-    constructor(config: NoInfer<MaterialConfig<S>>, constraints: AtomicConstraintsSchema = []) {
+    constructor(config: NoInfer<MaterialConfig<S>>) {
         super({
             ...config,
             formula: config.formula ?? "",
@@ -145,7 +146,6 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
 
         this.formula = config.formula || this.getBasis().formula;
         this.name = this.name || this.formula;
-        this.constraints = constraints;
     }
 
     updateFormula() {
@@ -179,33 +179,15 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
     setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
 
     setBasis(textOrObject: string | BasisConfig, format?: "xyz", unitz?: BasisSchema["units"]) {
-        const { constraints, ...basis } = parseBasis(textOrObject, format, unitz);
-
-        this.basis = basis;
-        this.constraints = constraints ?? [];
+        this.basis = parseBasis(textOrObject, format, unitz);
         this.unsetFileProps();
         this.updateFormula();
     }
 
-    setBasisConstraints(constraints: Constraint[]) {
-        this.constraints = constraints.map((c) => ({ id: c.id, value: c.value }));
-        this.unsetFileProps();
-    }
-
-    setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema) {
-        const constraintsInstances = constraints.map((c) => {
-            return Constraint.fromValueAndId(c.value, c.id);
-        });
-        this.setBasisConstraints(constraintsInstances);
-    }
-
-    getBasis(constraints?: AtomicConstraintsSchema) {
-        const basisData = this.basis;
-
-        return new ConstrainedBasis({
-            ...basisData,
+    getBasis(): Basis | ConstrainedBasis {
+        return new Basis({
+            ...this.basis,
             cell: this.getLattice().vectors,
-            constraints: constraints ?? this.constraints,
         });
     }
 
@@ -220,9 +202,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
             basis.toCrystal();
         }
 
-        const { constraints: nextConstraints, ...basisWithoutConstraints } = basis.toJSON();
-        this.basis = basisWithoutConstraints;
-        this.constraints = nextConstraints ?? this.constraints;
+        this.basis = basis.toJSON();
         this.lattice = lattice;
 
         this.unsetFileProps();
@@ -280,24 +260,23 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
     /**
      * Converts basis to crystal/fractional coordinates.
      */
-    toCrystal(constraints?: AtomicConstraintsSchema) {
-        this.setBasis(this.getBasis(constraints).toCrystal().toJSON());
+    toCrystal() {
+        this.setBasis(this.getBasis().toCrystal().toJSON());
     }
 
     /**
      * Converts current material's basis coordinates to cartesian.
      * No changes if coordinates already cartesian.
      */
-    toCartesian(constraints?: AtomicConstraintsSchema) {
-        this.setBasis(this.getBasis(constraints).toCartesian().toJSON());
+    toCartesian() {
+        this.setBasis(this.getBasis().toCartesian().toJSON());
     }
 
     /**
      * Returns material's basis in XYZ format.
-     * Uses ESSE material JSON plus constraints separately (same contract as POSCAR/QE serializers).
      */
     getBasisAsXyz(fractional = false): string {
-        return parsers.xyz.fromMaterial(this.toJSON(), fractional, this.constraints);
+        return parsers.xyz.fromMaterial(this.toJSON(), fractional);
     }
 
     /**
@@ -314,7 +293,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
      * ```
      */
     getAsQEFormat(): string {
-        return parsers.espresso.toEspressoFormat(this.toJSON(), this.constraints);
+        return parsers.espresso.toEspressoFormat(this.toJSON());
     }
 
     /**
@@ -325,25 +304,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         if (this.src?.extension === "poscar" && !ignoreOriginal) {
             return this.src.text;
         }
-        return parsers.poscar.toPoscar(this.toJSON(), this.constraints, omitConstraints);
-    }
-
-    /**
-     * Preserve private constraints via the second constructor argument (never on basis JSON).
-     */
-    clone(extraContext?: object): this {
-        type ThisType = typeof this;
-        type ThisConstructor = {
-            new (o: object, constraints?: AtomicConstraintsSchema): ThisType;
-        };
-
-        return new (this.constructor as ThisConstructor)(
-            {
-                ...this.toJSON(),
-                ...extraContext,
-            },
-            this.constraints,
-        );
+        return parsers.poscar.toPoscar(this.toJSON(), omitConstraints);
     }
 
     /**
@@ -367,12 +328,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         config.lattice.type = conventionalLatticeType;
         config.name = `${this.name} - conventional cell`;
 
-        type ThisType = typeof this;
-        type ThisConstructor = {
-            new (o: object, constraints?: AtomicConstraintsSchema): ThisType;
-        };
-
-        return new (this.constructor as ThisConstructor)(config, this.constraints);
+        return this.clone(config);
     }
 
     /**
@@ -424,15 +380,13 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
     }
 
     toJSON(): S {
-        const { constraints, ...basis } = this.getBasis().toJSON();
-
         return {
             ...super.toJSON(),
             lattice: this.getLattice().toJSON(),
-            basis,
+            basis: this.getBasis().toJSON(),
             isNonPeriodic: this.isNonPeriodic,
         } as S;
     }
 }
 
-export { Material };
+export default Material;

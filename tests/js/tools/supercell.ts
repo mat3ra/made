@@ -4,7 +4,7 @@ import { expect } from "chai";
 
 import { Basis } from "../../../src/js/basis/basis";
 import { Made } from "../../../src/js/made";
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
 import { Silicon, SiSupercell } from "../fixtures";
 
 const { assertDeepAlmostEqual } = Utils.assertion;

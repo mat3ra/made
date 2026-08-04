@@ -1,9 +1,9 @@
 declare const _default: {
     surface: {
-        generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: import("../material").Material<S>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./surface").SlabConfigSchema;
+        generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: import("../Material").default<S>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./surface").SlabConfigSchema;
     };
     supercell: {
-        generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: import("../material").Material<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
+        generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: import("../Material").default<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
             name: string;
             basis: import("../basis/basis").BasisConfig & import("@mat3ra/esse/dist/js/types").BaseInMemoryEntitySchema;
             lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;
@@ -11,9 +11,9 @@ declare const _default: {
         generateNewBasisWithinSupercell: (basis: import("../made").Basis | import("../basis/constrained_basis").ConstrainedBasis, cell: import("../made").Cell, supercell: import("../made").Cell, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => import("../made").Basis;
     };
     material: {
-        scaleOneLatticeVector: (material: import("../material").Material, key?: "a" | "b" | "c", factor?: number) => void;
-        scaleLatticeToMakeNonPeriodic: (material: import("../material").Material) => void;
-        translateAtomsToCenter: (material: import("../material").Material) => void;
+        scaleOneLatticeVector: (material: import("../Material").default, key?: "a" | "b" | "c", factor?: number) => void;
+        scaleLatticeToMakeNonPeriodic: (material: import("../Material").default) => void;
+        translateAtomsToCenter: (material: import("../Material").default) => void;
     };
     basis: {
         repeat: (basis: import("../made").Basis, repetitions: number[]) => import("../made").Basis;

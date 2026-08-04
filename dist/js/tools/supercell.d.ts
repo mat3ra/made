@@ -2,7 +2,7 @@ import { type MaterialSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types
 import { Basis } from "../basis/basis";
 import { ConstrainedBasis } from "../basis/constrained_basis";
 import { Cell } from "../cell/cell";
-import type { Material } from "../material";
+import type Material from "../Material";
 /**
  * @summary Generates new basis for a supercell. For each site from basis generates shifts that are within supercell.
  */

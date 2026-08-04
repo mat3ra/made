@@ -3,7 +3,7 @@ import { Utils } from "@mat3ra/utils";
 
 import { ATOMIC_COORD_UNITS } from "../constants";
 import { Lattice } from "../lattice/lattice";
-import { Material } from "../material";
+import Material from "../Material";
 
 /**
  * Scales one lattice vector for the given material

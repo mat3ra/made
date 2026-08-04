@@ -8,7 +8,7 @@ import { Utils } from "@mat3ra/utils";
 
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
-import { type MaterialConfig, Material } from "../material";
+import Material, { type MaterialConfig } from "../Material";
 import SupercellTools from "./supercell";
 
 const MULT = Utils.math.multiply;

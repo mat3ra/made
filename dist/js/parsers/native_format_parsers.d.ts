@@ -1,4 +1,5 @@
-import { type MaterialSchemaWithConstraints } from "./poscar";
+import type { MaterialConfig } from "../Material";
+import type { MaterialConstrainedConfig } from "../MaterialConstrained";
 /**
  * @summary Detects the format of the input string
  * @throws If the input string is unknown format
@@ -12,7 +13,7 @@ declare function detectFormat(text: string): "json" | "poscar" | "unknown";
  * @throws If the input string is of unknown format
  * @return Material config
  */
-declare function convertFromNativeFormat(text: string): MaterialSchemaWithConstraints;
+declare function convertFromNativeFormat(text: string): MaterialConfig | MaterialConstrainedConfig;
 declare const _default: {
     detectFormat: typeof detectFormat;
     convertFromNativeFormat: typeof convertFromNativeFormat;

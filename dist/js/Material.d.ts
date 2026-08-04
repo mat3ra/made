@@ -2,10 +2,9 @@ import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import { type Defaultable } from "@mat3ra/code/dist/js/entity/mixins/DefaultableMixin";
 import { type HasMetadata } from "@mat3ra/code/dist/js/entity/mixins/HasMetadataMixin";
 import { type NamedEntity } from "@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin";
-import type { AtomicConstraintsSchema, BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
-import type { BasisConfig } from "./basis/basis";
-import { ConstrainedBasis } from "./basis/constrained_basis";
-import { Constraint } from "./constraints/constraints";
+import type { BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { type BasisConfig, Basis } from "./basis/basis";
+import type { ConstrainedBasis } from "./basis/constrained_basis";
 import { type MaterialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -20,8 +19,7 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     static createDefault: () => Material;
     static get defaultConfig(): MaterialConfig;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
-    constraints: AtomicConstraintsSchema;
-    constructor(config: NoInfer<MaterialConfig<S>>, constraints?: AtomicConstraintsSchema);
+    constructor(config: NoInfer<MaterialConfig<S>>);
     updateFormula(): void;
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
@@ -64,9 +62,7 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     unsetFileProps(): void;
     setBasis(basis: BasisConfig): void;
     setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
-    setBasisConstraints(constraints: Constraint[]): void;
-    setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema): void;
-    getBasis(constraints?: AtomicConstraintsSchema): ConstrainedBasis;
+    getBasis(): Basis | ConstrainedBasis;
     setLattice(lattice: LatticeSchema): void;
     getLattice(): Lattice;
     /**
@@ -93,15 +89,14 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     /**
      * Converts basis to crystal/fractional coordinates.
      */
-    toCrystal(constraints?: AtomicConstraintsSchema): void;
+    toCrystal(): void;
     /**
      * Converts current material's basis coordinates to cartesian.
      * No changes if coordinates already cartesian.
      */
-    toCartesian(constraints?: AtomicConstraintsSchema): void;
+    toCartesian(): void;
     /**
      * Returns material's basis in XYZ format.
-     * Uses ESSE material JSON plus constraints separately (same contract as POSCAR/QE serializers).
      */
     getBasisAsXyz(fractional?: boolean): string;
     /**
@@ -123,10 +118,6 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
      */
     getAsPOSCAR(ignoreOriginal?: boolean, omitConstraints?: boolean): string;
     /**
-     * Preserve private constraints via the second constructor argument (never on basis JSON).
-     */
-    clone(extraContext?: object): this;
-    /**
      * Returns a copy of the material with conventional cell constructed instead of primitive.
      */
     getACopyWithConventionalCell(): this;
@@ -142,4 +133,4 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     getBasisConsistencyChecks(): ConsistencyCheck[];
     toJSON(): S;
 }
-export { Material };
+export default Material;

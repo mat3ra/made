@@ -1,7 +1,7 @@
 import type { MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
 import tools from "../../../src/js/tools";
 import { SlabConfigSchema } from "../../../src/js/tools/surface";
 import { Silicon, SiSlab100, SiSlab111, SiSlab111NoVacuum } from "../fixtures";

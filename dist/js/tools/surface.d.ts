@@ -1,5 +1,5 @@
 import { type MaterialSchema, Coordinate3DSchema } from "@mat3ra/esse/dist/js/types";
-import { type MaterialConfig, Material } from "../material";
+import Material, { type MaterialConfig } from "../Material";
 export type SlabConfigSchema = MaterialConfig & {
     outOfPlaneAxisIndex: number;
 };

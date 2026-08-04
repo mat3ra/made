@@ -1,7 +1,8 @@
 import { expect } from "chai";
 
 import { AtomicConstraints } from "../../../src/js/constraints/constraints";
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
+import MaterialConstrained from "../../../src/js/MaterialConstrained";
 import parsers from "../../../src/js/parsers/parsers";
 import { atomsCount } from "../../../src/js/parsers/poscar";
 import {
@@ -79,7 +80,13 @@ direct
    0.000000000    0.000000000    0.000000000 F F F Si
    0.250000000    0.250000000    0.250000000 T T T Ge`;
 
-        const material = new Material(Silicon);
+        const material = new MaterialConstrained({
+            ...Silicon,
+            basis: {
+                ...Silicon.basis,
+                constraints: [],
+            },
+        });
         const clonedMaterial = material.clone();
         clonedMaterial.setBasis(newBasisXYZ, "xyz", clonedMaterial.getBasis().units);
 

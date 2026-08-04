@@ -6,8 +6,10 @@ import { defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, Lat
 import { DEFAULT_LATTICE_UNITS, LATTICE_TYPE_CONFIGS } from "./lattice/lattice_types";
 import { ReciprocalLattice } from "./lattice/reciprocal/lattice_reciprocal";
 import { UnitCell } from "./lattice/unit_cell";
-import { defaultMaterialConfig, Material } from "./material";
-import { MaterialHashed } from "./material_hashed";
+import Material, { defaultMaterialConfig } from "./Material";
+import MaterialConstrained, { defaultMaterialConstrainedConfig } from "./MaterialConstrained";
+import MaterialConstrainedHashed from "./MaterialConstrainedHashed";
+import MaterialHashed from "./MaterialHashed";
 import parsers from "./parsers/parsers";
 import tools from "./tools/index";
 export declare const Made: {
@@ -34,8 +36,11 @@ export declare const Made: {
         cartesian: string;
     };
     Material: typeof Material;
+    MaterialConstrained: typeof MaterialConstrained;
+    MaterialConstrainedHashed: typeof MaterialConstrainedHashed;
     MaterialHashed: typeof MaterialHashed;
     defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema;
+    defaultMaterialConstrainedConfig: import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
     UnitCell: typeof UnitCell;
@@ -48,15 +53,15 @@ export declare const Made: {
     parsers: {
         xyz: {
             validate: typeof import("./parsers/xyz").validate;
-            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, fractional?: boolean, constraints?: import("@mat3ra/esse/dist/js/types").AtomicConstraintsSchema) => string;
+            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema, fractional?: boolean) => string;
             toBasisConfig: (txt: string, units?: string, cell?: Cell) => import("./basis/constrained_basis").ConstrainedBasisConfig;
             fromBasis: (basisClsInstance: import("./basis/constrained_basis").ConstrainedBasis, coordinatePrintFormat: string) => string;
             CombinatorialBasis: typeof import("./parsers/xyz_combinatorial_basis").CombinatorialBasis;
         };
         poscar: {
             isPoscar: (text: string) => boolean;
-            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, constraints?: import("@mat3ra/esse/dist/js/types").AtomicConstraintsSchema, omitConstraints?: boolean) => string;
-            fromPoscar: (fileContent: string) => import("./parsers/poscar").MaterialSchemaWithConstraints;
+            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema, omitConstraints?: boolean) => string;
+            fromPoscar: (fileContent: string) => import("./MaterialConstrained").MaterialConstrainedConfig;
             atomicConstraintsCharFromBool: (bool: boolean) => string;
             atomsCount: typeof import("./parsers/poscar").atomsCount;
         };
@@ -64,11 +69,11 @@ export declare const Made: {
             parseMeta: (txt: string) => import("./parsers/cif").Meta;
         };
         espresso: {
-            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, constraints?: import("@mat3ra/esse/dist/js/types").AtomicConstraintsSchema) => string;
+            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema) => string;
         };
         nativeFormatParsers: {
             detectFormat: (text: string) => "json" | "poscar" | "unknown";
-            convertFromNativeFormat: (text: string) => import("./parsers/poscar").MaterialSchemaWithConstraints;
+            convertFromNativeFormat: (text: string) => import("./Material").MaterialConfig | import("./MaterialConstrained").MaterialConstrainedConfig;
         };
     };
     tools: {
@@ -103,4 +108,4 @@ export declare const Made: {
         };
     };
 };
-export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, MaterialHashed, defaultMaterialConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };
+export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, MaterialConstrained, MaterialConstrainedHashed, MaterialHashed, defaultMaterialConfig, defaultMaterialConstrainedConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };

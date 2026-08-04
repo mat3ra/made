@@ -1,9 +1,8 @@
-import { AtomicConstraintsSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { MaterialConstrainedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 /**
  * Construct textual representation of a materialOrConfig according to Quantum ESPRESSO pw.x input format.
- * Constraints are not part of ESSE basis — pass them separately.
  */
-declare function toEspressoFormat(materialOrConfig: MaterialSchema, constraints?: AtomicConstraintsSchema): string;
+declare function toEspressoFormat(materialOrConfig: MaterialSchema | MaterialConstrainedSchema): string;
 declare const _default: {
     toEspressoFormat: typeof toEspressoFormat;
 };

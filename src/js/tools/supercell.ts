@@ -9,7 +9,7 @@ import { Basis } from "../basis/basis";
 import { ConstrainedBasis } from "../basis/constrained_basis";
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
-import type { Material } from "../material";
+import type Material from "../Material";
 import cellTools from "./cell";
 
 const ADD = Utils.math.add;

@@ -15,13 +15,13 @@ const _latticeVectorsToString = (vectors) => vectors.map((v) => v.map((c) => _pr
 const atomicConstraintsCharFromBool = (bool) => (bool ? "T" : "F");
 /**
  * Obtain a textual representation of a material in POSCAR format.
- * @param materialOrConfig - material class instance or config object (ESSE basis; no constraints).
- * @param constraints - atomic constraints, separate from material config.
+ * @param materialOrConfig - material class instance or config object.
  * @param omitConstraints - whether to discard constraints when serializing.
  */
-function toPoscar(materialOrConfig, constraints = [], omitConstraints = false) {
+function toPoscar(materialOrConfig, omitConstraints = false) {
     const lattice = new lattice_1.Lattice(materialOrConfig.lattice);
     const vectorsAsString = _latticeVectorsToString(lattice.vectorArrays);
+    const constraints = "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
     const basis = new constrained_basis_1.ConstrainedBasis({
         ...materialOrConfig.basis,
         cell: cell_1.Cell.fromVectorsArray(lattice.vectorArrays),
@@ -132,14 +132,11 @@ function fromPoscar(fileContent) {
         cell: cell_1.Cell.fromVectorsArray(lattice.vectorArrays),
         constraints,
     });
-    const basisJson = basis.toJSON();
-    const { constraints: atomicConstraints, ...basisWithoutConstraints } = basisJson;
     const materialConfig = {
         lattice: lattice.toJSON(),
-        basis: basisWithoutConstraints,
+        basis: basis.toJSON(),
         name: comment,
         isNonPeriodic: false,
-        ...((atomicConstraints === null || atomicConstraints === void 0 ? void 0 : atomicConstraints.length) ? { constraints: atomicConstraints } : {}),
     };
     return materialConfig;
 }

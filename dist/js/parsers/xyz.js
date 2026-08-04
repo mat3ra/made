@@ -132,11 +132,11 @@ function fromBasis(basisClsInstance, coordinatePrintFormat) {
 }
 /**
  * Create XYZ from Material class instance (or its JSON config).
- * Constraints are not part of ESSE basis — pass them separately.
  * Prefer fromBasis when you already have a ConstrainedBasis instance.
  */
-function fromMaterial(materialOrConfig, fractional = false, constraints = []) {
+function fromMaterial(materialOrConfig, fractional = false) {
     const lattice = new lattice_1.Lattice(materialOrConfig.lattice);
+    const constraints = "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
     const basis = new constrained_basis_1.ConstrainedBasis({
         ...materialOrConfig.basis,
         cell: cell_1.Cell.fromVectorsArray(lattice.vectorArrays),

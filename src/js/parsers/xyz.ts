@@ -1,4 +1,4 @@
-import { AtomicConstraintsSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { MaterialConstrainedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { isEmpty, isNaN, map } from "lodash";
 import s from "underscore.string";
 
@@ -161,15 +161,15 @@ function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: st
 
 /**
  * Create XYZ from Material class instance (or its JSON config).
- * Constraints are not part of ESSE basis — pass them separately.
  * Prefer fromBasis when you already have a ConstrainedBasis instance.
  */
 function fromMaterial(
-    materialOrConfig: MaterialSchema,
+    materialOrConfig: MaterialSchema | MaterialConstrainedSchema,
     fractional = false,
-    constraints: AtomicConstraintsSchema = [],
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);
+    const constraints =
+        "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
     const basis = new ConstrainedBasis({
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),

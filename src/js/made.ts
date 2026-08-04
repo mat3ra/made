@@ -11,8 +11,10 @@ import {
 import { DEFAULT_LATTICE_UNITS, LATTICE_TYPE_CONFIGS } from "./lattice/lattice_types";
 import { ReciprocalLattice } from "./lattice/reciprocal/lattice_reciprocal";
 import { UnitCell } from "./lattice/unit_cell";
-import { defaultMaterialConfig, Material } from "./material";
-import { MaterialHashed } from "./material_hashed";
+import Material, { defaultMaterialConfig } from "./Material";
+import MaterialConstrained, { defaultMaterialConstrainedConfig } from "./MaterialConstrained";
+import MaterialConstrainedHashed from "./MaterialConstrainedHashed";
+import MaterialHashed from "./MaterialHashed";
 import parsers from "./parsers/parsers";
 import tools from "./tools/index";
 
@@ -23,8 +25,11 @@ export const Made = {
     ATOMIC_COORD_UNITS,
 
     Material,
+    MaterialConstrained,
+    MaterialConstrainedHashed,
     MaterialHashed,
     defaultMaterialConfig,
+    defaultMaterialConstrainedConfig,
     Lattice,
     Cell,
     UnitCell,
@@ -47,8 +52,11 @@ export {
     units,
     ATOMIC_COORD_UNITS,
     Material,
+    MaterialConstrained,
+    MaterialConstrainedHashed,
     MaterialHashed,
     defaultMaterialConfig,
+    defaultMaterialConstrainedConfig,
     Lattice,
     Cell,
     UnitCell,

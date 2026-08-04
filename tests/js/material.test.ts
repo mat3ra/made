@@ -1,14 +1,24 @@
-import type { MaterialHashedSchema } from "@mat3ra/esse/dist/js/types";
+import type { MaterialConstrainedSchema, MaterialHashedSchema } from "@mat3ra/esse/dist/js/types";
 import { expect } from "chai";
 
-import { Material } from "../../src/js/material";
-import { MaterialHashed } from "../../src/js/material_hashed";
+import Material from "../../src/js/Material";
+import MaterialConstrained from "../../src/js/MaterialConstrained";
+import MaterialConstrainedHashed from "../../src/js/MaterialConstrainedHashed";
+import MaterialHashed from "../../src/js/MaterialHashed";
 import expectedHashes from "../fixtures/hashes.json";
 import { FeOStandata, Graphene, Na4Cl4, Silicon } from "./fixtures";
 
 const newBasisXYZ = `Si     0.000000    0.000000    0.000000
 Ge     0.250000    0.250000    0.250000
 `;
+
+const constrainedSilicon: MaterialConstrainedSchema = {
+    ...Silicon,
+    basis: {
+        ...Silicon.basis,
+        constraints: [],
+    },
+};
 
 describe("Material", () => {
     it("should return unique elements", () => {
@@ -28,89 +38,51 @@ describe("Material", () => {
 Li 0.25 0.25 0.25
 `;
 
-        it("keeps constraints in getBasisAsXyz after setBasis strips them from basis JSON", () => {
+        it("does not retain constraints parsed from XYZ", () => {
             const material = new Material(Silicon);
             material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
 
             expect(material.basis).to.not.have.property("constraints");
-            expect(material.getBasisAsXyz()).to.include("1 1 0");
-            expect(material.getBasisAsXyz()).to.include("1 1 1");
-        });
-
-        it("keeps constraints in getBasisAsXyz when toJSON omits them (client CoreMaterial path)", () => {
-            const material = new Material(Silicon);
-            material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
-
-            // Simulate CoreMaterial client toJSON(): return raw _json without constraints.
-            material.toJSON = () => material._json;
-
             expect(material.toJSON().basis).to.not.have.property("constraints");
-            expect(material.getBasisAsXyz()).to.include(
-                "Li     0.000000    0.000000    0.000000 1 1 0",
-            );
-            expect(material.getBasisAsXyz()).to.include(
-                "Li     0.250000    0.250000    0.250000 1 1 1",
-            );
+            expect(material.getAsPOSCAR(true)).to.not.include("Selective dynamics");
         });
+    });
+});
 
-        it("toJSON never embeds constraints on basis", () => {
-            const material = new Material(Silicon);
-            material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
+describe("MaterialConstrained", () => {
+    const constrainedBasisXYZ = `Li 0 0 0 1 1 0
+Li 0.25 0.25 0.25
+`;
 
-            expect(material.toJSON().basis).to.not.have.property("constraints");
-            expect(material.constraints).to.have.lengthOf(2);
-        });
+    it("stores parsed constraints in basis JSON", () => {
+        const material = new MaterialConstrained(constrainedSilicon);
+        material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
 
-        it("accepts constraints only as the second constructor argument", () => {
-            const material = new Material(Silicon);
-            material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
-            const { constraints } = material.getBasis();
+        expect(material.basis.constraints).to.deep.equal([
+            { id: 0, value: [true, true, false] },
+            { id: 1, value: [true, true, true] },
+        ]);
+        expect(material.toJSON().basis.constraints).to.deep.equal(material.basis.constraints);
+        expect(material.getBasisAsXyz()).to.include("1 1 0");
+    });
 
-            // Embedded basis.constraints are not used; only the second arg hydrates this.constraints.
-            const fromSecondArg = new Material(
-                { ...Silicon, basis: { ...material.basis } },
-                constraints,
-            );
-            expect(fromSecondArg.constraints).to.deep.equal(constraints);
-            expect(fromSecondArg.getBasisAsXyz()).to.include("1 1 0");
-            expect(fromSecondArg.getBasisAsXyz()).to.include("1 1 1");
-            expect(fromSecondArg.toJSON().basis).to.not.have.property("constraints");
-        });
+    it("preserves basis constraints across clone and lattice changes", () => {
+        const material = new MaterialConstrained(constrainedSilicon);
+        material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
+        const cloned = material.clone();
 
-        it("rehydrates private constraints via setBasisConstraintsFromArrayOfObjects", () => {
-            const material = new Material(Silicon);
-            material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
-            const { constraints } = material.getBasis();
+        cloned.setLattice({ ...cloned.lattice, a: cloned.lattice.a + 0.1 });
 
-            const reloaded = new Material({
-                ...Silicon,
-                basis: { ...material.basis },
-            });
-            reloaded.setBasisConstraintsFromArrayOfObjects(constraints);
+        expect(cloned.basis.constraints).to.deep.equal(material.basis.constraints);
+    });
 
-            expect(reloaded.getBasisAsXyz()).to.include("1 1 0");
-            expect(reloaded.getBasisAsXyz()).to.include("1 1 1");
-        });
+    it("serializes embedded constraints to POSCAR", () => {
+        const material = new MaterialConstrained(constrainedSilicon);
+        material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
+        const poscar = material.getAsPOSCAR(true);
 
-        it("preserves constraints across clone via second constructor argument", () => {
-            const material = new Material(Silicon);
-            material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
-            material.toJSON = () => material._json;
-
-            const cloned = material.clone();
-            expect(cloned.getBasisAsXyz()).to.include("1 1 0");
-            expect(cloned.toJSON().basis).to.not.have.property("constraints");
-        });
-
-        it("serializes constraints via getAsPOSCAR separate from basis JSON", () => {
-            const material = new Material(Silicon);
-            material.setBasis(constrainedBasisXYZ, "xyz", "crystal");
-
-            expect(material.toJSON().basis).to.not.have.property("constraints");
-            const poscar = material.getAsPOSCAR(true);
-            expect(poscar).to.include("Selective dynamics");
-            expect(poscar).to.match(/T\s+T\s+F/);
-        });
+        expect(poscar).to.include("Selective dynamics");
+        expect(poscar).to.match(/T\s+T\s+F/);
     });
 });
 
@@ -195,5 +167,27 @@ describe("MaterialHashed", () => {
             material._json.webappOnly = "updated";
             expect(material._json.webappOnly).to.equal("updated");
         });
+    });
+});
+
+describe("MaterialConstrainedHashed", () => {
+    it("stores constraints in basis and refreshes hash after basis mutation", () => {
+        const material = new MaterialConstrainedHashed({
+            ...constrainedSilicon,
+            hash: Silicon.hash,
+        });
+        const previousHash = material.hash;
+
+        material.setBasis(
+            `Si 0 0 0 1 1 0
+Ge 0.25 0.25 0.25 1 1 1
+`,
+            "xyz",
+            "crystal",
+        );
+
+        expect(material.basis.constraints).to.have.lengthOf(2);
+        expect(material.hash).to.equal(material.calculateHash());
+        expect(material.hash).to.not.equal(previousHash);
     });
 });

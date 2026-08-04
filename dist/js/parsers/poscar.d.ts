@@ -1,26 +1,22 @@
-import { AtomicConstraintsSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { MaterialConstrainedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import type { MaterialConstrainedConfig } from "../MaterialConstrained";
 /**
  * Obtain a textual representation of a material in POSCAR format.
- * @param materialOrConfig - material class instance or config object (ESSE basis; no constraints).
- * @param constraints - atomic constraints, separate from material config.
+ * @param materialOrConfig - material class instance or config object.
  * @param omitConstraints - whether to discard constraints when serializing.
  */
-declare function toPoscar(materialOrConfig: MaterialSchema, constraints?: AtomicConstraintsSchema, omitConstraints?: boolean): string;
+declare function toPoscar(materialOrConfig: MaterialSchema | MaterialConstrainedSchema, omitConstraints?: boolean): string;
 /**
  * @summary calculates the number of atoms in a poscar file based on the summation of the numbers in line 7 of the file.
  * Poscar file formatting: https://www.vasp.at/wiki/index.php/POSCAR
  */
 export declare function atomsCount(poscarFileContent: string): number;
-export type MaterialSchemaWithConstraints = Omit<MaterialSchema, "metadata"> & {
-    metadata?: MaterialSchema["metadata"];
-    constraints?: AtomicConstraintsSchema;
-};
 /**
  * Parses POSCAR file into a Material config object.
  * @param fileContent - POSCAR file content.
  * @return Material config.
  */
-declare function fromPoscar(fileContent: string): MaterialSchemaWithConstraints;
+declare function fromPoscar(fileContent: string): MaterialConstrainedConfig;
 /**
  * @summary Checks if a string has a POSCAR format (first 8 lines are read)
  * @param text - string to check

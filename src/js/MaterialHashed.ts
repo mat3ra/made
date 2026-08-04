@@ -2,13 +2,9 @@ import {
     type HashedSchemaMixin,
     hashedSchemaMixin,
 } from "@mat3ra/code/dist/js/generated/HashedSchemaMixin";
-import type {
-    AtomicConstraintsSchema,
-    MaterialHashedSchema,
-    MaterialSchema,
-} from "@mat3ra/esse/dist/js/types";
+import type { MaterialHashedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 
-import { type MaterialConfig, type PartialBy, defaultMaterialConfig, Material } from "./material";
+import Material, { type MaterialConfig, type PartialBy, defaultMaterialConfig } from "./Material";
 
 type Schema = MaterialHashedSchema;
 
@@ -28,18 +24,12 @@ class MaterialHashed<S extends Schema = Schema> extends Material<S> implements S
     }
 
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
-    constructor(
-        config: NoInfer<MaterialHashedConfig<S>>,
-        constraints: AtomicConstraintsSchema = [],
-    ) {
+    constructor(config: NoInfer<MaterialHashedConfig<S>>) {
         // MaterialConfig<S> still requires hash; use a placeholder until calculateHash can run.
-        super(
-            {
-                ...config,
-                hash: config.hash ?? "",
-            } as MaterialConfig<S>,
-            constraints,
-        );
+        super({
+            ...config,
+            hash: config.hash ?? "",
+        } as MaterialConfig<S>);
         this.hash = config.hash ?? this.calculateHash("", false, this.isNonPeriodic);
     }
 
@@ -68,4 +58,4 @@ class MaterialHashed<S extends Schema = Schema> extends Material<S> implements S
 
 hashedSchemaMixin(MaterialHashed.prototype);
 
-export { MaterialHashed };
+export default MaterialHashed;

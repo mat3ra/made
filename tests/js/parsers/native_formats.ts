@@ -15,8 +15,12 @@ describe("Parsers.NativeFormat", () => {
     });
 
     it("should return a material config for graphene from a poscar", () => {
-        const { constraints, ...config } =
-            nativeFormatParsers.convertFromNativeFormat(GraphenePoscar);
+        const parsedMaterial = nativeFormatParsers.convertFromNativeFormat(GraphenePoscar);
+        if (!("constraints" in parsedMaterial.basis)) {
+            throw new Error("Expected constrained basis");
+        }
+        const { constraints, ...basis } = parsedMaterial.basis;
+        const config = { ...parsedMaterial, basis };
 
         assertDeepAlmostEqual(config, Graphene, ["basis.labels", "lattice"]);
         assertDeepAlmostEqual(config.lattice, Graphene.lattice, ["type"]);
@@ -24,12 +28,16 @@ describe("Parsers.NativeFormat", () => {
     });
 
     it("should return a material config for Ni hex from a poscar", () => {
-        const { constraints, ...config } = nativeFormatParsers.convertFromNativeFormat(NiHexPoscar);
+        const parsedMaterial = nativeFormatParsers.convertFromNativeFormat(NiHexPoscar);
+        if (!("constraints" in parsedMaterial.basis)) {
+            throw new Error("Expected constrained basis");
+        }
+        const { constraints, ...basis } = parsedMaterial.basis;
+        const config = { ...parsedMaterial, basis };
 
         assertDeepAlmostEqual(config, NiHex, ["lattice", "basis.labels"]);
         assertDeepAlmostEqual(config.lattice, NiHex.lattice, ["type"]);
-        // Empty selective-dynamics list is omitted from POSCAR parse output.
-        expect(constraints ?? []).to.deep.equal([]);
+        expect(constraints).to.deep.equal([]);
     });
 
     it("should throw an error for unknown format", () => {

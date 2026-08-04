@@ -5,7 +5,7 @@ import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
 import { Basis } from "../../../src/js/basis/basis";
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
     C2H4,
@@ -37,8 +37,7 @@ describe("Basis", () => {
 
     it("should return jsonified basis", () => {
         const basis = new Material(Na4Cl4).getBasis();
-        const { constraints: _, ...basisJson } = basis.toJSON();
-        expect(basisJson).to.be.deep.almost.equal(Na4Cl4.basis);
+        expect(basis.toJSON()).to.be.deep.almost.equal(Na4Cl4.basis);
     });
 
     it("should return true if cells are equal", () => {

@@ -1,4 +1,6 @@
-import Poscar, { type MaterialSchemaWithConstraints } from "./poscar";
+import type { MaterialConfig } from "../Material";
+import type { MaterialConstrainedConfig } from "../MaterialConstrained";
+import Poscar from "./poscar";
 
 const NATIVE_FORMAT = {
     JSON: "json",
@@ -29,7 +31,7 @@ function detectFormat(text: string) {
  * @throws If the input string is of unknown format
  * @return Material config
  */
-function convertFromNativeFormat(text: string): MaterialSchemaWithConstraints {
+function convertFromNativeFormat(text: string): MaterialConfig | MaterialConstrainedConfig {
     const format = detectFormat(text);
 
     switch (format) {
