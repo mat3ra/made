@@ -17,6 +17,47 @@ def translate(material: Material, vector: Vector3D) -> Material:
     return translate_by_vector(material, vector, use_cartesian_coordinates=True)
 
 
+def translate_atoms(
+    material: Material,
+    atom_ids: List[int],
+    vector: Vector3D,
+    use_cartesian_coordinates: bool = True,
+) -> Material:
+    """
+    Translate the given atoms by a vector.
+
+    Basis order is preserved.
+
+    Args:
+        material (Material): The material to translate atoms in.
+        atom_ids (List[int]): Indices of the atoms to translate.
+        vector (Vector3D): The vector to translate the atoms by.
+        use_cartesian_coordinates (bool): Whether `vector` is in cartesian coordinates.
+
+    Returns:
+        Material: The material with the given atoms translated.
+
+    Raises:
+        IndexError: If any atom id is out of range for the basis.
+    """
+    new_material = material.clone()
+    if use_cartesian_coordinates:
+        new_material.to_cartesian()
+    coordinates: List[List[float]] = [list(coordinate) for coordinate in new_material.basis.coordinates.values]
+
+    out_of_range = [atom_id for atom_id in atom_ids if not -len(coordinates) <= atom_id < len(coordinates)]
+    if out_of_range:
+        raise IndexError(f"Atom ids {out_of_range} are out of range for a basis of {len(coordinates)} atoms.")
+
+    for atom_id in atom_ids:
+        coordinates[atom_id] = (np.array(coordinates[atom_id]) + np.array(vector)).tolist()
+
+    new_material.set_coordinates(coordinates)
+    if use_cartesian_coordinates:
+        new_material.to_crystal()
+    return new_material
+
+
 @decorator_convert_supercell_matrix_2x2_to_3x3
 def supercell(material: MaterialWithBuildMetadata, supercell_matrix) -> MaterialWithBuildMetadata:
     atoms = to_ase(material)
