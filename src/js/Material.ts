@@ -122,6 +122,12 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         return defaultMaterialConfig;
     }
 
+    static fromMaterial(material: Material): Material {
+        return new Material({
+            ...material.toJSON(),
+        });
+    }
+
     static constructMaterialFileSource(
         fileName: string,
         fileContent: string,

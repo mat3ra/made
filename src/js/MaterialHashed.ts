@@ -23,6 +23,13 @@ class MaterialHashed<S extends Schema = Schema> extends Material<S> implements S
         return defaultMaterialConfig;
     }
 
+    static fromMaterial(material: Material | MaterialHashed): MaterialHashed {
+        return new MaterialHashed({
+            ...material.toJSON(),
+            hash: material.calculateHash("", false, material.isNonPeriodic),
+        });
+    }
+
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
     constructor(config: NoInfer<MaterialHashedConfig<S>>) {
         // MaterialConfig<S> still requires hash; use a placeholder until calculateHash can run.

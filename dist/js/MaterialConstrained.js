@@ -64,6 +64,16 @@ class MaterialConstrained extends Material_1.default {
     static get defaultConfig() {
         return exports.defaultMaterialConstrainedConfig;
     }
+    static fromMaterial(material) {
+        const constraints = "constraints" in material.basis ? material.basis.constraints : [];
+        return new MaterialConstrained({
+            ...material.toJSON(),
+            basis: {
+                ...material.basis,
+                constraints,
+            },
+        });
+    }
     get basis() {
         return this.requiredProp("basis");
     }

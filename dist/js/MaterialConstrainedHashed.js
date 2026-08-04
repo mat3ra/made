@@ -44,6 +44,17 @@ class MaterialConstrainedHashed extends MaterialConstrained_1.default {
     static get defaultConfig() {
         return exports.defaultMaterialConstrainedHashedConfig;
     }
+    static fromMaterial(material) {
+        const constraints = "constraints" in material.basis ? material.basis.constraints : [];
+        return new MaterialConstrainedHashed({
+            ...material.toJSON(),
+            basis: {
+                ...material.basis,
+                constraints,
+            },
+            hash: material.calculateHash("", false, material.isNonPeriodic),
+        });
+    }
     constructor(config) {
         super(config);
         this.hash = config.hash || this.calculateHash("", false, this.isNonPeriodic);

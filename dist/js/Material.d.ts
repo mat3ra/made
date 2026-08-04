@@ -18,6 +18,7 @@ declare class BaseMaterial<S extends Schema = Schema> extends InMemoryEntity<S> 
 declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Schema {
     static createDefault: () => Material;
     static get defaultConfig(): MaterialConfig;
+    static fromMaterial(material: Material): Material;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
     constructor(config: NoInfer<MaterialConfig<S>>);
     updateFormula(): void;

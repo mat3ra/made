@@ -39,6 +39,12 @@ class MaterialHashed extends Material_1.default {
     static get defaultConfig() {
         return Material_1.defaultMaterialConfig;
     }
+    static fromMaterial(material) {
+        return new MaterialHashed({
+            ...material.toJSON(),
+            hash: material.calculateHash("", false, material.isNonPeriodic),
+        });
+    }
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
     constructor(config) {
         var _a, _b;

@@ -8,6 +8,7 @@ interface MaterialHashed extends HashedSchemaMixin {
 declare class MaterialHashed<S extends Schema = Schema> extends Material<S> implements Schema {
     static createDefault: () => MaterialHashed;
     static get defaultConfig(): MaterialHashedConfig;
+    static fromMaterial(material: Material | MaterialHashed): MaterialHashed;
     constructor(config: NoInfer<MaterialHashedConfig<S>>);
     get basis(): MaterialSchema["basis"];
     set basis(value: MaterialSchema["basis"]);

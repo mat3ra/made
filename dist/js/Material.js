@@ -82,6 +82,11 @@ class Material extends BaseMaterial {
     static get defaultConfig() {
         return exports.defaultMaterialConfig;
     }
+    static fromMaterial(material) {
+        return new Material({
+            ...material.toJSON(),
+        });
+    }
     static constructMaterialFileSource(fileName, fileContent, fileExtension) {
         return {
             extension: fileExtension,

@@ -9,6 +9,7 @@ import type {
 } from "@mat3ra/esse/dist/js/types";
 
 import type { PartialBy } from "./Material";
+import type Material from "./Material";
 import MaterialConstrained, { defaultMaterialConstrainedConfig } from "./MaterialConstrained";
 
 type Schema = MaterialConstrainedHashedSchema;
@@ -31,6 +32,19 @@ class MaterialConstrainedHashed<S extends Schema = Schema> extends MaterialConst
 
     static get defaultConfig(): MaterialConstrainedHashedConfig {
         return defaultMaterialConstrainedHashedConfig;
+    }
+
+    static fromMaterial(material: Material | MaterialConstrained): MaterialConstrainedHashed {
+        const constraints = "constraints" in material.basis ? material.basis.constraints : [];
+
+        return new MaterialConstrainedHashed({
+            ...material.toJSON(),
+            basis: {
+                ...material.basis,
+                constraints,
+            },
+            hash: material.calculateHash("", false, material.isNonPeriodic),
+        });
     }
 
     constructor(config: NoInfer<MaterialConstrainedHashedConfig<S>>) {

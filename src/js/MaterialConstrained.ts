@@ -49,6 +49,18 @@ class MaterialConstrained<S extends Schema = Schema> extends Material<S> impleme
         return defaultMaterialConstrainedConfig;
     }
 
+    static fromMaterial(material: Material | MaterialConstrained): MaterialConstrained {
+        const constraints = "constraints" in material.basis ? material.basis.constraints : [];
+
+        return new MaterialConstrained({
+            ...material.toJSON(),
+            basis: {
+                ...material.basis,
+                constraints,
+            },
+        });
+    }
+
     get basis(): S["basis"] {
         return this.requiredProp("basis");
     }
@@ -75,7 +87,7 @@ class MaterialConstrained<S extends Schema = Schema> extends Material<S> impleme
         this.updateFormula();
     }
 
-    setBasisConstraints(constraints: Constraint[]) {
+    private setBasisConstraints(constraints: Constraint[]) {
         this.basis = {
             ...this.basis,
             constraints: constraints.map((constraint) => ({
