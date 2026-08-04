@@ -31,7 +31,7 @@ class SolidSolutionBuilder(MergeBuilder):
         source_element = configuration.source_element
         target_element = configuration.target_element
         material.name = (
-            f"{formula} - Solid Solution ({source_element}\u2192{target_element} "
+            f"{formula} - Solid Solution ({source_element}->{target_element} "
             f"{concentration_percentage:.4g}%)"
         )
         return material
