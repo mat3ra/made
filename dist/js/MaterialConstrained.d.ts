@@ -9,11 +9,8 @@ declare class MaterialConstrained<S extends Schema = Schema> extends Material<S>
     static createDefault: () => MaterialConstrained;
     static get defaultConfig(): MaterialConstrainedConfig;
     static fromMaterial(material: Material | MaterialConstrained): MaterialConstrained;
-    get basis(): S["basis"];
-    set basis(basis: S["basis"]);
-    protected setConstrainedBasis(basis: MaterialConstrainedSchema["basis"]): void;
     setBasis(basis: BasisConfig): void;
-    setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
+    setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
     private setBasisConstraints;
     setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema): void;
     getBasis(): ConstrainedBasis;

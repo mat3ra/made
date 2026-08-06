@@ -15,13 +15,13 @@ const MaterialSchemaMixin_1 = require("./generated/MaterialSchemaMixin");
 const lattice_1 = require("./lattice/lattice");
 const parsers_1 = __importDefault(require("./parsers/parsers"));
 const supercell_1 = __importDefault(require("./tools/supercell"));
-function parseBasis(textOrObject, format, unitz) {
+function parseBasis(textOrObject, format, units) {
     var _a;
     if (typeof textOrObject === "string") {
         if (format !== "xyz") {
             throw new Error("Invalid format");
         }
-        const parsedBasis = parsers_1.default.xyz.toBasisConfig(textOrObject, unitz);
+        const parsedBasis = parsers_1.default.xyz.toBasisConfig(textOrObject, units);
         return {
             elements: parsedBasis.elements,
             coordinates: parsedBasis.coordinates,
@@ -107,6 +107,13 @@ class Material extends BaseMaterial {
         this.formula = config.formula || this.getBasis().formula;
         this.name = this.name || this.formula;
     }
+    // redefine basis as constrained material has a different basis type
+    get basis() {
+        return this.requiredProp("basis");
+    }
+    set basis(basis) {
+        super.basis = basis;
+    }
     updateFormula() {
         const basis = this.getBasis();
         this.formula = basis.formula;
@@ -130,8 +137,8 @@ class Material extends BaseMaterial {
         this.unsetProp("icsdId");
         this.unsetProp("external");
     }
-    setBasis(textOrObject, format, unitz) {
-        this.basis = parseBasis(textOrObject, format, unitz);
+    setBasis(textOrObject, format, units) {
+        this.basis = parseBasis(textOrObject, format, units);
         this.unsetFileProps();
         this.updateFormula();
     }

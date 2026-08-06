@@ -48,12 +48,12 @@ exports.defaultMaterialConstrainedConfig = {
         constraints: [],
     },
 };
-function parseConstrainedBasis(textOrObject, format, unitz) {
+function parseConstrainedBasis(textOrObject, format, units) {
     if (typeof textOrObject === "string") {
         if (format !== "xyz") {
             throw new Error("Invalid format");
         }
-        return parsers_1.default.xyz.toBasisConfig(textOrObject, unitz);
+        return parsers_1.default.xyz.toBasisConfig(textOrObject, units);
     }
     if ("constraints" in textOrObject) {
         return textOrObject;
@@ -74,17 +74,8 @@ class MaterialConstrained extends Material_1.default {
             },
         });
     }
-    get basis() {
-        return this.requiredProp("basis");
-    }
-    set basis(basis) {
-        super.basis = basis;
-    }
-    setConstrainedBasis(basis) {
-        super.basis = basis;
-    }
-    setBasis(textOrObject, format, unitz) {
-        this.setConstrainedBasis(parseConstrainedBasis(textOrObject, format, unitz));
+    setBasis(textOrObject, format, units) {
+        this.basis = parseConstrainedBasis(textOrObject, format, units);
         this.unsetFileProps();
         this.updateFormula();
     }

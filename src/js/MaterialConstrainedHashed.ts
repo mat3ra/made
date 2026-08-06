@@ -1,16 +1,9 @@
-import {
-    type HashedSchemaMixin,
-    hashedSchemaMixin,
-} from "@mat3ra/code/dist/js/generated/HashedSchemaMixin";
-import type {
-    BasisConstrainedSchema,
-    MaterialConstrainedHashedSchema,
-    MaterialSchema,
-} from "@mat3ra/esse/dist/js/types";
+import type { MaterialConstrainedHashedSchema } from "@mat3ra/esse/dist/js/types";
 
 import type { PartialBy } from "./Material";
 import type Material from "./Material";
 import MaterialConstrained, { defaultMaterialConstrainedConfig } from "./MaterialConstrained";
+import { type MaterialHashedMixin, materialHashedMixin } from "./mixins/MaterialHashedMixin";
 
 type Schema = MaterialConstrainedHashedSchema;
 
@@ -25,7 +18,7 @@ export const defaultMaterialConstrainedHashedConfig: Schema = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
-interface MaterialConstrainedHashed extends HashedSchemaMixin {}
+interface MaterialConstrainedHashed extends MaterialHashedMixin {}
 
 class MaterialConstrainedHashed<S extends Schema = Schema> extends MaterialConstrained<S> {
     declare static createDefault: () => MaterialConstrainedHashed;
@@ -51,35 +44,8 @@ class MaterialConstrainedHashed<S extends Schema = Schema> extends MaterialConst
         super(config);
         this.hash = config.hash || this.calculateHash("", false, this.isNonPeriodic);
     }
-
-    get basis(): BasisConstrainedSchema {
-        return super.basis;
-    }
-
-    set basis(value: BasisConstrainedSchema) {
-        super.basis = value;
-        this.updateHash();
-    }
-
-    protected setConstrainedBasis(basis: BasisConstrainedSchema) {
-        super.setConstrainedBasis(basis);
-        this.updateHash();
-    }
-
-    get lattice(): MaterialSchema["lattice"] {
-        return super.lattice;
-    }
-
-    set lattice(value: MaterialSchema["lattice"]) {
-        super.lattice = value;
-        this.updateHash();
-    }
-
-    updateHash() {
-        this.hash = this.calculateHash("", false, this.isNonPeriodic);
-    }
 }
 
-hashedSchemaMixin(MaterialConstrainedHashed.prototype);
+materialHashedMixin(MaterialConstrainedHashed.prototype);
 
 export default MaterialConstrainedHashed;

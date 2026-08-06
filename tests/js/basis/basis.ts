@@ -120,7 +120,8 @@ describe("Basis", () => {
     });
 
     it("should convert crystal to cartesian", () => {
-        const basis = new Material(Na4Cl4).getBasis().toCartesian();
+        const basis = new Material(Na4Cl4).getBasis();
+        basis.toCartesian();
         expect(basis.isInCartesianUnits).to.be.equal(true);
         expect(basis.coordinates).to.be.deep.almost.equal(Na4Cl4Cartesian.basis.coordinates);
     });
@@ -195,9 +196,7 @@ describe("Basis", () => {
 
     it("should return standard representation", () => {
         const basis = new Material(Na4Cl4Cartesian).getBasis();
-        const standardRepresentation = { ...basis.standardRepresentation };
-        delete (standardRepresentation as { constraints?: unknown }).constraints;
-        expect(standardRepresentation).to.be.deep.almost.equal(Na4Cl4.basis);
+        assertDeepAlmostEqual(basis.standardRepresentation, Na4Cl4.basis, ["constraints"]);
     });
 
     /**

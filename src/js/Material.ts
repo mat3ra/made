@@ -37,13 +37,13 @@ import supercellTools from "./tools/supercell";
 function parseBasis(
     textOrObject: string | BasisConfig,
     format?: "xyz",
-    unitz?: BasisSchema["units"],
+    units?: BasisSchema["units"],
 ): BasisConfig {
     if (typeof textOrObject === "string") {
         if (format !== "xyz") {
             throw new Error("Invalid format");
         }
-        const parsedBasis = parsers.xyz.toBasisConfig(textOrObject, unitz);
+        const parsedBasis = parsers.xyz.toBasisConfig(textOrObject, units);
         return {
             elements: parsedBasis.elements,
             coordinates: parsedBasis.coordinates,
@@ -154,6 +154,15 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         this.name = this.name || this.formula;
     }
 
+    // redefine basis as constrained material has a different basis type
+    get basis(): S["basis"] {
+        return this.requiredProp("basis");
+    }
+
+    set basis(basis: S["basis"]) {
+        super.basis = basis;
+    }
+
     updateFormula() {
         const basis = this.getBasis();
         this.formula = basis.formula;
@@ -182,10 +191,10 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
 
     setBasis(basis: BasisConfig): void;
 
-    setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
+    setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
 
-    setBasis(textOrObject: string | BasisConfig, format?: "xyz", unitz?: BasisSchema["units"]) {
-        this.basis = parseBasis(textOrObject, format, unitz);
+    setBasis(textOrObject: string | BasisConfig, format?: "xyz", units?: BasisSchema["units"]) {
+        this.basis = parseBasis(textOrObject, format, units);
         this.unsetFileProps();
         this.updateFormula();
     }

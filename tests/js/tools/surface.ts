@@ -8,10 +8,6 @@ import { Silicon, SiSlab100, SiSlab111, SiSlab111NoVacuum } from "../fixtures";
 
 const { assertDeepAlmostEqual } = Utils.assertion;
 
-const toJSONWithoutHash = (material: Material) => {
-    return material.toJSON();
-};
-
 const generateSlabWithVacuum = (slabConfig: SlabConfigSchema, vacuumRatio: number) => {
     const slabMaterial = new Material(slabConfig);
     const { outOfPlaneAxisIndex } = slabConfig;
@@ -43,6 +39,7 @@ describe("Tools:Surface", () => {
         const adjustedSilicon: MaterialSchema = {
             ...Silicon,
             basis: {
+                ...Silicon.basis,
                 elements: [
                     {
                         id: 10,
@@ -94,10 +91,9 @@ describe("Tools:Surface", () => {
         const vacuumRatio = 0.5;
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
-        assertDeepAlmostEqual(
-            toJSONWithoutHash(expectedSlabMaterial),
-            toJSONWithoutHash(slabMaterial),
-        );
+        const expectedMaterialJSON = expectedSlabMaterial.toJSON();
+        const slabMaterialJSON = slabMaterial.toJSON();
+        assertDeepAlmostEqual(expectedMaterialJSON, slabMaterialJSON);
     });
 
     it("should return slab (111) with vacuum for gamma = 60.001", () => {
@@ -113,9 +109,8 @@ describe("Tools:Surface", () => {
         const vacuumRatio = 0.5;
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
-        assertDeepAlmostEqual(
-            toJSONWithoutHash(expectedSlabMaterial),
-            toJSONWithoutHash(slabMaterial),
-        );
+        const expectedMaterialJSON = expectedSlabMaterial.toJSON();
+        const slabMaterialJSON = slabMaterial.toJSON();
+        assertDeepAlmostEqual(expectedMaterialJSON, slabMaterialJSON);
     });
 });

@@ -28,13 +28,13 @@ export const defaultMaterialConstrainedConfig: Schema = {
 function parseConstrainedBasis(
     textOrObject: string | BasisConfig | ConstrainedBasisConfig,
     format?: "xyz",
-    unitz?: BasisSchema["units"],
+    units?: BasisSchema["units"],
 ): ConstrainedBasisConfig {
     if (typeof textOrObject === "string") {
         if (format !== "xyz") {
             throw new Error("Invalid format");
         }
-        return parsers.xyz.toBasisConfig(textOrObject, unitz);
+        return parsers.xyz.toBasisConfig(textOrObject, units);
     }
     if ("constraints" in textOrObject) {
         return textOrObject;
@@ -61,28 +61,16 @@ class MaterialConstrained<S extends Schema = Schema> extends Material<S> impleme
         });
     }
 
-    get basis(): S["basis"] {
-        return this.requiredProp("basis");
-    }
-
-    set basis(basis: S["basis"]) {
-        super.basis = basis;
-    }
-
-    protected setConstrainedBasis(basis: MaterialConstrainedSchema["basis"]) {
-        super.basis = basis;
-    }
-
     setBasis(basis: BasisConfig): void;
 
-    setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
+    setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
 
     setBasis(
         textOrObject: string | BasisConfig | ConstrainedBasisConfig,
         format?: "xyz",
-        unitz?: BasisSchema["units"],
+        units?: BasisSchema["units"],
     ) {
-        this.setConstrainedBasis(parseConstrainedBasis(textOrObject, format, unitz));
+        this.basis = parseConstrainedBasis(textOrObject, format, units);
         this.unsetFileProps();
         this.updateFormula();
     }

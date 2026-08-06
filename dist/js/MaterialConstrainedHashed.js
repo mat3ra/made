@@ -34,8 +34,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.defaultMaterialConstrainedHashedConfig = void 0;
-const HashedSchemaMixin_1 = require("@mat3ra/code/dist/js/generated/HashedSchemaMixin");
 const MaterialConstrained_1 = __importStar(require("./MaterialConstrained"));
+const MaterialHashedMixin_1 = require("./mixins/MaterialHashedMixin");
 exports.defaultMaterialConstrainedHashedConfig = {
     ...MaterialConstrained_1.defaultMaterialConstrainedConfig,
     hash: "",
@@ -59,27 +59,6 @@ class MaterialConstrainedHashed extends MaterialConstrained_1.default {
         super(config);
         this.hash = config.hash || this.calculateHash("", false, this.isNonPeriodic);
     }
-    get basis() {
-        return super.basis;
-    }
-    set basis(value) {
-        super.basis = value;
-        this.updateHash();
-    }
-    setConstrainedBasis(basis) {
-        super.setConstrainedBasis(basis);
-        this.updateHash();
-    }
-    get lattice() {
-        return super.lattice;
-    }
-    set lattice(value) {
-        super.lattice = value;
-        this.updateHash();
-    }
-    updateHash() {
-        this.hash = this.calculateHash("", false, this.isNonPeriodic);
-    }
 }
-(0, HashedSchemaMixin_1.hashedSchemaMixin)(MaterialConstrainedHashed.prototype);
+(0, MaterialHashedMixin_1.materialHashedMixin)(MaterialConstrainedHashed.prototype);
 exports.default = MaterialConstrainedHashed;

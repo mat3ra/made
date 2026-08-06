@@ -21,6 +21,8 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     static fromMaterial(material: Material): Material;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
     constructor(config: NoInfer<MaterialConfig<S>>);
+    get basis(): S["basis"];
+    set basis(basis: S["basis"]);
     updateFormula(): void;
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
@@ -62,7 +64,7 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
     getDerivedProperties(): DerivedPropertiesSchema;
     unsetFileProps(): void;
     setBasis(basis: BasisConfig): void;
-    setBasis(basis: string, format: "xyz", unitz?: BasisSchema["units"]): void;
+    setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
     getBasis(): Basis | ConstrainedBasis;
     setLattice(lattice: LatticeSchema): void;
     getLattice(): Lattice;
