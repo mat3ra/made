@@ -27,11 +27,7 @@ describe("Parsers:XYZ", () => {
     it("should return [true, true, true] as constraints for the line without any constraints", () => {
         const text = "Si 0 0 0 0 1 1\n Si 0.25 0.25 0.25";
         const basis = parsers.xyz.toBasisConfig(text);
-        const { constraints } = basis;
-        if (!constraints) {
-            throw new Error("expected constraints on parsed XYZ basis");
-        }
-        assertDeepAlmostEqual(constraints[0].value, [false, true, true]);
-        assertDeepAlmostEqual(constraints[1].value, [true, true, true]);
+        assertDeepAlmostEqual(basis.constraints[0].value, [false, true, true]);
+        assertDeepAlmostEqual(basis.constraints[1].value, [true, true, true]);
     });
 });
