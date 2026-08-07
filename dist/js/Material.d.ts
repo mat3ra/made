@@ -22,8 +22,8 @@ export type MaterialSchemaMap = {
 /** Default ESSE schema map (no web-app extensions). */
 export type DefaultMaterialSchemas = MaterialSchemaMap;
 /**
- * Constructor config: constraints/hash optional — normalized in the constructor
- * (`parseConstrainedBasis` + {@link Material.updateHash}).
+ * Constructor config: constraints/hash/metadata optional — normalized in the constructor
+ * (`parseConstrainedBasis` + {@link Material.updateHash}; `metadata` defaults to `{}`).
  */
 export type MaterialConfig<S extends MaterialEnrichedHashedSchema = MaterialEnrichedHashedSchema> = Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
     basis: MaterialSchema["basis"] | MaterialEnrichedSchema["basis"];
@@ -66,8 +66,8 @@ declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchema
     static get defaultConfig(): MaterialEnrichedSchema;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
     /**
-     * @param config - Partial entity input. `basis.constraints` / `hash` may be omitted;
-     *   both are filled in here before the instance is usable.
+     * @param config - Partial entity input. `basis.constraints` / `hash` / `metadata` may be omitted;
+     *   constraints and hash are filled here; missing `metadata` becomes `{}`.
      * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
      */
     constructor(config: NoInfer<MaterialConfig>);

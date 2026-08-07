@@ -20,6 +20,16 @@ describe("Material", () => {
         expect(clonedMaterial.getBasis().elements).to.have.lengthOf(2);
     });
 
+    it("defaults missing metadata to empty object", () => {
+        const material = new Material({
+            name: Silicon.name,
+            basis: Silicon.basis,
+            lattice: Silicon.lattice,
+        });
+        expect(material.metadata).to.deep.equal({});
+        expect(material.toJSON().metadata).to.deep.equal({});
+    });
+
     describe("toJSON variants", () => {
         const material = new Material(Silicon);
 

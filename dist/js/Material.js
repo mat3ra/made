@@ -137,8 +137,8 @@ class Material extends BaseMaterial {
         };
     }
     /**
-     * @param config - Partial entity input. `basis.constraints` / `hash` may be omitted;
-     *   both are filled in here before the instance is usable.
+     * @param config - Partial entity input. `basis.constraints` / `hash` / `metadata` may be omitted;
+     *   constraints and hash are filled here; missing `metadata` becomes `{}`.
      * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
      */
     constructor(config) {
