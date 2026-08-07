@@ -127,11 +127,6 @@ class Material extends BaseMaterial {
     static get defaultConfig() {
         return exports.defaultMaterialConfig;
     }
-    static fromMaterial(material) {
-        return new Material({
-            ...material.toJSONPure(),
-        });
-    }
     static constructMaterialFileSource(fileName, fileContent, fileExtension) {
         return {
             extension: fileExtension,
@@ -140,16 +135,21 @@ class Material extends BaseMaterial {
             hash: crypto_js_1.default.MD5(fileContent).toString(),
         };
     }
-    // NoInfer: keep default Schemas (or an explicit type arg) instead of inferring from the config literal.
+    /**
+     * @param config - Partial entity input. `basis.constraints` / `hash` may be omitted;
+     *   both are filled in here before the instance is usable.
+     * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
+     */
     constructor(config) {
         var _a, _b, _c, _d;
+        const basis = parseConstrainedBasis(config.basis);
         super({
             ...config,
-            formula: (_a = config.formula) !== null && _a !== void 0 ? _a : "",
-            name: (_c = (_b = config.name) !== null && _b !== void 0 ? _b : config.formula) !== null && _c !== void 0 ? _c : "",
-            metadata: (_d = config.metadata) !== null && _d !== void 0 ? _d : {},
+            basis,
+            name: (_b = (_a = config.name) !== null && _a !== void 0 ? _a : config.formula) !== null && _b !== void 0 ? _b : "",
+            metadata: (_c = config.metadata) !== null && _c !== void 0 ? _c : {},
+            hash: (_d = config.hash) !== null && _d !== void 0 ? _d : "",
         });
-        this.basis = parseConstrainedBasis(this.basis);
         this.formula = config.formula || this.getBasis().formula;
         this.name = this.name || this.formula;
         this.updateHash();

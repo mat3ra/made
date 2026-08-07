@@ -1,4 +1,4 @@
-import type { MaterialConfig, MaterialConstrainedConfig } from "../Material";
+import type { MaterialConfig } from "../Material";
 import Poscar from "./poscar";
 
 const NATIVE_FORMAT = {
@@ -30,7 +30,7 @@ function detectFormat(text: string) {
  * @throws If the input string is of unknown format
  * @return Material config
  */
-function convertFromNativeFormat(text: string): MaterialConfig | MaterialConstrainedConfig {
+function convertFromNativeFormat(text: string): MaterialConfig {
     const format = detectFormat(text);
 
     switch (format) {

@@ -1,5 +1,5 @@
 import { MaterialConstrainedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
-import type { MaterialConstrainedConfig } from "../Material";
+import type { MaterialConfig } from "../Material";
 /**
  * Obtain a textual representation of a material in POSCAR format.
  * @param materialOrConfig - material class instance or config object.
@@ -16,7 +16,7 @@ export declare function atomsCount(poscarFileContent: string): number;
  * @param fileContent - POSCAR file content.
  * @return Material config.
  */
-declare function fromPoscar(fileContent: string): MaterialConstrainedConfig;
+declare function fromPoscar(fileContent: string): MaterialConfig;
 /**
  * @summary Checks if a string has a POSCAR format (first 8 lines are read)
  * @param text - string to check

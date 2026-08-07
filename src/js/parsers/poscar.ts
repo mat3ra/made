@@ -15,7 +15,7 @@ import { Cell } from "../cell/cell";
 import { ATOMIC_COORD_UNITS } from "../constants";
 import { AtomicConstraintValue } from "../constraints/constraints";
 import { Lattice } from "../lattice/lattice";
-import type { MaterialConstrainedConfig } from "../Material";
+import type { MaterialConfig } from "../Material";
 
 const _print = (x: number, printFormat = "%14.9f") => s.sprintf(printFormat, Utils.math.precise(x));
 const _latticeVectorsToString = (vectors: Vector3DSchema[]) =>
@@ -84,7 +84,7 @@ export function atomsCount(poscarFileContent: string): number {
  * @param fileContent - POSCAR file content.
  * @return Material config.
  */
-function fromPoscar(fileContent: string): MaterialConstrainedConfig {
+function fromPoscar(fileContent: string): MaterialConfig {
     const cleanContent = Utils.str.removeCommentsFromSourceCode(fileContent, "fortran");
     const lines = cleanContent.split("\n");
 
@@ -157,7 +157,7 @@ function fromPoscar(fileContent: string): MaterialConstrainedConfig {
         constraints,
     });
 
-    const materialConfig: MaterialConstrainedConfig = {
+    const materialConfig: MaterialConfig = {
         lattice: lattice.toJSON(),
         basis: basis.toJSON(),
         name: comment,

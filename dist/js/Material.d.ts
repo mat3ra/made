@@ -28,7 +28,6 @@ export type DefaultMaterialSchemas = MaterialSchemaMap;
 export type MaterialConfig<S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema> = Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
     basis: MaterialSchema["basis"] | MaterialConstrainedSchema["basis"];
 };
-export type MaterialConstrainedConfig<S extends MaterialConstrainedSchema = MaterialConstrainedSchema> = PartialBy<S, "name" | "metadata">;
 export declare const defaultMaterialConfig: MaterialConstrainedSchema;
 interface BaseMaterial<S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema> extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<S["metadata"]>> {
 }
@@ -50,7 +49,7 @@ declare class BaseMaterial<S extends MaterialConstrainedHashedSchema = MaterialC
  * ```
  */
 declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> extends BaseMaterial<Schemas["constrainedHashed"]> {
-    static createDefault: () => Material;
+    static createDefault: () => Material<MaterialSchemaMap>;
     /**
      * Schema used by {@link InMemoryEntity.clean} / {@link toJSON}.
      * Defaults to constrained+hashed; subclasses / web-app Core* may override.
@@ -64,10 +63,14 @@ declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchema
     static get jsonSchemaHashed(): JSONSchema;
     /** Schema for {@link toJSONConstrainedHashed}. */
     static get jsonSchemaConstrainedHashed(): JSONSchema;
-    static get defaultConfig(): MaterialConstrainedConfig;
-    static fromMaterial(material: Material): Material;
+    static get defaultConfig(): MaterialConstrainedSchema;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
-    constructor(config: NoInfer<MaterialConfig<Schemas["constrainedHashed"]>>);
+    /**
+     * @param config - Partial entity input. `basis.constraints` / `hash` may be omitted;
+     *   both are filled in here before the instance is usable.
+     * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
+     */
+    constructor(config: NoInfer<MaterialConfig>);
     get hash(): Schemas["constrainedHashed"]["hash"];
     set hash(value: Schemas["constrainedHashed"]["hash"]);
     get scaledHash(): Schemas["constrainedHashed"]["scaledHash"];

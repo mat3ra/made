@@ -54,7 +54,7 @@ export declare const Made: {
         poscar: {
             isPoscar: (text: string) => boolean;
             toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema, omitConstraints?: boolean) => string;
-            fromPoscar: (fileContent: string) => import("./Material").MaterialConstrainedConfig;
+            fromPoscar: (fileContent: string) => import("./Material").MaterialConfig;
             atomicConstraintsCharFromBool: (bool: boolean) => string;
             atomsCount: typeof import("./parsers/poscar").atomsCount;
         };
@@ -66,7 +66,7 @@ export declare const Made: {
         };
         nativeFormatParsers: {
             detectFormat: (text: string) => "json" | "poscar" | "unknown";
-            convertFromNativeFormat: (text: string) => import("./Material").MaterialConfig | import("./Material").MaterialConstrainedConfig;
+            convertFromNativeFormat: (text: string) => import("./Material").MaterialConfig;
         };
     };
     tools: {

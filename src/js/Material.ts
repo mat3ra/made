@@ -93,10 +93,6 @@ export type MaterialConfig<
     basis: MaterialSchema["basis"] | MaterialConstrainedSchema["basis"];
 };
 
-export type MaterialConstrainedConfig<
-    S extends MaterialConstrainedSchema = MaterialConstrainedSchema,
-> = PartialBy<S, "name" | "metadata">;
-
 export const defaultMaterialConfig: MaterialConstrainedSchema = {
     name: "Silicon FCC",
     basis: {
@@ -173,7 +169,7 @@ hasMetadataMixin(BaseMaterial.prototype);
 class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> extends BaseMaterial<
     Schemas["constrainedHashed"]
 > {
-    declare static createDefault: () => Material;
+    declare static createDefault: () => Material<MaterialSchemaMap>;
 
     /**
      * Schema used by {@link InMemoryEntity.clean} / {@link toJSON}.
@@ -203,14 +199,8 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
         return JSONSchemasInterface.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.constrainedHashed);
     }
 
-    static get defaultConfig(): MaterialConstrainedConfig {
+    static get defaultConfig(): MaterialConstrainedSchema {
         return defaultMaterialConfig;
-    }
-
-    static fromMaterial(material: Material): Material {
-        return new Material({
-            ...material.toJSONPure(),
-        });
     }
 
     static constructMaterialFileSource(
@@ -226,16 +216,22 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
         };
     }
 
-    // NoInfer: keep default Schemas (or an explicit type arg) instead of inferring from the config literal.
-    constructor(config: NoInfer<MaterialConfig<Schemas["constrainedHashed"]>>) {
+    /**
+     * @param config - Partial entity input. `basis.constraints` / `hash` may be omitted;
+     *   both are filled in here before the instance is usable.
+     * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
+     */
+    constructor(config: NoInfer<MaterialConfig>) {
+        const basis = parseConstrainedBasis(config.basis);
+
         super({
             ...config,
-            formula: config.formula ?? "",
+            basis,
             name: config.name ?? config.formula ?? "",
             metadata: config.metadata ?? {},
-        } as Schemas["constrainedHashed"]);
+            hash: config.hash ?? "",
+        });
 
-        this.basis = parseConstrainedBasis(this.basis);
         this.formula = config.formula || this.getBasis().formula;
         this.name = this.name || this.formula;
         this.updateHash();
