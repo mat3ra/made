@@ -7,9 +7,6 @@ import { DEFAULT_LATTICE_UNITS, LATTICE_TYPE_CONFIGS } from "./lattice/lattice_t
 import { ReciprocalLattice } from "./lattice/reciprocal/lattice_reciprocal";
 import { UnitCell } from "./lattice/unit_cell";
 import Material, { defaultMaterialConfig } from "./Material";
-import MaterialConstrained, { defaultMaterialConstrainedConfig } from "./MaterialConstrained";
-import MaterialConstrainedHashed from "./MaterialConstrainedHashed";
-import MaterialHashed from "./MaterialHashed";
 import parsers from "./parsers/parsers";
 import tools from "./tools/index";
 export declare const Made: {
@@ -36,11 +33,7 @@ export declare const Made: {
         cartesian: string;
     };
     Material: typeof Material;
-    MaterialConstrained: typeof MaterialConstrained;
-    MaterialConstrainedHashed: typeof MaterialConstrainedHashed;
-    MaterialHashed: typeof MaterialHashed;
-    defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema;
-    defaultMaterialConstrainedConfig: import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema;
+    defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
     UnitCell: typeof UnitCell;
@@ -61,7 +54,7 @@ export declare const Made: {
         poscar: {
             isPoscar: (text: string) => boolean;
             toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema, omitConstraints?: boolean) => string;
-            fromPoscar: (fileContent: string) => import("./MaterialConstrained").MaterialConstrainedConfig;
+            fromPoscar: (fileContent: string) => import("./Material").MaterialConstrainedConfig;
             atomicConstraintsCharFromBool: (bool: boolean) => string;
             atomsCount: typeof import("./parsers/poscar").atomsCount;
         };
@@ -73,15 +66,15 @@ export declare const Made: {
         };
         nativeFormatParsers: {
             detectFormat: (text: string) => "json" | "poscar" | "unknown";
-            convertFromNativeFormat: (text: string) => import("./Material").MaterialConfig | import("./MaterialConstrained").MaterialConstrainedConfig;
+            convertFromNativeFormat: (text: string) => import("./Material").MaterialConfig | import("./Material").MaterialConstrainedConfig;
         };
     };
     tools: {
         surface: {
-            generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: Material<S>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
+            generateConfig: <Schemas extends import("./Material").MaterialSchemaMap = import("./Material").MaterialSchemaMap>(material: Material<Schemas>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
         };
         supercell: {
-            generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: Material<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
+            generateConfig: <Schemas extends import("./Material").MaterialSchemaMap = import("./Material").MaterialSchemaMap>(material: Material<Schemas>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
                 name: string;
                 basis: import("./basis/basis").BasisConfig & import("@mat3ra/esse/dist/js/types").BaseInMemoryEntitySchema;
                 lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;
@@ -108,4 +101,4 @@ export declare const Made: {
         };
     };
 };
-export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, MaterialConstrained, MaterialConstrainedHashed, MaterialHashed, defaultMaterialConfig, defaultMaterialConstrainedConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };
+export { coefficients, tolerance, units, ATOMIC_COORD_UNITS, Material, defaultMaterialConfig, Lattice, Cell, UnitCell, defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, molecularLatticePaddingFactor, ReciprocalLattice, Basis, AtomicConstraints, parsers, tools, LATTICE_TYPE_CONFIGS, DEFAULT_LATTICE_UNITS, };

@@ -1,5 +1,4 @@
-import type { MaterialConfig } from "../Material";
-import type { MaterialConstrainedConfig } from "../MaterialConstrained";
+import type { MaterialConfig, MaterialConstrainedConfig } from "../Material";
 import Poscar from "./poscar";
 
 const NATIVE_FORMAT = {

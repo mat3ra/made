@@ -55,12 +55,6 @@ export function materialSchemaMixin<T extends InMemoryEntity>(
         set src(value: MaterialPropertiesSchema["src"]) {
             this.setProp("src", value);
         },
-        get scaledHash() {
-            return this.prop("scaledHash");
-        },
-        set scaledHash(value: MaterialPropertiesSchema["scaledHash"]) {
-            this.setProp("scaledHash", value);
-        },
         get icsdId() {
             return this.prop("icsdId");
         },

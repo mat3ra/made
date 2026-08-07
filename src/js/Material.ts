@@ -11,56 +11,93 @@ import {
     type NamedEntity,
     namedEntityMixin,
 } from "@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin";
+import { clone, deepClone } from "@mat3ra/code/dist/js/utils/clone";
+import JSONSchemasInterface from "@mat3ra/esse/dist/js/esse/JSONSchemasInterface";
+import type { JSONSchema } from "@mat3ra/esse/dist/js/esse/utils";
 import type {
+    AtomicConstraintsSchema,
     BasisSchema,
     ConsistencyCheck,
     DerivedPropertiesSchema,
     FileSourceSchema,
     InChIRepresentationSchema,
     LatticeSchema,
+    MaterialConstrainedHashedSchema,
+    MaterialConstrainedSchema,
+    MaterialHashedSchema,
     MaterialSchema,
 } from "@mat3ra/esse/dist/js/types";
 import CryptoJS from "crypto-js";
 
-import { type BasisConfig, Basis } from "./basis/basis";
-import type { ConstrainedBasis } from "./basis/constrained_basis";
+import { type BasisConfig } from "./basis/basis";
+import { type ConstrainedBasisConfig, ConstrainedBasis } from "./basis/constrained_basis";
 import {
     isConventionalCellSameAsPrimitiveForLatticeType,
     PRIMITIVE_TO_CONVENTIONAL_CELL_LATTICE_TYPES,
     PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS,
 } from "./cell/conventional_cell";
+import { Constraint } from "./constraints/constraints";
 import { type MaterialSchemaMixin, materialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 import parsers from "./parsers/parsers";
 import supercellTools from "./tools/supercell";
 
-function parseBasis(
-    textOrObject: string | BasisConfig,
+/** ESSE `$id` values for material schema variants. */
+const MATERIAL_SCHEMA_IDS = {
+    pure: "material",
+    constrained: "material-constrained",
+    hashed: "material-hashed",
+    constrainedHashed: "material-constrained-hashed",
+} as const;
+
+function parseConstrainedBasis(
+    textOrObject: string | BasisConfig | ConstrainedBasisConfig,
     format?: "xyz",
     units?: BasisSchema["units"],
-): BasisConfig {
+): ConstrainedBasisConfig {
     if (typeof textOrObject === "string") {
         if (format !== "xyz") {
             throw new Error("Invalid format");
         }
-        const parsedBasis = parsers.xyz.toBasisConfig(textOrObject, units);
-        return {
-            elements: parsedBasis.elements,
-            coordinates: parsedBasis.coordinates,
-            units: parsedBasis.units,
-            ...(parsedBasis.labels?.length ? { labels: parsedBasis.labels } : {}),
-        };
+        return parsers.xyz.toBasisConfig(textOrObject, units);
     }
-    return textOrObject;
+    if ("constraints" in textOrObject) {
+        return textOrObject;
+    }
+    return { ...textOrObject, constraints: [] };
 }
 
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
-type Schema = MaterialSchema;
+/**
+ * Bundle of material JSON-schema variants used by {@link Material} projections.
+ * Web-app passes extended schemas here so `toJSON*` return types stay precise.
+ */
+export type MaterialSchemaMap = {
+    pure: MaterialSchema;
+    constrained: MaterialConstrainedSchema;
+    hashed: MaterialHashedSchema;
+    constrainedHashed: MaterialConstrainedHashedSchema;
+};
 
-export type MaterialConfig<S extends Schema = Schema> = PartialBy<S, "name" | "metadata">;
+/** Default ESSE schema map (no web-app extensions). */
+export type DefaultMaterialSchemas = MaterialSchemaMap;
 
-export const defaultMaterialConfig: Schema = {
+/**
+ * Constructor config: constraints/hash optional — normalized in the constructor
+ * (`parseConstrainedBasis` + {@link Material.updateHash}).
+ */
+export type MaterialConfig<
+    S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema,
+> = Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
+    basis: MaterialSchema["basis"] | MaterialConstrainedSchema["basis"];
+};
+
+export type MaterialConstrainedConfig<
+    S extends MaterialConstrainedSchema = MaterialConstrainedSchema,
+> = PartialBy<S, "name" | "metadata">;
+
+export const defaultMaterialConfig: MaterialConstrainedSchema = {
     name: "Silicon FCC",
     basis: {
         elements: [
@@ -84,6 +121,7 @@ export const defaultMaterialConfig: Schema = {
             },
         ],
         units: "crystal",
+        constraints: [],
     },
     lattice: {
         // Primitive cell for Diamond FCC Silicon at ambient conditions
@@ -102,29 +140,76 @@ export const defaultMaterialConfig: Schema = {
     metadata: {},
 };
 
-interface BaseMaterial
+interface BaseMaterial<S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema>
     extends MaterialSchemaMixin,
         NamedEntity,
         Defaultable,
-        Required<HasMetadata<Schema["metadata"]>> {}
+        Required<HasMetadata<S["metadata"]>> {}
 
-class BaseMaterial<S extends Schema = Schema> extends InMemoryEntity<S> {}
+class BaseMaterial<
+    S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema,
+> extends InMemoryEntity<S> {}
 
 materialSchemaMixin(BaseMaterial.prototype);
 namedEntityMixin(BaseMaterial.prototype);
 defaultableEntityMixin(BaseMaterial);
 hasMetadataMixin(BaseMaterial.prototype);
 
-class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Schema {
+/**
+ * Unified material. Pass extended schemas via {@link MaterialSchemaMap} so each
+ * `toJSON*` returns the web-app (or other host) schema type.
+ *
+ * @example
+ * ```ts
+ * type WebappSchemas = {
+ *   pure: MaterialSchema;
+ *   constrained: WebappMaterialConstrainedSchema;
+ *   hashed: WebappMaterialHashedSchema;
+ *   constrainedHashed: WebappMaterialConstrainedSchema;
+ * };
+ * class CoreMaterial extends Material<WebappSchemas> {}
+ * ```
+ */
+class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> extends BaseMaterial<
+    Schemas["constrainedHashed"]
+> {
     declare static createDefault: () => Material;
 
-    static get defaultConfig(): MaterialConfig {
+    /**
+     * Schema used by {@link InMemoryEntity.clean} / {@link toJSON}.
+     * Defaults to constrained+hashed; subclasses / web-app Core* may override.
+     */
+    static get jsonSchema(): JSONSchema {
+        return this.jsonSchemaConstrainedHashed;
+    }
+
+    /** Schema for {@link toJSONPure} — override in web-app if the base material schema is extended. */
+    static get jsonSchemaPure(): JSONSchema {
+        return JSONSchemasInterface.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.pure);
+    }
+
+    /** Schema for {@link toJSONConstrained}. */
+    static get jsonSchemaConstrained(): JSONSchema {
+        return JSONSchemasInterface.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.constrained);
+    }
+
+    /** Schema for {@link toJSONHashed}. */
+    static get jsonSchemaHashed(): JSONSchema {
+        return JSONSchemasInterface.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.hashed);
+    }
+
+    /** Schema for {@link toJSONConstrainedHashed}. */
+    static get jsonSchemaConstrainedHashed(): JSONSchema {
+        return JSONSchemasInterface.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.constrainedHashed);
+    }
+
+    static get defaultConfig(): MaterialConstrainedConfig {
         return defaultMaterialConfig;
     }
 
     static fromMaterial(material: Material): Material {
         return new Material({
-            ...material.toJSON(),
+            ...material.toJSONPure(),
         });
     }
 
@@ -141,26 +226,59 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         };
     }
 
-    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
-    constructor(config: NoInfer<MaterialConfig<S>>) {
+    // NoInfer: keep default Schemas (or an explicit type arg) instead of inferring from the config literal.
+    constructor(config: NoInfer<MaterialConfig<Schemas["constrainedHashed"]>>) {
         super({
             ...config,
             formula: config.formula ?? "",
             name: config.name ?? config.formula ?? "",
             metadata: config.metadata ?? {},
-        } as S);
+        } as Schemas["constrainedHashed"]);
 
+        this.basis = parseConstrainedBasis(this.basis);
         this.formula = config.formula || this.getBasis().formula;
         this.name = this.name || this.formula;
+        this.updateHash();
     }
 
-    // redefine basis as constrained material has a different basis type
-    get basis(): S["basis"] {
+    get hash(): Schemas["constrainedHashed"]["hash"] {
+        return this.requiredProp("hash");
+    }
+
+    set hash(value: Schemas["constrainedHashed"]["hash"]) {
+        this.setProp("hash", value);
+    }
+
+    get scaledHash(): Schemas["constrainedHashed"]["scaledHash"] {
+        return this.prop("scaledHash");
+    }
+
+    set scaledHash(value: Schemas["constrainedHashed"]["scaledHash"]) {
+        this.setProp("scaledHash", value);
+    }
+
+    /** Recompute and store {@link hash} from the current basis/lattice. */
+    updateHash(): void {
+        this.hash = this.calculateHash("", false, this.isNonPeriodic);
+    }
+
+    // Override schema-mixin accessors so basis/lattice changes keep hash in sync.
+    get basis(): Schemas["constrainedHashed"]["basis"] {
         return this.requiredProp("basis");
     }
 
-    set basis(basis: S["basis"]) {
-        super.basis = basis;
+    set basis(value: Schemas["constrainedHashed"]["basis"]) {
+        this.setProp("basis", value);
+        this.updateHash();
+    }
+
+    get lattice(): Schemas["constrainedHashed"]["lattice"] {
+        return this.requiredProp("lattice");
+    }
+
+    set lattice(value: Schemas["constrainedHashed"]["lattice"]) {
+        this.setProp("lattice", value);
+        this.updateHash();
     }
 
     updateFormula() {
@@ -189,19 +307,41 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         this.unsetProp("external");
     }
 
-    setBasis(basis: BasisConfig): void;
+    setBasis(basis: BasisConfig | ConstrainedBasisConfig): void;
 
     setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
 
-    setBasis(textOrObject: string | BasisConfig, format?: "xyz", units?: BasisSchema["units"]) {
-        this.basis = parseBasis(textOrObject, format, units);
+    setBasis(
+        textOrObject: string | BasisConfig | ConstrainedBasisConfig,
+        format?: "xyz",
+        units?: BasisSchema["units"],
+    ) {
+        this.basis = parseConstrainedBasis(textOrObject, format, units);
         this.unsetFileProps();
         this.updateFormula();
     }
 
-    getBasis(): Basis | ConstrainedBasis {
-        return new Basis({
+    private setBasisConstraints(constraints: Constraint[]) {
+        this.setBasis({
             ...this.basis,
+            constraints: constraints.map((constraint) => ({
+                id: constraint.id,
+                value: constraint.value,
+            })),
+        });
+    }
+
+    setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema) {
+        this.setBasisConstraints(
+            constraints.map((constraint) =>
+                Constraint.fromValueAndId(constraint.value, constraint.id),
+            ),
+        );
+    }
+
+    getBasis(): ConstrainedBasis {
+        return new ConstrainedBasis({
+            ...parseConstrainedBasis(this.basis),
             cell: this.getLattice().vectors,
         });
     }
@@ -291,7 +431,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
      * Returns material's basis in XYZ format.
      */
     getBasisAsXyz(fractional = false): string {
-        return parsers.xyz.fromMaterial(this.toJSON(), fractional);
+        return parsers.xyz.fromMaterial(this.toJSONPure(), fractional);
     }
 
     /**
@@ -308,7 +448,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
      * ```
      */
     getAsQEFormat(): string {
-        return parsers.espresso.toEspressoFormat(this.toJSON());
+        return parsers.espresso.toEspressoFormat(this.toJSONPure());
     }
 
     /**
@@ -319,7 +459,7 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         if (this.src?.extension === "poscar" && !ignoreOriginal) {
             return this.src.text;
         }
-        return parsers.poscar.toPoscar(this.toJSON(), omitConstraints);
+        return parsers.poscar.toPoscar(this.toJSONConstrained(), omitConstraints);
     }
 
     /**
@@ -394,13 +534,67 @@ class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Sch
         return checks;
     }
 
-    toJSON(): S {
-        return {
-            ...super.toJSON(),
+    /**
+     * Full material JSON: constrained basis + hash fields from live getters.
+     * Variants below AJV-clean this payload against the matching ESSE schema.
+     * Builds from `_json` (not `super.toJSON`) so we do not pre-clean against
+     * {@link Material.jsonSchema} before projecting to a narrower schema.
+     */
+    private getFullJSON(): Schemas["constrainedHashed"] {
+        const fullJSON = {
+            ...clone(this._json),
             lattice: this.getLattice().toJSON(),
             basis: this.getBasis().toJSON(),
             isNonPeriodic: this.isNonPeriodic,
-        } as S;
+            hash: this.hash,
+        } as Schemas["constrainedHashed"];
+        if (this.scaledHash !== undefined) {
+            fullJSON.scaledHash = this.scaledHash;
+        }
+        return fullJSON;
+    }
+
+    /**
+     * Clone {@link getFullJSON} and validate/clean against `jsonSchema` via AJV
+     * (same path as {@link InMemoryEntity.validateData} / {@link InMemoryEntity.clean}).
+     */
+    private cleanFullJSONAgainstSchema(jsonSchema: JSONSchema): object {
+        return (this.constructor as typeof Material).validateData(
+            deepClone(this.getFullJSON()),
+            true,
+            jsonSchema,
+        );
+    }
+
+    toJSONPure(): Schemas["pure"] {
+        return this.cleanFullJSONAgainstSchema(
+            (this.constructor as typeof Material).jsonSchemaPure,
+        ) as Schemas["pure"];
+    }
+
+    toJSONConstrained(): Schemas["constrained"] {
+        return this.cleanFullJSONAgainstSchema(
+            (this.constructor as typeof Material).jsonSchemaConstrained,
+        ) as Schemas["constrained"];
+    }
+
+    toJSONHashed(): Schemas["hashed"] {
+        return this.cleanFullJSONAgainstSchema(
+            (this.constructor as typeof Material).jsonSchemaHashed,
+        ) as Schemas["hashed"];
+    }
+
+    toJSONConstrainedHashed(): Schemas["constrainedHashed"] {
+        return this.cleanFullJSONAgainstSchema(
+            (this.constructor as typeof Material).jsonSchemaConstrainedHashed,
+        ) as Schemas["constrainedHashed"];
+    }
+
+    toJSON(): Schemas["constrainedHashed"] {
+        // Same payload as toJSONConstrainedHashed when jsonSchema is the constrained-hashed default.
+        return this.cleanFullJSONAgainstSchema(
+            (this.constructor as typeof Material).jsonSchema,
+        ) as Schemas["constrainedHashed"];
     }
 }
 

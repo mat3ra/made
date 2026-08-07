@@ -15,7 +15,7 @@ import { Cell } from "../cell/cell";
 import { ATOMIC_COORD_UNITS } from "../constants";
 import { AtomicConstraintValue } from "../constraints/constraints";
 import { Lattice } from "../lattice/lattice";
-import type { MaterialConstrainedConfig } from "../MaterialConstrained";
+import type { MaterialConstrainedConfig } from "../Material";
 
 const _print = (x: number, printFormat = "%14.9f") => s.sprintf(printFormat, Utils.math.precise(x));
 const _latticeVectorsToString = (vectors: Vector3DSchema[]) =>

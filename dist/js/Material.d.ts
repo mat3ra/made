@@ -2,27 +2,82 @@ import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import { type Defaultable } from "@mat3ra/code/dist/js/entity/mixins/DefaultableMixin";
 import { type HasMetadata } from "@mat3ra/code/dist/js/entity/mixins/HasMetadataMixin";
 import { type NamedEntity } from "@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin";
-import type { BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
-import { type BasisConfig, Basis } from "./basis/basis";
-import type { ConstrainedBasis } from "./basis/constrained_basis";
+import type { JSONSchema } from "@mat3ra/esse/dist/js/esse/utils";
+import type { AtomicConstraintsSchema, BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialConstrainedHashedSchema, MaterialConstrainedSchema, MaterialHashedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { type BasisConfig } from "./basis/basis";
+import { type ConstrainedBasisConfig, ConstrainedBasis } from "./basis/constrained_basis";
 import { type MaterialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
-type Schema = MaterialSchema;
-export type MaterialConfig<S extends Schema = Schema> = PartialBy<S, "name" | "metadata">;
-export declare const defaultMaterialConfig: Schema;
-interface BaseMaterial extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<Schema["metadata"]>> {
+/**
+ * Bundle of material JSON-schema variants used by {@link Material} projections.
+ * Web-app passes extended schemas here so `toJSON*` return types stay precise.
+ */
+export type MaterialSchemaMap = {
+    pure: MaterialSchema;
+    constrained: MaterialConstrainedSchema;
+    hashed: MaterialHashedSchema;
+    constrainedHashed: MaterialConstrainedHashedSchema;
+};
+/** Default ESSE schema map (no web-app extensions). */
+export type DefaultMaterialSchemas = MaterialSchemaMap;
+/**
+ * Constructor config: constraints/hash optional — normalized in the constructor
+ * (`parseConstrainedBasis` + {@link Material.updateHash}).
+ */
+export type MaterialConfig<S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema> = Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
+    basis: MaterialSchema["basis"] | MaterialConstrainedSchema["basis"];
+};
+export type MaterialConstrainedConfig<S extends MaterialConstrainedSchema = MaterialConstrainedSchema> = PartialBy<S, "name" | "metadata">;
+export declare const defaultMaterialConfig: MaterialConstrainedSchema;
+interface BaseMaterial<S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema> extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<S["metadata"]>> {
 }
-declare class BaseMaterial<S extends Schema = Schema> extends InMemoryEntity<S> {
+declare class BaseMaterial<S extends MaterialConstrainedHashedSchema = MaterialConstrainedHashedSchema> extends InMemoryEntity<S> {
 }
-declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implements Schema {
+/**
+ * Unified material. Pass extended schemas via {@link MaterialSchemaMap} so each
+ * `toJSON*` returns the web-app (or other host) schema type.
+ *
+ * @example
+ * ```ts
+ * type WebappSchemas = {
+ *   pure: MaterialSchema;
+ *   constrained: WebappMaterialConstrainedSchema;
+ *   hashed: WebappMaterialHashedSchema;
+ *   constrainedHashed: WebappMaterialConstrainedSchema;
+ * };
+ * class CoreMaterial extends Material<WebappSchemas> {}
+ * ```
+ */
+declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> extends BaseMaterial<Schemas["constrainedHashed"]> {
     static createDefault: () => Material;
-    static get defaultConfig(): MaterialConfig;
+    /**
+     * Schema used by {@link InMemoryEntity.clean} / {@link toJSON}.
+     * Defaults to constrained+hashed; subclasses / web-app Core* may override.
+     */
+    static get jsonSchema(): JSONSchema;
+    /** Schema for {@link toJSONPure} — override in web-app if the base material schema is extended. */
+    static get jsonSchemaPure(): JSONSchema;
+    /** Schema for {@link toJSONConstrained}. */
+    static get jsonSchemaConstrained(): JSONSchema;
+    /** Schema for {@link toJSONHashed}. */
+    static get jsonSchemaHashed(): JSONSchema;
+    /** Schema for {@link toJSONConstrainedHashed}. */
+    static get jsonSchemaConstrainedHashed(): JSONSchema;
+    static get defaultConfig(): MaterialConstrainedConfig;
     static fromMaterial(material: Material): Material;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
-    constructor(config: NoInfer<MaterialConfig<S>>);
-    get basis(): S["basis"];
-    set basis(basis: S["basis"]);
+    constructor(config: NoInfer<MaterialConfig<Schemas["constrainedHashed"]>>);
+    get hash(): Schemas["constrainedHashed"]["hash"];
+    set hash(value: Schemas["constrainedHashed"]["hash"]);
+    get scaledHash(): Schemas["constrainedHashed"]["scaledHash"];
+    set scaledHash(value: Schemas["constrainedHashed"]["scaledHash"]);
+    /** Recompute and store {@link hash} from the current basis/lattice. */
+    updateHash(): void;
+    get basis(): Schemas["constrainedHashed"]["basis"];
+    set basis(value: Schemas["constrainedHashed"]["basis"]);
+    get lattice(): Schemas["constrainedHashed"]["lattice"];
+    set lattice(value: Schemas["constrainedHashed"]["lattice"]);
     updateFormula(): void;
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
@@ -63,9 +118,11 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
      */
     getDerivedProperties(): DerivedPropertiesSchema;
     unsetFileProps(): void;
-    setBasis(basis: BasisConfig): void;
+    setBasis(basis: BasisConfig | ConstrainedBasisConfig): void;
     setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
-    getBasis(): Basis | ConstrainedBasis;
+    private setBasisConstraints;
+    setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema): void;
+    getBasis(): ConstrainedBasis;
     setLattice(lattice: LatticeSchema): void;
     getLattice(): Lattice;
     /**
@@ -134,6 +191,22 @@ declare class Material<S extends Schema = Schema> extends BaseMaterial<S> implem
      * @returns Array of checks results
      */
     getBasisConsistencyChecks(): ConsistencyCheck[];
-    toJSON(): S;
+    /**
+     * Full material JSON: constrained basis + hash fields from live getters.
+     * Variants below AJV-clean this payload against the matching ESSE schema.
+     * Builds from `_json` (not `super.toJSON`) so we do not pre-clean against
+     * {@link Material.jsonSchema} before projecting to a narrower schema.
+     */
+    private getFullJSON;
+    /**
+     * Clone {@link getFullJSON} and validate/clean against `jsonSchema` via AJV
+     * (same path as {@link InMemoryEntity.validateData} / {@link InMemoryEntity.clean}).
+     */
+    private cleanFullJSONAgainstSchema;
+    toJSONPure(): Schemas["pure"];
+    toJSONConstrained(): Schemas["constrained"];
+    toJSONHashed(): Schemas["hashed"];
+    toJSONConstrainedHashed(): Schemas["constrainedHashed"];
+    toJSON(): Schemas["constrainedHashed"];
 }
 export default Material;

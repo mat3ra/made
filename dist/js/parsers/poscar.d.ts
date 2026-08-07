@@ -1,5 +1,5 @@
 import { MaterialConstrainedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
-import type { MaterialConstrainedConfig } from "../MaterialConstrained";
+import type { MaterialConstrainedConfig } from "../Material";
 /**
  * Obtain a textual representation of a material in POSCAR format.
  * @param materialOrConfig - material class instance or config object.

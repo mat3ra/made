@@ -30,10 +30,6 @@ function extGCD(a, b) {
 /**
  * Generates a slab scaling matrix for the specified cell based on miller indices.
  * Inspired by from https://gitlab.com/ase/ase/blob/master/ase/build/general_surface.py.
- * @param cell {Cell}
- * @param millerIndices {Number[]}
- * @param tol {Number} Zero-value tolerance
- * @return {Number[][]}
  */
 function getMillerScalingMatrix(cell, millerIndices, tol = 1e-8) {
     if (!millerIndices.reduce((a, b) => utils_1.Utils.math.abs(a) + utils_1.Utils.math.abs(b)))
@@ -108,7 +104,6 @@ function getMillerScalingMatrix(cell, millerIndices, tol = 1e-8) {
  * @param thickness {Number} Surface (Slab) thickness in layers (Positive Integer).
  * @param vx {Number} Size of lateral supercell along the direction of the first (x) cell vector (Positive Integer).
  * @param vy {Number} Size of lateral supercell along the direction of the second (y) cell vector (Positive Integer).
- * @return {Number[][]}
  */
 function getDimensionsScalingMatrix(outOfPlaneAxisIndex, thickness, vx, vy) {
     const transformationMatrix = [

@@ -1,9 +1,9 @@
 declare const _default: {
     surface: {
-        generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: import("../Material").default<S>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./surface").SlabConfigSchema;
+        generateConfig: <Schemas extends import("../Material").MaterialSchemaMap = import("../Material").MaterialSchemaMap>(material: import("../Material").default<Schemas>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./surface").SlabConfigSchema;
     };
     supercell: {
-        generateConfig: <S extends import("@mat3ra/esse/dist/js/types").MaterialSchema = import("@mat3ra/esse/dist/js/types").MaterialSchema>(material: import("../Material").default<S>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
+        generateConfig: <Schemas extends import("../Material").MaterialSchemaMap = import("../Material").MaterialSchemaMap>(material: import("../Material").default<Schemas>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
             name: string;
             basis: import("../basis/basis").BasisConfig & import("@mat3ra/esse/dist/js/types").BaseInMemoryEntitySchema;
             lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;

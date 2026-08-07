@@ -1,14 +1,11 @@
-import {
-    type MaterialSchema,
-    Coordinate3DSchema,
-    Matrix3X3Schema,
-} from "@mat3ra/esse/dist/js/types";
+import { Coordinate3DSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
 import { Basis } from "../basis/basis";
 import { ConstrainedBasis } from "../basis/constrained_basis";
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
+import type { MaterialSchemaMap } from "../Material";
 import type Material from "../Material";
 import cellTools from "./cell";
 
@@ -57,8 +54,8 @@ function generateNewBasisWithinSupercell(
 /**
  * @summary Generates supercell config for the specified material.
  */
-function generateConfig<S extends MaterialSchema = MaterialSchema>(
-    material: Material<S>,
+function generateConfig<Schemas extends MaterialSchemaMap = MaterialSchemaMap>(
+    material: Material<Schemas>,
     supercellMatrix: Matrix3X3Schema,
 ) {
     const det = Utils.math.det(supercellMatrix);

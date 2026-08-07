@@ -1,5 +1,5 @@
 {
     "extension": ["ts", "js"],
     "spec": "tests/**/*.js",
-    "require": ["ts-node/register"]
-  }
+    "require": ["ts-node/register", "./tests/js/register-esse-schemas.cjs", "./tests/js/setup.ts"]
+}

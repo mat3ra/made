@@ -1,5 +1,4 @@
-import type { MaterialConfig } from "../Material";
-import type { MaterialConstrainedConfig } from "../MaterialConstrained";
+import type { MaterialConfig, MaterialConstrainedConfig } from "../Material";
 /**
  * @summary Detects the format of the input string
  * @throws If the input string is unknown format

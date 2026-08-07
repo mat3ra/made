@@ -9,7 +9,7 @@ declare const _default: {
     poscar: {
         isPoscar: (text: string) => boolean;
         toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialConstrainedSchema, omitConstraints?: boolean) => string;
-        fromPoscar: (fileContent: string) => import("../MaterialConstrained").MaterialConstrainedConfig;
+        fromPoscar: (fileContent: string) => import("../Material").MaterialConstrainedConfig;
         atomicConstraintsCharFromBool: (bool: boolean) => string;
         atomsCount: typeof import("./poscar").atomsCount;
     };
@@ -21,7 +21,7 @@ declare const _default: {
     };
     nativeFormatParsers: {
         detectFormat: (text: string) => "json" | "poscar" | "unknown";
-        convertFromNativeFormat: (text: string) => import("../Material").MaterialConfig | import("../MaterialConstrained").MaterialConstrainedConfig;
+        convertFromNativeFormat: (text: string) => import("../Material").MaterialConfig | import("../Material").MaterialConstrainedConfig;
     };
 };
 export default _default;

@@ -46,12 +46,6 @@ function materialSchemaMixin(item) {
         set src(value) {
             this.setProp("src", value);
         },
-        get scaledHash() {
-            return this.prop("scaledHash");
-        },
-        set scaledHash(value) {
-            this.setProp("scaledHash", value);
-        },
         get icsdId() {
             return this.prop("icsdId");
         },

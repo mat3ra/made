@@ -36,7 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DEFAULT_LATTICE_UNITS = exports.LATTICE_TYPE_CONFIGS = exports.tools = exports.parsers = exports.AtomicConstraints = exports.Basis = exports.ReciprocalLattice = exports.molecularLatticePaddingFactor = exports.diatomicLatticePaddingFactor = exports.defaultNonPeriodicMinimumLatticeSize = exports.UnitCell = exports.Cell = exports.Lattice = exports.defaultMaterialConstrainedConfig = exports.defaultMaterialConfig = exports.MaterialHashed = exports.MaterialConstrainedHashed = exports.MaterialConstrained = exports.Material = exports.ATOMIC_COORD_UNITS = exports.units = exports.tolerance = exports.coefficients = exports.Made = void 0;
+exports.DEFAULT_LATTICE_UNITS = exports.LATTICE_TYPE_CONFIGS = exports.tools = exports.parsers = exports.AtomicConstraints = exports.Basis = exports.ReciprocalLattice = exports.molecularLatticePaddingFactor = exports.diatomicLatticePaddingFactor = exports.defaultNonPeriodicMinimumLatticeSize = exports.UnitCell = exports.Cell = exports.Lattice = exports.defaultMaterialConfig = exports.Material = exports.ATOMIC_COORD_UNITS = exports.units = exports.tolerance = exports.coefficients = exports.Made = void 0;
 const basis_1 = require("./basis/basis");
 Object.defineProperty(exports, "Basis", { enumerable: true, get: function () { return basis_1.Basis; } });
 const cell_1 = require("./cell/cell");
@@ -63,13 +63,6 @@ Object.defineProperty(exports, "UnitCell", { enumerable: true, get: function () 
 const Material_1 = __importStar(require("./Material"));
 exports.Material = Material_1.default;
 Object.defineProperty(exports, "defaultMaterialConfig", { enumerable: true, get: function () { return Material_1.defaultMaterialConfig; } });
-const MaterialConstrained_1 = __importStar(require("./MaterialConstrained"));
-exports.MaterialConstrained = MaterialConstrained_1.default;
-Object.defineProperty(exports, "defaultMaterialConstrainedConfig", { enumerable: true, get: function () { return MaterialConstrained_1.defaultMaterialConstrainedConfig; } });
-const MaterialConstrainedHashed_1 = __importDefault(require("./MaterialConstrainedHashed"));
-exports.MaterialConstrainedHashed = MaterialConstrainedHashed_1.default;
-const MaterialHashed_1 = __importDefault(require("./MaterialHashed"));
-exports.MaterialHashed = MaterialHashed_1.default;
 const parsers_1 = __importDefault(require("./parsers/parsers"));
 exports.parsers = parsers_1.default;
 const index_1 = __importDefault(require("./tools/index"));
@@ -80,11 +73,7 @@ exports.Made = {
     units: constants_1.units,
     ATOMIC_COORD_UNITS: constants_1.ATOMIC_COORD_UNITS,
     Material: Material_1.default,
-    MaterialConstrained: MaterialConstrained_1.default,
-    MaterialConstrainedHashed: MaterialConstrainedHashed_1.default,
-    MaterialHashed: MaterialHashed_1.default,
     defaultMaterialConfig: Material_1.defaultMaterialConfig,
-    defaultMaterialConstrainedConfig: MaterialConstrained_1.defaultMaterialConstrainedConfig,
     Lattice: lattice_1.Lattice,
     Cell: cell_1.Cell,
     UnitCell: unit_cell_1.UnitCell,
