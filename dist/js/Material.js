@@ -21,9 +21,9 @@ const supercell_1 = __importDefault(require("./tools/supercell"));
 /** ESSE `$id` values for material schema variants. */
 const MATERIAL_SCHEMA_IDS = {
     pure: "material",
-    constrained: "material-constrained",
+    enriched: "material-enriched",
     hashed: "material-hashed",
-    constrainedHashed: "material-constrained-hashed",
+    enrichedHashed: "material-enriched-hashed",
 };
 function parseConstrainedBasis(textOrObject, format, units) {
     if (typeof textOrObject === "string") {
@@ -93,9 +93,9 @@ class BaseMaterial extends entity_1.InMemoryEntity {
  * ```ts
  * type WebappSchemas = {
  *   pure: MaterialSchema;
- *   constrained: WebappMaterialConstrainedSchema;
+ *   enriched: WebappMaterialEnrichedSchema;
  *   hashed: WebappMaterialHashedSchema;
- *   constrainedHashed: WebappMaterialConstrainedSchema;
+ *   enrichedHashed: WebappMaterialEnrichedSchema;
  * };
  * class CoreMaterial extends Material<WebappSchemas> {}
  * ```
@@ -103,26 +103,26 @@ class BaseMaterial extends entity_1.InMemoryEntity {
 class Material extends BaseMaterial {
     /**
      * Schema used by {@link InMemoryEntity.clean} / {@link toJSON}.
-     * Defaults to constrained+hashed; subclasses / web-app Core* may override.
+     * Defaults to enriched+hashed; subclasses / web-app Core* may override.
      */
     static get jsonSchema() {
-        return this.jsonSchemaConstrainedHashed;
+        return this.jsonSchemaEnrichedHashed;
     }
     /** Schema for {@link toJSONPure} — override in web-app if the base material schema is extended. */
     static get jsonSchemaPure() {
         return JSONSchemasInterface_1.default.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.pure);
     }
-    /** Schema for {@link toJSONConstrained}. */
-    static get jsonSchemaConstrained() {
-        return JSONSchemasInterface_1.default.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.constrained);
+    /** Schema for {@link toJSONEnriched}. */
+    static get jsonSchemaEnriched() {
+        return JSONSchemasInterface_1.default.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.enriched);
     }
     /** Schema for {@link toJSONHashed}. */
     static get jsonSchemaHashed() {
         return JSONSchemasInterface_1.default.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.hashed);
     }
-    /** Schema for {@link toJSONConstrainedHashed}. */
-    static get jsonSchemaConstrainedHashed() {
-        return JSONSchemasInterface_1.default.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.constrainedHashed);
+    /** Schema for {@link toJSONEnrichedHashed}. */
+    static get jsonSchemaEnrichedHashed() {
+        return JSONSchemasInterface_1.default.getRequiredSchemaById(MATERIAL_SCHEMA_IDS.enrichedHashed);
     }
     static get defaultConfig() {
         return exports.defaultMaterialConfig;
@@ -333,7 +333,7 @@ class Material extends BaseMaterial {
         if (((_a = this.src) === null || _a === void 0 ? void 0 : _a.extension) === "poscar" && !ignoreOriginal) {
             return this.src.text;
         }
-        return parsers_1.default.poscar.toPoscar(this.toJSONConstrained(), omitConstraints);
+        return parsers_1.default.poscar.toPoscar(this.toJSONEnriched(), omitConstraints);
     }
     /**
      * Returns a copy of the material with conventional cell constructed instead of primitive.
@@ -416,17 +416,17 @@ class Material extends BaseMaterial {
     toJSONPure() {
         return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchemaPure);
     }
-    toJSONConstrained() {
-        return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchemaConstrained);
+    toJSONEnriched() {
+        return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchemaEnriched);
     }
     toJSONHashed() {
         return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchemaHashed);
     }
-    toJSONConstrainedHashed() {
-        return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchemaConstrainedHashed);
+    toJSONEnrichedHashed() {
+        return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchemaEnrichedHashed);
     }
     toJSON() {
-        // Same payload as toJSONConstrainedHashed when jsonSchema is the constrained-hashed default.
+        // Same payload as toJSONEnrichedHashed when jsonSchema is the enriched-hashed default.
         return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchema);
     }
 }

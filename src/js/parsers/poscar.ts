@@ -1,7 +1,7 @@
 import {
     BasisSchema,
     Coordinate3DSchema,
-    MaterialConstrainedSchema,
+    MaterialEnrichedSchema,
     MaterialSchema,
     Vector3DSchema,
 } from "@mat3ra/esse/dist/js/types";
@@ -28,7 +28,7 @@ const atomicConstraintsCharFromBool = (bool: boolean): string => (bool ? "T" : "
  * @param omitConstraints - whether to discard constraints when serializing.
  */
 function toPoscar(
-    materialOrConfig: MaterialSchema | MaterialConstrainedSchema,
+    materialOrConfig: MaterialSchema | MaterialEnrichedSchema,
     omitConstraints = false,
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);

@@ -1,11 +1,11 @@
-import { MaterialConstrainedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { MaterialEnrichedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import type { MaterialConfig } from "../Material";
 /**
  * Obtain a textual representation of a material in POSCAR format.
  * @param materialOrConfig - material class instance or config object.
  * @param omitConstraints - whether to discard constraints when serializing.
  */
-declare function toPoscar(materialOrConfig: MaterialSchema | MaterialConstrainedSchema, omitConstraints?: boolean): string;
+declare function toPoscar(materialOrConfig: MaterialSchema | MaterialEnrichedSchema, omitConstraints?: boolean): string;
 /**
  * @summary calculates the number of atoms in a poscar file based on the summation of the numbers in line 7 of the file.
  * Poscar file formatting: https://www.vasp.at/wiki/index.php/POSCAR
