@@ -33,7 +33,7 @@ export declare const Made: {
         cartesian: string;
     };
     Material: typeof Material;
-    defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialEnrichedSchema;
+    defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
     UnitCell: typeof UnitCell;
@@ -46,14 +46,14 @@ export declare const Made: {
     parsers: {
         xyz: {
             validate: typeof import("./parsers/xyz").validate;
-            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnrichedSchema, fractional?: boolean) => string;
+            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema, fractional?: boolean) => string;
             toBasisConfig: (txt: string, units?: string, cell?: Cell) => import("./basis/constrained_basis").ConstrainedBasisConfig;
             fromBasis: (basisClsInstance: import("./basis/constrained_basis").ConstrainedBasis, coordinatePrintFormat: string) => string;
             CombinatorialBasis: typeof import("./parsers/xyz_combinatorial_basis").CombinatorialBasis;
         };
         poscar: {
             isPoscar: (text: string) => boolean;
-            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnrichedSchema, omitConstraints?: boolean) => string;
+            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema, omitConstraints?: boolean) => string;
             fromPoscar: (fileContent: string) => import("./Material").MaterialConfig;
             atomicConstraintsCharFromBool: (bool: boolean) => string;
             atomsCount: typeof import("./parsers/poscar").atomsCount;
@@ -62,7 +62,7 @@ export declare const Made: {
             parseMeta: (txt: string) => import("./parsers/cif").Meta;
         };
         espresso: {
-            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnrichedSchema) => string;
+            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema) => string;
         };
         nativeFormatParsers: {
             detectFormat: (text: string) => "json" | "poscar" | "unknown";

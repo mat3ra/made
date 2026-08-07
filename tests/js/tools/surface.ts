@@ -74,7 +74,7 @@ describe("Tools:Surface", () => {
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
         // Structural comparison: omit hash (now included in Material.toJSON).
-        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnriched(), slabMaterial.toJSONEnriched());
+        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnhanced(), slabMaterial.toJSONEnhanced());
     });
 
     it("should return slab (111) with vacuum for gamma = 59.999", () => {
@@ -90,7 +90,7 @@ describe("Tools:Surface", () => {
         const vacuumRatio = 0.5;
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
-        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnriched(), slabMaterial.toJSONEnriched());
+        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnhanced(), slabMaterial.toJSONEnhanced());
     });
 
     it("should return slab (111) with vacuum for gamma = 60.001", () => {
@@ -106,6 +106,6 @@ describe("Tools:Surface", () => {
         const vacuumRatio = 0.5;
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
-        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnriched(), slabMaterial.toJSONEnriched());
+        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnhanced(), slabMaterial.toJSONEnhanced());
     });
 });

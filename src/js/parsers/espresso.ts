@@ -1,4 +1,4 @@
-import { MaterialEnrichedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { MaterialEnhancedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { map } from "lodash";
 import s from "underscore.string";
 
@@ -8,7 +8,7 @@ import xyz from "./xyz";
 /**
  * Construct textual representation of a materialOrConfig according to Quantum ESPRESSO pw.x input format.
  */
-function toEspressoFormat(materialOrConfig: MaterialSchema | MaterialEnrichedSchema): string {
+function toEspressoFormat(materialOrConfig: MaterialSchema | MaterialEnhancedSchema): string {
     const l = new Lattice(materialOrConfig.lattice);
     const vectors = l.vectorArrays;
     const vectorsAsString = map(vectors, (v) => {

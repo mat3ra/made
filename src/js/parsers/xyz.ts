@@ -1,4 +1,4 @@
-import { MaterialEnrichedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { MaterialEnhancedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { isEmpty, isNaN, map } from "lodash";
 import s from "underscore.string";
 
@@ -164,7 +164,7 @@ function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: st
  * Prefer fromBasis when you already have a ConstrainedBasis instance.
  */
 function fromMaterial(
-    materialOrConfig: MaterialSchema | MaterialEnrichedSchema,
+    materialOrConfig: MaterialSchema | MaterialEnhancedSchema,
     fractional = false,
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);

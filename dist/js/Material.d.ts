@@ -3,7 +3,7 @@ import { type Defaultable } from "@mat3ra/code/dist/js/entity/mixins/Defaultable
 import { type HasMetadata } from "@mat3ra/code/dist/js/entity/mixins/HasMetadataMixin";
 import { type NamedEntity } from "@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin";
 import type { JSONSchema } from "@mat3ra/esse/dist/js/esse/utils";
-import type { AtomicConstraintsSchema, BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialEnrichedHashedSchema, MaterialEnrichedSchema, MaterialHashedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import type { AtomicConstraintsSchema, BasisSchema, ConsistencyCheck, DerivedPropertiesSchema, FileSourceSchema, LatticeSchema, MaterialEnhancedHashedSchema, MaterialEnhancedSchema, MaterialHashedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { type BasisConfig } from "./basis/basis";
 import { type ConstrainedBasisConfig, ConstrainedBasis } from "./basis/constrained_basis";
 import { type MaterialSchemaMixin } from "./generated/MaterialSchemaMixin";
@@ -15,9 +15,9 @@ export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
  */
 export type MaterialSchemaMap = {
     pure: MaterialSchema;
-    enriched: MaterialEnrichedSchema;
+    enhanced: MaterialEnhancedSchema;
     hashed: MaterialHashedSchema;
-    enrichedHashed: MaterialEnrichedHashedSchema;
+    enhancedHashed: MaterialEnhancedHashedSchema;
 };
 /** Default ESSE schema map (no web-app extensions). */
 export type DefaultMaterialSchemas = MaterialSchemaMap;
@@ -25,13 +25,13 @@ export type DefaultMaterialSchemas = MaterialSchemaMap;
  * Constructor config: constraints/hash/metadata optional — normalized in the constructor
  * (`parseConstrainedBasis` + {@link Material.updateHash}; `metadata` defaults to `{}`).
  */
-export type MaterialConfig<S extends MaterialEnrichedHashedSchema = MaterialEnrichedHashedSchema> = Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
-    basis: MaterialSchema["basis"] | MaterialEnrichedSchema["basis"];
+export type MaterialConfig<S extends MaterialEnhancedHashedSchema = MaterialEnhancedHashedSchema> = Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
+    basis: MaterialSchema["basis"] | MaterialEnhancedSchema["basis"];
 };
-export declare const defaultMaterialConfig: MaterialEnrichedSchema;
-interface BaseMaterial<S extends MaterialEnrichedHashedSchema = MaterialEnrichedHashedSchema> extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<S["metadata"]>> {
+export declare const defaultMaterialConfig: MaterialEnhancedSchema;
+interface BaseMaterial<S extends MaterialEnhancedHashedSchema = MaterialEnhancedHashedSchema> extends MaterialSchemaMixin, NamedEntity, Defaultable, Required<HasMetadata<S["metadata"]>> {
 }
-declare class BaseMaterial<S extends MaterialEnrichedHashedSchema = MaterialEnrichedHashedSchema> extends InMemoryEntity<S> {
+declare class BaseMaterial<S extends MaterialEnhancedHashedSchema = MaterialEnhancedHashedSchema> extends InMemoryEntity<S> {
 }
 /**
  * Unified material. Pass extended schemas via {@link MaterialSchemaMap} so each
@@ -41,29 +41,29 @@ declare class BaseMaterial<S extends MaterialEnrichedHashedSchema = MaterialEnri
  * ```ts
  * type WebappSchemas = {
  *   pure: MaterialSchema;
- *   enriched: WebappMaterialEnrichedSchema;
+ *   enhanced: WebappMaterialEnhancedSchema;
  *   hashed: WebappMaterialHashedSchema;
- *   enrichedHashed: WebappMaterialEnrichedSchema;
+ *   enhancedHashed: WebappMaterialEnhancedSchema;
  * };
  * class CoreMaterial extends Material<WebappSchemas> {}
  * ```
  */
-declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> extends BaseMaterial<Schemas["enrichedHashed"]> {
+declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> extends BaseMaterial<Schemas["enhancedHashed"]> {
     static createDefault: () => Material<MaterialSchemaMap>;
     /**
      * Schema used by {@link InMemoryEntity.clean} / {@link toJSON}.
-     * Defaults to enriched+hashed; subclasses / web-app Core* may override.
+     * Defaults to enhanced+hashed; subclasses / web-app Core* may override.
      */
     static get jsonSchema(): JSONSchema;
     /** Schema for {@link toJSONPure} — override in web-app if the base material schema is extended. */
     static get jsonSchemaPure(): JSONSchema;
-    /** Schema for {@link toJSONEnriched}. */
-    static get jsonSchemaEnriched(): JSONSchema;
+    /** Schema for {@link toJSONEnhanced}. */
+    static get jsonSchemaEnhanced(): JSONSchema;
     /** Schema for {@link toJSONHashed}. */
     static get jsonSchemaHashed(): JSONSchema;
-    /** Schema for {@link toJSONEnrichedHashed}. */
-    static get jsonSchemaEnrichedHashed(): JSONSchema;
-    static get defaultConfig(): MaterialEnrichedSchema;
+    /** Schema for {@link toJSONEnhancedHashed}. */
+    static get jsonSchemaEnhancedHashed(): JSONSchema;
+    static get defaultConfig(): MaterialEnhancedSchema;
     static constructMaterialFileSource(fileName: string, fileContent: string, fileExtension: string): FileSourceSchema;
     /**
      * @param config - Partial entity input. `basis.constraints` / `hash` / `metadata` may be omitted;
@@ -71,16 +71,16 @@ declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchema
      * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
      */
     constructor(config: NoInfer<MaterialConfig>);
-    get hash(): Schemas["enrichedHashed"]["hash"];
-    set hash(value: Schemas["enrichedHashed"]["hash"]);
-    get scaledHash(): Schemas["enrichedHashed"]["scaledHash"];
-    set scaledHash(value: Schemas["enrichedHashed"]["scaledHash"]);
+    get hash(): Schemas["enhancedHashed"]["hash"];
+    set hash(value: Schemas["enhancedHashed"]["hash"]);
+    get scaledHash(): Schemas["enhancedHashed"]["scaledHash"];
+    set scaledHash(value: Schemas["enhancedHashed"]["scaledHash"]);
     /** Recompute and store {@link hash} from the current basis/lattice. */
     updateHash(): void;
-    get basis(): Schemas["enrichedHashed"]["basis"];
-    set basis(value: Schemas["enrichedHashed"]["basis"]);
-    get lattice(): Schemas["enrichedHashed"]["lattice"];
-    set lattice(value: Schemas["enrichedHashed"]["lattice"]);
+    get basis(): Schemas["enhancedHashed"]["basis"];
+    set basis(value: Schemas["enhancedHashed"]["basis"]);
+    get lattice(): Schemas["enhancedHashed"]["lattice"];
+    set lattice(value: Schemas["enhancedHashed"]["lattice"]);
     updateFormula(): void;
     /**
      * @summary Returns the specific derived property (as specified by name) for a material.
@@ -207,9 +207,9 @@ declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchema
      */
     private cleanFullJSONAgainstSchema;
     toJSONPure(): Schemas["pure"];
-    toJSONEnriched(): Schemas["enriched"];
+    toJSONEnhanced(): Schemas["enhanced"];
     toJSONHashed(): Schemas["hashed"];
-    toJSONEnrichedHashed(): Schemas["enrichedHashed"];
-    toJSON(): Schemas["enrichedHashed"];
+    toJSONEnhancedHashed(): Schemas["enhancedHashed"];
+    toJSON(): Schemas["enhancedHashed"];
 }
 export default Material;

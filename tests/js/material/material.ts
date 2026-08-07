@@ -41,8 +41,8 @@ describe("Material", () => {
             expect(json.name).to.equal(Silicon.name);
         });
 
-        it("toJSONEnriched includes basis.constraints and omits hash", () => {
-            const json = material.toJSONEnriched();
+        it("toJSONEnhanced includes basis.constraints and omits hash", () => {
+            const json = material.toJSONEnhanced();
             expect(json).to.not.have.property("hash");
             expect(json).to.not.have.property("scaledHash");
             expect(json.basis).to.have.property("constraints").that.is.an("array");
@@ -55,15 +55,15 @@ describe("Material", () => {
             expect(json.basis).to.not.have.property("constraints");
         });
 
-        it("toJSONEnrichedHashed includes hash and basis.constraints", () => {
-            const json = material.toJSONEnrichedHashed();
+        it("toJSONEnhancedHashed includes hash and basis.constraints", () => {
+            const json = material.toJSONEnhancedHashed();
             expect(json.hash).to.be.a("string");
             expect(json.hash.length).to.be.greaterThan(0);
             expect(json.basis.constraints).to.be.an("array");
         });
 
-        it("toJSON equals toJSONEnrichedHashed", () => {
-            expect(material.toJSON()).to.deep.equal(material.toJSONEnrichedHashed());
+        it("toJSON equals toJSONEnhancedHashed", () => {
+            expect(material.toJSON()).to.deep.equal(material.toJSONEnhancedHashed());
         });
     });
 
