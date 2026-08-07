@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.defaultMaterialConfig = void 0;
 const entity_1 = require("@mat3ra/code/dist/js/entity");
+const in_memory_1 = require("@mat3ra/code/dist/js/entity/in_memory");
 const DefaultableMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/DefaultableMixin");
 const HasMetadataMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/HasMetadataMixin");
 const NamedEntityMixin_1 = require("@mat3ra/code/dist/js/entity/mixins/NamedEntityMixin");
@@ -411,7 +412,22 @@ class Material extends BaseMaterial {
      * (same path as {@link InMemoryEntity.validateData} / {@link InMemoryEntity.clean}).
      */
     cleanFullJSONAgainstSchema(jsonSchema) {
-        return this.constructor.validateData((0, clone_1.deepClone)(this.getFullJSON()), true, jsonSchema);
+        var _a, _b, _c;
+        try {
+            return this.constructor.validateData((0, clone_1.deepClone)(this.getFullJSON()), true, jsonSchema);
+        }
+        catch (err) {
+            // validateData throws EntityError with only the code as message — log details for DevTools.
+            if (err instanceof in_memory_1.EntityError) {
+                console.error("Material.toJSON validation failed", {
+                    code: err.code,
+                    error: (_a = err.details) === null || _a === void 0 ? void 0 : _a.error,
+                    json: (_b = err.details) === null || _b === void 0 ? void 0 : _b.json,
+                    schema: (_c = err.details) === null || _c === void 0 ? void 0 : _c.schema,
+                });
+            }
+            throw err;
+        }
     }
     toJSONPure() {
         return this.cleanFullJSONAgainstSchema(this.constructor.jsonSchemaPure);

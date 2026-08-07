@@ -1,4 +1,5 @@
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
+import { EntityError } from "@mat3ra/code/dist/js/entity/in_memory";
 import {
     type Defaultable,
     defaultableEntityMixin,
@@ -554,11 +555,24 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
      * (same path as {@link InMemoryEntity.validateData} / {@link InMemoryEntity.clean}).
      */
     private cleanFullJSONAgainstSchema(jsonSchema: JSONSchema): object {
-        return (this.constructor as typeof Material).validateData(
-            deepClone(this.getFullJSON()),
-            true,
-            jsonSchema,
-        );
+        try {
+            return (this.constructor as typeof Material).validateData(
+                deepClone(this.getFullJSON()),
+                true,
+                jsonSchema,
+            );
+        } catch (err) {
+            // validateData throws EntityError with only the code as message — log details for DevTools.
+            if (err instanceof EntityError) {
+                console.error("Material.toJSON validation failed", {
+                    code: err.code,
+                    error: err.details?.error,
+                    json: err.details?.json,
+                    schema: err.details?.schema,
+                });
+            }
+            throw err;
+        }
     }
 
     toJSONPure(): Schemas["pure"] {
