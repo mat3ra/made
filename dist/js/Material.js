@@ -167,9 +167,9 @@ class Material extends BaseMaterial {
     set scaledHash(value) {
         this.setProp("scaledHash", value);
     }
-    /** Recompute and store {@link hash} from the current basis/lattice. */
+    /** Recompute and store {@link hash} from the current basis/lattice (or InChI if non-periodic). */
     updateHash() {
-        this.hash = this.calculateHash("", false, this.isNonPeriodic);
+        this.hash = this.calculateHash();
     }
     // Override schema-mixin accessors so basis/lattice changes keep hash in sync.
     get basis() {

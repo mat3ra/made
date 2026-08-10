@@ -75,7 +75,7 @@ declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchema
     set hash(value: Schemas["enhancedHashed"]["hash"]);
     get scaledHash(): Schemas["enhancedHashed"]["scaledHash"];
     set scaledHash(value: Schemas["enhancedHashed"]["scaledHash"]);
-    /** Recompute and store {@link hash} from the current basis/lattice. */
+    /** Recompute and store {@link hash} from the current basis/lattice (or InChI if non-periodic). */
     updateHash(): void;
     get basis(): Schemas["enhancedHashed"]["basis"];
     set basis(value: Schemas["enhancedHashed"]["basis"]);

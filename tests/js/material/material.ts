@@ -87,5 +87,37 @@ describe("Material", () => {
             // scaledHash is stored on schema; standata config may omit it — match main's computed getter.
             expect(material.calculateHash("", true)).to.equal(expectedHashes.FeO.scaledHash);
         });
+
+        it("stores InChI hash for non-periodic materials (updateHash must not bypass)", () => {
+            // MD5 of the InChI string — same contract as web-app MolView upload.
+            const inchi =
+                "1S/C8H18N4O2/c1-10-4-9-6-5(10)7(13)12(3)8(14)11(6)2/h5-9,13-14H,4H2,1-3H3";
+            const expectedInchiHash = "b3680772bb4f0cba602788d519531914";
+
+            const material = new Material({
+                name: "non-periodic-inchi",
+                isNonPeriodic: true,
+                basis: Silicon.basis,
+                lattice: Silicon.lattice,
+                derivedProperties: [{ name: "inchi", value: inchi }],
+            });
+
+            // Sanity: flag + derived InChI must be present for the InChI hash path.
+            expect(material.isNonPeriodic).to.equal(true);
+            expect(material.getInchiStringForHash()).to.equal(inchi);
+            expect(material.calculateHash()).to.equal(expectedInchiHash);
+
+            // Bug: updateHash() currently passes isNonPeriodic as bypassNonPeriodicCheck,
+            // so the constructor stores the geometric hash instead of the InChI hash.
+            expect(material.hash).to.equal(
+                expectedInchiHash,
+                "Material.hash after construct must use InChI path (updateHash must not bypass)",
+            );
+
+            const geometricHashWithBypass = material.calculateHash("", false, true);
+            material.lattice = { ...material.lattice };
+            expect(material.hash).to.equal(expectedInchiHash);
+            expect(material.hash).to.not.equal(geometricHashWithBypass);
+        });
     });
 });
