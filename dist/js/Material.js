@@ -312,10 +312,10 @@ class Material extends BaseMaterial {
         this.setBasis(this.getBasis().toCartesian().toJSON());
     }
     /**
-     * Returns material's basis in XYZ format.
+     * Returns material's basis in XYZ format (includes atomic constraints when present).
      */
     getBasisAsXyz(fractional = false) {
-        return parsers_1.default.xyz.fromMaterial(this.toJSONPure(), fractional);
+        return parsers_1.default.xyz.fromMaterial(this.toJSONEnhanced(), fractional);
     }
     /**
      * Returns material in Quantum Espresso output format:

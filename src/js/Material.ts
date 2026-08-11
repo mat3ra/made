@@ -432,10 +432,10 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
     }
 
     /**
-     * Returns material's basis in XYZ format.
+     * Returns material's basis in XYZ format (includes atomic constraints when present).
      */
     getBasisAsXyz(fractional = false): string {
-        return parsers.xyz.fromMaterial(this.toJSONPure(), fractional);
+        return parsers.xyz.fromMaterial(this.toJSONEnhanced(), fractional);
     }
 
     /**

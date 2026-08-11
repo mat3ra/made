@@ -163,7 +163,7 @@ declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchema
      */
     toCartesian(): void;
     /**
-     * Returns material's basis in XYZ format.
+     * Returns material's basis in XYZ format (includes atomic constraints when present).
      */
     getBasisAsXyz(fractional?: boolean): string;
     /**

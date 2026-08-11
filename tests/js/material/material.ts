@@ -67,6 +67,34 @@ describe("Material", () => {
         });
     });
 
+    it("getBasisAsXyz includes atomic constraints via toJSONEnhanced", () => {
+        const material = new Material({
+            name: "Li-with-constraints",
+            basis: {
+                elements: [
+                    { id: 0, value: "Li" },
+                    { id: 1, value: "Li" },
+                ],
+                coordinates: [
+                    { id: 0, value: [0, 0, 0] },
+                    { id: 1, value: [0.25, 0.25, 0.25] },
+                ],
+                units: "crystal",
+                constraints: [
+                    { id: 0, value: [true, true, false] },
+                    { id: 1, value: [true, true, true] },
+                ],
+            },
+            lattice: Silicon.lattice,
+        });
+
+        const xyz = material.getBasisAsXyz();
+        expect(xyz).to.match(/Li\s+0\.000000\s+0\.000000\s+0\.000000\s+1\s+1\s+0/);
+        expect(xyz).to.match(/Li\s+0\.250000\s+0\.250000\s+0\.250000\s+1\s+1\s+1/);
+        // Regression: toJSONPure strips constraints — must not be used for XYZ display.
+        expect(material.toJSONPure().basis).to.not.have.property("constraints");
+    });
+
     describe("calculateHash", () => {
         [
             { name: "Silicon", fixture: Silicon },
