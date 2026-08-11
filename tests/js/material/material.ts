@@ -88,7 +88,7 @@ describe("Material", () => {
             expect(material.calculateHash("", true)).to.equal(expectedHashes.FeO.scaledHash);
         });
 
-        it("stores InChI hash for non-periodic materials (updateHash must not bypass)", () => {
+        it("stores InChI hash for non-periodic materials when InChI is present", () => {
             // MD5 of the InChI string — same contract as web-app MolView upload.
             const inchi =
                 "1S/C8H18N4O2/c1-10-4-9-6-5(10)7(13)12(3)8(14)11(6)2/h5-9,13-14H,4H2,1-3H3";
@@ -102,22 +102,32 @@ describe("Material", () => {
                 derivedProperties: [{ name: "inchi", value: inchi }],
             });
 
-            // Sanity: flag + derived InChI must be present for the InChI hash path.
             expect(material.isNonPeriodic).to.equal(true);
             expect(material.getInchiStringForHash()).to.equal(inchi);
             expect(material.calculateHash()).to.equal(expectedInchiHash);
-
-            // Bug: updateHash() currently passes isNonPeriodic as bypassNonPeriodicCheck,
-            // so the constructor stores the geometric hash instead of the InChI hash.
-            expect(material.hash).to.equal(
-                expectedInchiHash,
-                "Material.hash after construct must use InChI path (updateHash must not bypass)",
-            );
+            expect(material.hash).to.equal(expectedInchiHash);
 
             const geometricHashWithBypass = material.calculateHash("", false, true);
             material.lattice = { ...material.lattice };
             expect(material.hash).to.equal(expectedInchiHash);
             expect(material.hash).to.not.equal(geometricHashWithBypass);
+        });
+
+        it("uses geometric hash when non-periodic but InChI is not derived yet", () => {
+            // Designer toggle sets isNonPeriodic then scales lattice before butler adds InChI.
+            const material = new Material({
+                name: "non-periodic-no-inchi",
+                isNonPeriodic: true,
+                basis: Silicon.basis,
+                lattice: Silicon.lattice,
+            });
+
+            const expectedGeometricHash = material.calculateHash("", false, true);
+            expect(material.hash).to.equal(expectedGeometricHash);
+            expect(() => material.calculateHash()).to.throw(/Missing InChI/);
+
+            material.lattice = { ...material.lattice };
+            expect(material.hash).to.equal(material.calculateHash("", false, true));
         });
     });
 });

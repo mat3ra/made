@@ -75,7 +75,11 @@ declare class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchema
     set hash(value: Schemas["enhancedHashed"]["hash"]);
     get scaledHash(): Schemas["enhancedHashed"]["scaledHash"];
     set scaledHash(value: Schemas["enhancedHashed"]["scaledHash"]);
-    /** Recompute and store {@link hash} from the current basis/lattice (or InChI if non-periodic). */
+    /**
+     * Recompute and store {@link hash} from the current basis/lattice (or InChI if non-periodic).
+     * When non-periodic but InChI is not derived yet (e.g. designer toggle before butler), use
+     * geometric hash so setters do not throw — same practical UX as main before auto-updateHash.
+     */
     updateHash(): void;
     get basis(): Schemas["enhancedHashed"]["basis"];
     set basis(value: Schemas["enhancedHashed"]["basis"]);

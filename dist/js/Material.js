@@ -167,9 +167,17 @@ class Material extends BaseMaterial {
     set scaledHash(value) {
         this.setProp("scaledHash", value);
     }
-    /** Recompute and store {@link hash} from the current basis/lattice (or InChI if non-periodic). */
+    /**
+     * Recompute and store {@link hash} from the current basis/lattice (or InChI if non-periodic).
+     * When non-periodic but InChI is not derived yet (e.g. designer toggle before butler), use
+     * geometric hash so setters do not throw — same practical UX as main before auto-updateHash.
+     */
     updateHash() {
-        this.hash = this.calculateHash();
+        const hasInchi = Boolean(this.getDerivedPropertyByName("inchi"));
+        this.hash =
+            this.isNonPeriodic && !hasInchi
+                ? this.calculateHash("", false, true)
+                : this.calculateHash();
     }
     // Override schema-mixin accessors so basis/lattice changes keep hash in sync.
     get basis() {
