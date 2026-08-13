@@ -1,6 +1,6 @@
 name: Continuous Testing and Publication
 
-on: [ push ]
+on: [push]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -12,19 +12,29 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@v7
         with:
           lfs: true
 
-      - name: Checkout actions repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout multi-consumer root
+        uses: actions/checkout@v7
         with:
-          repository: mat3ra/actions
+          repository: mat3ra/web-app
+          # TODO: use main after references runner lands on web-app main
+          ref: chore/SOF-7942
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          path: actions
+          path: root
+
+      - name: Initialize multi-consumer root
+        uses: ./root/.github/actions/init-multi-consumer-root
+        with:
+          multi-consumer-root: root
+          ssh-private-key: ${{ secrets.BOT_GITHUB_KEY }}
+          # TODO: drop actions-ref after post-npm-install lands on actions main
+          actions-ref: chore/SOF-7942
 
       - name: Run ruff linter
-        uses: ./actions/py/lint
+        uses: ./root/reference/actions/py/lint
         with:
           ruff-version: 0.15.20
 
@@ -43,19 +53,27 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@v7
         with:
           lfs: true
 
-      - name: Checkout actions repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout multi-consumer root
+        uses: actions/checkout@v7
         with:
-          repository: mat3ra/actions
+          repository: mat3ra/web-app
+          ref: chore/SOF-7942
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          path: actions
+          path: root
+
+      - name: Initialize multi-consumer root
+        uses: ./root/.github/actions/init-multi-consumer-root
+        with:
+          multi-consumer-root: root
+          ssh-private-key: ${{ secrets.BOT_GITHUB_KEY }}
+          actions-ref: chore/SOF-7942
 
       - name: Run python unit tests
-        uses: ./actions/py/pytest
+        uses: ./root/reference/actions/py/pytest
         with:
           python-version: ${{ matrix.python-version }}
           unit-test-directory: tests/py/unit
@@ -70,28 +88,47 @@ jobs:
           - 22.x
 
     steps:
-      - name: Checkout this repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout multi-consumer root
+        uses: actions/checkout@v7
         with:
+          repository: mat3ra/web-app
+          # TODO: use main after references runner lands on web-app main
+          ref: chore/SOF-7942
+          token: ${{ secrets.BOT_GITHUB_TOKEN }}
+          path: root
           lfs: true
 
-      - name: Checkout actions repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout package under test
+        uses: actions/checkout@v7
         with:
-          repository: mat3ra/actions
-          token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          path: actions
+          path: root/reference/made
+          lfs: true
+
+      - name: Initialize multi-consumer root
+        uses: ./root/.github/actions/init-multi-consumer-root
+        with:
+          multi-consumer-root: root
+          ssh-private-key: ${{ secrets.BOT_GITHUB_KEY }}
+          node-version: ${{ matrix.node-version }}
+          # TODO: drop actions-ref after post-npm-install lands on actions main
+          actions-ref: chore/SOF-7942
 
       - name: Run JS validate
-        uses: ./actions/js/validate
-        with:
-          node-version: '20.x'
-          skip-eslint: 'true'
-
-      - name: Run JS tests
-        uses: ./actions/js/test
+        uses: ./root/reference/actions/js/validate
         with:
           node-version: ${{ matrix.node-version }}
+          package-directory: root/reference/made
+          skip-eslint: "true"
+
+      - name: Run JS tests
+        uses: ./root/reference/actions/js/test
+        with:
+          node-version: ${{ matrix.node-version }}
+          package-directory: root/reference/made
+          npm-options: "--legacy-peer-deps"
+          post-npm-install: |
+            npm run references:sync
+            npm run references:install
 
   publish-js-package:
     needs:
@@ -103,22 +140,28 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@v7
 
-      - name: Checkout actions repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout multi-consumer root
+        uses: actions/checkout@v7
         with:
-          repository: mat3ra/actions
+          repository: mat3ra/web-app
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          path: actions
+          path: root
+
+      - name: Initialize multi-consumer root
+        uses: ./root/.github/actions/init-multi-consumer-root
+        with:
+          multi-consumer-root: root
+          ssh-private-key: ${{ secrets.BOT_GITHUB_KEY }}
 
       - name: Publish JS release
-        uses: ./actions/js/publish
+        uses: ./root/reference/actions/js/publish
         with:
           node-version: 20.x
           npm-token: ${{ secrets.NPM_TOKEN }}
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          verify-tests: 'false'
+          verify-tests: "false"
 
   publish-py-package:
     needs:
@@ -132,21 +175,27 @@ jobs:
 
     steps:
       - name: Checkout this repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@v7
         with:
           lfs: true
 
-      - name: Checkout actions repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Checkout multi-consumer root
+        uses: actions/checkout@v7
         with:
-          repository: mat3ra/actions
+          repository: mat3ra/web-app
           token: ${{ secrets.BOT_GITHUB_TOKEN }}
-          path: actions
+          path: root
+
+      - name: Initialize multi-consumer root
+        uses: ./root/.github/actions/init-multi-consumer-root
+        with:
+          multi-consumer-root: root
+          ssh-private-key: ${{ secrets.BOT_GITHUB_KEY }}
 
       - name: Publish python release
-        uses: ./actions/py/publish
+        uses: ./root/reference/actions/py/publish
         with:
           python-version: 3.10.13
           github-token: ${{ secrets.BOT_GITHUB_TOKEN }}
           pypi-api-token: ${{ secrets.PYPI_API_TOKEN }}
-          publish-tag: 'false'
+          publish-tag: "false"

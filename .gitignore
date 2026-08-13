@@ -13,8 +13,8 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-# "dist" folder is not ignored on purpose to be able to install intermediate changes from github commits
-# dist
+# Built by `npm run transpile` (references:install / publish / local).
+dist/
 .Python
 ./build/
 develop-eggs/
