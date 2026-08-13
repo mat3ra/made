@@ -4,7 +4,7 @@ from typing import Any, List, Optional, Union
 from mat3ra.code.constants import AtomicCoordinateUnits, Units
 from mat3ra.code.entity import HasDescriptionHasMetadataNamedDefaultableInMemoryEntityPydantic
 from mat3ra.esse.models.material import MaterialSchema
-from pydantic import ConfigDict, SkipValidation, computed_field, field_serializer
+from pydantic import ConfigDict, SkipValidation, computed_field
 
 from .basis import Basis
 from .lattice import Lattice
@@ -125,10 +125,11 @@ class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemory
     def hash(self) -> str:
         return self.calculate_hash()
 
-    @field_serializer("scaledHash")
-    def serialize_scaled_hash(self, _scaled_hash: Optional[str]) -> str:
-        return self.scaled_hash
-
     @property
     def scaled_hash(self) -> str:
         return self.calculate_hash(is_scaled=True)
+
+    @computed_field
+    @property
+    def scaledHash(self) -> str:
+        return self.scaled_hash
