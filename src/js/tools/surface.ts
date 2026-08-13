@@ -1,14 +1,9 @@
-import {
-    Coordinate3DSchema,
-    MaterialSchema,
-    Matrix3X3Schema,
-    Vector3DSchema,
-} from "@mat3ra/esse/dist/js/types";
+import { Coordinate3DSchema, Matrix3X3Schema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
-import { Material } from "../material";
+import Material, { type MaterialConfig, type MaterialSchemaMap } from "../Material";
 import SupercellTools from "./supercell";
 
 const MULT = Utils.math.multiply;
@@ -36,10 +31,6 @@ function extGCD(a: number, b: number): [number, number] {
 /**
  * Generates a slab scaling matrix for the specified cell based on miller indices.
  * Inspired by from https://gitlab.com/ase/ase/blob/master/ase/build/general_surface.py.
- * @param cell {Cell}
- * @param millerIndices {Number[]}
- * @param tol {Number} Zero-value tolerance
- * @return {Number[][]}
  */
 function getMillerScalingMatrix(
     cell: Cell,
@@ -132,7 +123,6 @@ function getMillerScalingMatrix(
  * @param thickness {Number} Surface (Slab) thickness in layers (Positive Integer).
  * @param vx {Number} Size of lateral supercell along the direction of the first (x) cell vector (Positive Integer).
  * @param vy {Number} Size of lateral supercell along the direction of the second (y) cell vector (Positive Integer).
- * @return {Number[][]}
  */
 function getDimensionsScalingMatrix(
     outOfPlaneAxisIndex: number,
@@ -158,7 +148,7 @@ function getDimensionsScalingMatrix(
     return transformationMatrix as Matrix3X3Schema;
 }
 
-export type SlabConfigSchema = MaterialSchema & {
+export type SlabConfigSchema = MaterialConfig & {
     outOfPlaneAxisIndex: number;
 };
 
@@ -171,8 +161,8 @@ export type SlabConfigSchema = MaterialSchema & {
  * @param vy {Number} Size of lateral supercell along the direction of the second (y) cell vector (Positive Integer).
  * @return {Object}
  */
-function generateConfig(
-    material: Material,
+function generateConfig<Schemas extends MaterialSchemaMap = MaterialSchemaMap>(
+    material: Material<Schemas>,
     millerIndices: Coordinate3DSchema,
     numberOfLayers = 1,
     vx = 1,
@@ -181,7 +171,7 @@ function generateConfig(
     if (numberOfLayers < 1)
         throw new Error("Made.tools.surface.generateConfig: number of layers < 1.");
 
-    const cell = material.Lattice.vectors;
+    const cell = material.getLattice().vectors;
     const millerScalingMatrix = getMillerScalingMatrix(cell, millerIndices);
     const millerSupercell = cell.cloneAndScaleByMatrix(millerScalingMatrix);
     const millerPlanePseudoNormal = cell.convertPointToCartesian(millerIndices);
@@ -195,7 +185,7 @@ function generateConfig(
     );
     const supercellMatrix = MULT(dimensionsScalingMatrix, millerScalingMatrix);
     const supercell = millerSupercell.cloneAndScaleByMatrix(dimensionsScalingMatrix);
-    const tempBasis = material.Basis.clone();
+    const tempBasis = material.getBasis().clone();
     const newBasis = SupercellTools.generateNewBasisWithinSupercell(
         tempBasis,
         cell,

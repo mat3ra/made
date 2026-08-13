@@ -1,7 +1,7 @@
 import { expect } from "chai";
 
 import { AtomicConstraints } from "../../../src/js/constraints/constraints";
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
 import parsers from "../../../src/js/parsers/parsers";
 import { atomsCount } from "../../../src/js/parsers/poscar";
 import {
@@ -81,7 +81,7 @@ direct
 
         const material = new Material(Silicon);
         const clonedMaterial = material.clone();
-        clonedMaterial.setBasis(newBasisXYZ, "xyz", clonedMaterial.Basis.units);
+        clonedMaterial.setBasis(newBasisXYZ, "xyz", clonedMaterial.getBasis().units);
 
         const poscar = clonedMaterial.getAsPOSCAR(true);
         expect(poscar).to.be.equal(poscarConstraints);

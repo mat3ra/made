@@ -5,7 +5,7 @@ import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
 import { Basis } from "../../../src/js/basis/basis";
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
     C2H4,
@@ -29,20 +29,20 @@ describe("Basis", () => {
     });
 
     it("should return true when basis is compared to its clone", () => {
-        const basis1 = new Material(Na4Cl4).Basis;
+        const basis1 = new Material(Na4Cl4).getBasis();
         const basis2 = basis1.clone();
         expect(basis1.isEqualTo(basis2)).to.be.equal(true);
         expect(basis1.hasEquivalentCellTo(basis2)).to.be.equal(true);
     });
 
     it("should return jsonified basis", () => {
-        const basis = new Material(Na4Cl4).Basis;
+        const basis = new Material(Na4Cl4).getBasis();
         expect(basis.toJSON()).to.be.deep.almost.equal(Na4Cl4.basis);
     });
 
     it("should return true if cells are equal", () => {
-        const basis1 = new Material(Na4Cl4).Basis;
-        const basis2 = new Material(Na4Cl4Cartesian).Basis;
+        const basis1 = new Material(Na4Cl4).getBasis();
+        const basis2 = new Material(Na4Cl4Cartesian).getBasis();
         expect(basis1.hasEquivalentCellTo(basis2)).to.be.equal(true);
     });
 
@@ -120,7 +120,7 @@ describe("Basis", () => {
     });
 
     it("should convert crystal to cartesian", () => {
-        const basis = new Material(Na4Cl4).Basis;
+        const basis = new Material(Na4Cl4).getBasis();
         basis.toCartesian();
         expect(basis.isInCartesianUnits).to.be.equal(true);
         expect(basis.coordinates).to.be.deep.almost.equal(Na4Cl4Cartesian.basis.coordinates);
@@ -195,8 +195,8 @@ describe("Basis", () => {
      */
 
     it("should return standard representation", () => {
-        const basis = new Material(Na4Cl4Cartesian).Basis;
-        expect(basis.standardRepresentation).to.be.deep.almost.equal(Na4Cl4.basis);
+        const basis = new Material(Na4Cl4Cartesian).getBasis();
+        assertDeepAlmostEqual(basis.standardRepresentation, Na4Cl4.basis, ["constraints"]);
     });
 
     /**

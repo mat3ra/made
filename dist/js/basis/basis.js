@@ -35,6 +35,8 @@ const DEFAULT_BASIS_CONFIG = {
     ],
     units: "crystal",
 };
+// Keep `{` on same line as `implements` to satisfy brace-style (conflicts with Prettier multi-line heritage).
+// prettier-ignore
 class Basis extends entity_1.InMemoryEntity {
     static _convertValuesToConfig({ elements = [], coordinates = [], units = constants_1.ATOMIC_COORD_UNITS.crystal, cell = new cell_1.Cell(), labels = [], }) {
         const elementsArrayWithIdsJSON = elements_1.Elements.fromValues(elements).toJSON();
@@ -57,6 +59,7 @@ class Basis extends entity_1.InMemoryEntity {
             labels,
         }));
     }
+    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
     constructor(config = Basis.defaultConfig) {
         super(config);
         const { elements, coordinates, units, labels } = config;
@@ -84,8 +87,6 @@ class Basis extends entity_1.InMemoryEntity {
     set labels(labels) {
         this._labels = labels_1.Labels.fromObjects(labels || []);
     }
-    // TODO: figure out how to override toJSON in the parent class with generic classes
-    // @ts-ignore
     toJSON(exclude = ["cell"]) {
         var _a;
         return {
@@ -96,7 +97,6 @@ class Basis extends entity_1.InMemoryEntity {
             ...(((_a = this.labels) === null || _a === void 0 ? void 0 : _a.length) ? { labels: this.labels } : {}),
         };
     }
-    // @ts-ignore
     clone() {
         const instance = super.clone();
         instance.cell = this.cell.clone();
@@ -127,15 +127,17 @@ class Basis extends entity_1.InMemoryEntity {
     }
     toCartesian() {
         if (this.isInCartesianUnits)
-            return;
+            return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCartesian(point));
         this.units = constants_1.ATOMIC_COORD_UNITS.cartesian;
+        return this;
     }
     toCrystal() {
         if (this.isInCrystalUnits)
-            return;
+            return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCrystal(point));
         this.units = constants_1.ATOMIC_COORD_UNITS.crystal;
+        return this;
     }
     getElementByIndex(idx) {
         return this._elements.getElementValueByIndex(idx);
@@ -310,7 +312,7 @@ class Basis extends entity_1.InMemoryEntity {
     /* Returns array of atomic labels E.g., ["1", "2", "", ""] */
     get atomicLabelsArray() {
         var _a;
-        const labelsArray = Array.from({ length: this.elements.length }, (_) => "");
+        const labelsArray = Array.from({ length: this.elements.length }, () => "");
         // https://dev.to/maafaishal/benchmarking-for-while-forof-and-arrayforeach-using-performancenow-1jjg
         if ((_a = this.labels) === null || _a === void 0 ? void 0 : _a.length) {
             for (let i = 0; i < this.labels.length; i++) {
@@ -447,13 +449,13 @@ class Basis extends entity_1.InMemoryEntity {
             for (let i = 0; i < this._elements.values.length; i++) {
                 for (let j = i + 1; j < this._elements.values.length; j++) {
                     const distance = utils_1.Utils.math.vDist(this._coordinates.getElementValueByIndex(i), this._coordinates.getElementValueByIndex(j));
-                    if (!distance)
-                        continue;
-                    if (extremum === "max" && distance > resultDistance) {
-                        resultDistance = distance;
-                    }
-                    if (extremum === "min" && distance < resultDistance) {
-                        resultDistance = distance;
+                    if (distance) {
+                        if (extremum === "max" && distance > resultDistance) {
+                            resultDistance = distance;
+                        }
+                        if (extremum === "min" && distance < resultDistance) {
+                            resultDistance = distance;
+                        }
                     }
                 }
             }

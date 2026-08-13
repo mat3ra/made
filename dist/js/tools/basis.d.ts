@@ -14,7 +14,7 @@ declare function repeat(basis: Basis, repetitions: number[]): Basis;
  * @param numberOfSteps{Number} Number of intermediate steps.
  * @return {Basis[]} List of all bases.
  */
-declare function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps?: number): Basis[];
+declare function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps?: number): Basis<import("../basis/basis").BasisConfig>[];
 declare const _default: {
     repeat: typeof repeat;
     interpolate: typeof interpolate;

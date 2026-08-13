@@ -9,7 +9,6 @@ const lattice_1 = require("../lattice/lattice");
 const xyz_1 = __importDefault(require("./xyz"));
 /**
  * Construct textual representation of a materialOrConfig according to Quantum ESPRESSO pw.x input format.
- * @param materialOrConfig - material class instance or its config object
  */
 function toEspressoFormat(materialOrConfig) {
     const l = new lattice_1.Lattice(materialOrConfig.lattice);

@@ -1,4 +1,4 @@
-import { MaterialSchema } from "@mat3ra/esse/dist/js/types";
+import { MaterialEnhancedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { ConstrainedBasis, ConstrainedBasisConfig } from "../basis/constrained_basis";
 import { AtomicCoordinateValue } from "../basis/coordinates";
 import { AtomicElementValue } from "../basis/elements";
@@ -32,11 +32,9 @@ declare function toBasisConfig(txt: string, units?: string, cell?: Cell): Constr
 declare function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: string): string;
 /**
  * Create XYZ from Material class instance (or its JSON config).
- * @param materialOrConfig Material.
- * @param fractional Coordinate units as fractional.
- * @return Class Instance
+ * Prefer fromBasis when you already have a ConstrainedBasis instance.
  */
-declare function fromMaterial(materialOrConfig: MaterialSchema, fractional?: boolean): string;
+declare function fromMaterial(materialOrConfig: MaterialSchema | MaterialEnhancedSchema, fractional?: boolean): string;
 declare const _default: {
     validate: typeof validate;
     fromMaterial: typeof fromMaterial;

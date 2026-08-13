@@ -132,16 +132,15 @@ function fromBasis(basisClsInstance, coordinatePrintFormat) {
 }
 /**
  * Create XYZ from Material class instance (or its JSON config).
- * @param materialOrConfig Material.
- * @param fractional Coordinate units as fractional.
- * @return Class Instance
+ * Prefer fromBasis when you already have a ConstrainedBasis instance.
  */
 function fromMaterial(materialOrConfig, fractional = false) {
     const lattice = new lattice_1.Lattice(materialOrConfig.lattice);
-    // @ts-ignore
+    const constraints = "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
     const basis = new constrained_basis_1.ConstrainedBasis({
         ...materialOrConfig.basis,
         cell: cell_1.Cell.fromVectorsArray(lattice.vectorArrays),
+        constraints,
     });
     if (fractional) {
         basis.toCrystal();

@@ -1,14 +1,16 @@
-import { AtomicConstraintsSchema } from "@mat3ra/esse/dist/js/types";
+import { AtomicConstraintsSchema, BasisConstrainedSchema } from "@mat3ra/esse/dist/js/types";
 
+import { Cell } from "../cell/cell";
 import { AtomicConstraints, AtomicConstraintValue, Constraint } from "../constraints/constraints";
-import { Basis, BasisConfig, ElementsAndCoordinatesConfig } from "./basis";
+import { Basis, ElementsAndCoordinatesConfig } from "./basis";
 import { AtomicCoordinateValue, Coordinate } from "./coordinates";
 import { AtomicElementValue } from "./elements";
 import { ElementWithLabel } from "./helpers";
 import { AtomicLabelValue } from "./labels";
 
-export interface ConstrainedBasisConfig extends BasisConfig {
-    constraints: AtomicConstraintsSchema;
+export interface ConstrainedBasisConfig extends BasisConstrainedSchema {
+    cell?: Cell;
+    isEmpty?: boolean;
 }
 
 export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoordinatesConfig {
@@ -19,13 +21,12 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
  * @summary Extension of the Basis class able to deal with atomic constraints.
  * @extends Basis
  */
-export class ConstrainedBasis extends Basis {
-    _constraints: AtomicConstraints;
+export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
+    private _constraints: AtomicConstraints;
 
     constructor(config: ConstrainedBasisConfig) {
         super(config);
-        const { constraints } = config;
-        this._constraints = AtomicConstraints.fromObjects(constraints || []); // `constraints` is an Array with ids
+        this._constraints = AtomicConstraints.fromObjects(config.constraints ?? []); // `constraints` is an Array with ids
     }
 
     static fromElementsCoordinatesAndConstraints(
@@ -51,9 +52,9 @@ export class ConstrainedBasis extends Basis {
         return AtomicConstraints.fromObjects(this.constraints);
     }
 
-    override toJSON(): ConstrainedBasisConfig {
+    override toJSON(exclude: (keyof ConstrainedBasisConfig)[] = ["cell"]): ConstrainedBasisConfig {
         return {
-            ...super.toJSON(),
+            ...super.toJSON(exclude as (keyof ConstrainedBasisConfig)[]),
             constraints: this.constraints,
         };
     }
@@ -75,7 +76,7 @@ export class ConstrainedBasis extends Basis {
         AtomicCoordinateValue,
         AtomicConstraintValue,
     ][] {
-        return this._elements.values.map((element: any, idx: number) => {
+        return this._elements.values.map((element: AtomicElementValue, idx: number) => {
             const coordinate = this.getCoordinateValueByIndex(idx);
             const constraint = this.getConstraintByIndex(idx);
             const label = this.atomicLabelsArray[idx];

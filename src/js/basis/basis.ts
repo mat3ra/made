@@ -1,13 +1,17 @@
 // @ts-ignore
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { BasisSchema, Coordinate3DSchema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import {
+    BaseInMemoryEntitySchema,
+    BasisSchema,
+    Coordinate3DSchema,
+    Vector3DSchema,
+} from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { chain, toPairs, uniq, values } from "lodash";
 
 import { Cell } from "../cell/cell";
 import { ATOMIC_COORD_UNITS, HASH_TOLERANCE } from "../constants";
-
 import {
     defaultNonPeriodicMinimumLatticeSize,
     diatomicLatticePaddingFactor,
@@ -72,7 +76,11 @@ const DEFAULT_BASIS_CONFIG = {
     units: "crystal",
 };
 
-export class Basis extends InMemoryEntity implements BasisSchema {
+type BasisEntitySchema<S extends BasisConfig = BasisConfig> = S & BaseInMemoryEntitySchema;
+
+// Keep `{` on same line as `implements` to satisfy brace-style (conflicts with Prettier multi-line heritage).
+// prettier-ignore
+export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<BasisEntitySchema<S>> implements BasisSchema {
     static defaultConfig: BasisSchema = DEFAULT_BASIS_CONFIG as BasisSchema;
 
     units: BasisSchema["units"];
@@ -122,8 +130,9 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         );
     }
 
-    constructor(config: BasisConfig = Basis.defaultConfig) {
-        super(config);
+    // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
+    constructor(config: NoInfer<S> = Basis.defaultConfig as NoInfer<S>) {
+        super(config as BasisEntitySchema<S>);
         const { elements, coordinates, units, labels } = config;
         this.cell = new Cell(config.cell);
         this.units = units || (ATOMIC_COORD_UNITS.crystal as BasisSchema["units"]);
@@ -156,20 +165,19 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         this._labels = Labels.fromObjects(labels || []);
     }
 
-    // TODO: figure out how to override toJSON in the parent class with generic classes
-    // @ts-ignore
-    toJSON(exclude: string[] = ["cell"]): BasisSchema {
+    toJSON(
+        exclude: (keyof BasisEntitySchema<S>)[] = ["cell"] as (keyof BasisEntitySchema<S>)[],
+    ): BasisEntitySchema<S> {
         return {
             ...super.toJSON(exclude),
             elements: this.elements,
             coordinates: this.coordinates,
             units: this.units,
             ...(this.labels?.length ? { labels: this.labels } : {}),
-        };
+        } as BasisEntitySchema<S>;
     }
 
-    // @ts-ignore
-    override clone(): Basis {
+    override clone(): this {
         const instance = super.clone();
         instance.cell = this.cell.clone();
         return instance;
@@ -205,16 +213,18 @@ export class Basis extends InMemoryEntity implements BasisSchema {
         return this.units === ATOMIC_COORD_UNITS.crystal;
     }
 
-    toCartesian(): void {
-        if (this.isInCartesianUnits) return;
+    toCartesian() {
+        if (this.isInCartesianUnits) return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCartesian(point));
         this.units = ATOMIC_COORD_UNITS.cartesian as BasisSchema["units"];
+        return this;
     }
 
-    toCrystal(): void {
-        if (this.isInCrystalUnits) return;
+    toCrystal() {
+        if (this.isInCrystalUnits) return this;
         this._coordinates.mapArrayInPlace((point) => this.cell.convertPointToCrystal(point));
         this.units = ATOMIC_COORD_UNITS.crystal as BasisSchema["units"];
+        return this;
     }
 
     getElementByIndex(idx: number): AtomicElementValue {
@@ -393,7 +403,9 @@ export class Basis extends InMemoryEntity implements BasisSchema {
             const element = entry[0];
             const coordinate = entry[1];
             const atomicLabel = entry[2];
-            const toleratedCoordinate = coordinate.map((x) => Utils.math.roundCustom(x, HASH_TOLERANCE));
+            const toleratedCoordinate = coordinate.map((x) =>
+                Utils.math.roundCustom(x, HASH_TOLERANCE),
+            );
             return `${element}${atomicLabel} ${toleratedCoordinate.join()}`;
         });
         return `${standardRep.sort().join(";")};`;
@@ -416,7 +428,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
 
     /* Returns array of atomic labels E.g., ["1", "2", "", ""] */
     get atomicLabelsArray(): string[] {
-        const labelsArray = Array.from({ length: this.elements.length }, (_) => "");
+        const labelsArray = Array.from({ length: this.elements.length }, () => "");
         // https://dev.to/maafaishal/benchmarking-for-while-forof-and-arrayforeach-using-performancenow-1jjg
         if (this.labels?.length) {
             for (let i = 0; i < this.labels.length; i++) {
@@ -461,7 +473,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
      * @summary Returns true if bases are equal, otherwise - false.
      * @param anotherBasisClsInstance {Basis} Another Basis.
      */
-    isEqualTo(anotherBasisClsInstance: Basis): boolean {
+    isEqualTo(anotherBasisClsInstance: { hashString: string }): boolean {
         return this.hashString === anotherBasisClsInstance.hashString;
     }
 
@@ -469,7 +481,7 @@ export class Basis extends InMemoryEntity implements BasisSchema {
      * @summary Returns true if basis cells are equal, otherwise - false.
      * @param anotherBasisClsInstance {Basis} Another Basis.
      */
-    hasEquivalentCellTo(anotherBasisClsInstance: Basis): boolean {
+    hasEquivalentCellTo(anotherBasisClsInstance: { cell: Cell }): boolean {
         return !this.cell.vectorArrays
             .map((vector, idx) => {
                 return Utils.math.vEqualWithTolerance(
@@ -576,12 +588,13 @@ export class Basis extends InMemoryEntity implements BasisSchema {
                         this._coordinates.getElementValueByIndex(i) as Coordinate3DSchema,
                         this._coordinates.getElementValueByIndex(j) as Coordinate3DSchema,
                     );
-                    if (!distance) continue;
-                    if (extremum === "max" && distance > resultDistance) {
-                        resultDistance = distance;
-                    }
-                    if (extremum === "min" && distance < resultDistance) {
-                        resultDistance = distance;
+                    if (distance) {
+                        if (extremum === "max" && distance > resultDistance) {
+                            resultDistance = distance;
+                        }
+                        if (extremum === "min" && distance < resultDistance) {
+                            resultDistance = distance;
+                        }
                     }
                 }
             }

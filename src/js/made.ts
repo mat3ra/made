@@ -11,7 +11,7 @@ import {
 import { DEFAULT_LATTICE_UNITS, LATTICE_TYPE_CONFIGS } from "./lattice/lattice_types";
 import { ReciprocalLattice } from "./lattice/reciprocal/lattice_reciprocal";
 import { UnitCell } from "./lattice/unit_cell";
-import { defaultMaterialConfig, Material } from "./material";
+import Material, { defaultMaterialConfig } from "./Material";
 import parsers from "./parsers/parsers";
 import tools from "./tools/index";
 

@@ -4,7 +4,7 @@ import { expect } from "chai";
 
 import { Basis } from "../../../src/js/basis/basis";
 import { Made } from "../../../src/js/made";
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
 import { Silicon, SiSupercell } from "../fixtures";
 
 const { assertDeepAlmostEqual } = Utils.assertion;
@@ -44,7 +44,7 @@ direct
    0.625000000    0.250000000    0.250000000  Ge`;
         const material = new Material(Silicon);
         const clonedMaterial = material.clone();
-        clonedMaterial.setBasis(newBasisXYZ, "xyz", clonedMaterial.Basis.units);
+        clonedMaterial.setBasis(newBasisXYZ, "xyz", clonedMaterial.getBasis().units);
         const supercellConfig = Made.tools.supercell.generateConfig(clonedMaterial, [
             [2, 0, 0],
             [0, 1, 0],

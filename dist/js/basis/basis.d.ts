@@ -1,5 +1,5 @@
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { BasisSchema, Coordinate3DSchema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import { BaseInMemoryEntitySchema, BasisSchema, Coordinate3DSchema, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Cell } from "../cell/cell";
 import { AtomicCoordinateValue, Coordinates } from "./coordinates";
 import { AtomicElementValue, Elements } from "./elements";
@@ -30,7 +30,8 @@ export interface ElementsAndCoordinatesConfig {
     units?: BasisSchema["units"];
     cell?: Cell;
 }
-export declare class Basis extends InMemoryEntity implements BasisSchema {
+type BasisEntitySchema<S extends BasisConfig = BasisConfig> = S & BaseInMemoryEntitySchema;
+export declare class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<BasisEntitySchema<S>> implements BasisSchema {
     static defaultConfig: BasisSchema;
     units: BasisSchema["units"];
     cell: Cell;
@@ -39,15 +40,15 @@ export declare class Basis extends InMemoryEntity implements BasisSchema {
     _labels: Labels;
     static _convertValuesToConfig({ elements, coordinates, units, cell, labels, }: ElementsAndCoordinatesConfig): BasisConfig;
     static fromElementsAndCoordinates({ elements, coordinates, units, cell, labels, }: ElementsAndCoordinatesConfig): Basis;
-    constructor(config?: BasisConfig);
+    constructor(config?: NoInfer<S>);
     get elements(): BasisSchema["elements"];
     set elements(elements: BasisSchema["elements"]);
     get coordinates(): BasisSchema["coordinates"];
     set coordinates(coordinates: BasisSchema["coordinates"]);
     get labels(): BasisSchema["labels"];
     set labels(labels: BasisSchema["labels"]);
-    toJSON(exclude?: string[]): BasisSchema;
-    clone(): Basis;
+    toJSON(exclude?: (keyof BasisEntitySchema<S>)[]): BasisEntitySchema<S>;
+    clone(): this;
     removeAllAtoms(): void;
     get cellRounded(): import("@mat3ra/esse/dist/js/types").Matrix3X3Schema;
     get elementsArray(): object[];
@@ -55,8 +56,8 @@ export declare class Basis extends InMemoryEntity implements BasisSchema {
     get coordinatesAsArray(): Coordinate3DSchema[];
     get isInCartesianUnits(): boolean;
     get isInCrystalUnits(): boolean;
-    toCartesian(): void;
-    toCrystal(): void;
+    toCartesian(): this;
+    toCrystal(): this;
     getElementByIndex(idx: number): AtomicElementValue;
     getElementById(id: number): AtomicElementValue;
     getCoordinateValueByIndex(idx: number): AtomicCoordinateValue;
@@ -140,12 +141,16 @@ export declare class Basis extends InMemoryEntity implements BasisSchema {
      * @summary Returns true if bases are equal, otherwise - false.
      * @param anotherBasisClsInstance {Basis} Another Basis.
      */
-    isEqualTo(anotherBasisClsInstance: Basis): boolean;
+    isEqualTo(anotherBasisClsInstance: {
+        hashString: string;
+    }): boolean;
     /**
      * @summary Returns true if basis cells are equal, otherwise - false.
      * @param anotherBasisClsInstance {Basis} Another Basis.
      */
-    hasEquivalentCellTo(anotherBasisClsInstance: Basis): boolean;
+    hasEquivalentCellTo(anotherBasisClsInstance: {
+        cell: Cell;
+    }): boolean;
     /**
      * @summary Returns the minimum cubic lattice size for a non-periodic structure.
      * Single-atom structures use the element atomic radius floored at defaultMinimumLatticeSize.

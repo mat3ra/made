@@ -1,6 +1,7 @@
 import {
     BasisSchema,
     Coordinate3DSchema,
+    MaterialEnhancedSchema,
     MaterialSchema,
     Vector3DSchema,
 } from "@mat3ra/esse/dist/js/types";
@@ -14,7 +15,7 @@ import { Cell } from "../cell/cell";
 import { ATOMIC_COORD_UNITS } from "../constants";
 import { AtomicConstraintValue } from "../constraints/constraints";
 import { Lattice } from "../lattice/lattice";
-
+import type { MaterialConfig } from "../Material";
 
 const _print = (x: number, printFormat = "%14.9f") => s.sprintf(printFormat, Utils.math.precise(x));
 const _latticeVectorsToString = (vectors: Vector3DSchema[]) =>
@@ -24,15 +25,20 @@ const atomicConstraintsCharFromBool = (bool: boolean): string => (bool ? "T" : "
 /**
  * Obtain a textual representation of a material in POSCAR format.
  * @param materialOrConfig - material class instance or config object.
- * @param omitConstraints - whether to discard constraints passed with material.
+ * @param omitConstraints - whether to discard constraints when serializing.
  */
-function toPoscar(materialOrConfig: MaterialSchema, omitConstraints = false): string {
+function toPoscar(
+    materialOrConfig: MaterialSchema | MaterialEnhancedSchema,
+    omitConstraints = false,
+): string {
     const lattice = new Lattice(materialOrConfig.lattice);
     const vectorsAsString = _latticeVectorsToString(lattice.vectorArrays);
-    // @ts-ignore
+    const constraints =
+        "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
     const basis = new ConstrainedBasis({
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
+        constraints: omitConstraints ? [] : constraints,
     });
     const BasisLines: string[] = [];
     let addSelectiveDynamics = false;
@@ -78,7 +84,7 @@ export function atomsCount(poscarFileContent: string): number {
  * @param fileContent - POSCAR file content.
  * @return Material config.
  */
-function fromPoscar(fileContent: string): object {
+function fromPoscar(fileContent: string): MaterialConfig {
     const cleanContent = Utils.str.removeCommentsFromSourceCode(fileContent, "fortran");
     const lines = cleanContent.split("\n");
 
@@ -151,7 +157,7 @@ function fromPoscar(fileContent: string): object {
         constraints,
     });
 
-    const materialConfig = {
+    const materialConfig: MaterialConfig = {
         lattice: lattice.toJSON(),
         basis: basis.toJSON(),
         name: comment,

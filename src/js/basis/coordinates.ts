@@ -8,7 +8,6 @@ import {
 import { Utils } from "@mat3ra/utils";
 import { sprintf } from "underscore.string";
 
-
 export type AtomicCoordinateValue = AtomicCoordinateSchema["value"];
 
 type AxisType = "x" | "y" | "z";

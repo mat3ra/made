@@ -5,9 +5,9 @@ import { Basis } from "../basis/basis";
 import { ConstrainedBasis } from "../basis/constrained_basis";
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
-import type { Material } from "../material";
+import type { MaterialSchemaMap } from "../Material";
+import type Material from "../Material";
 import cellTools from "./cell";
-
 
 const ADD = Utils.math.add;
 
@@ -53,18 +53,19 @@ function generateNewBasisWithinSupercell(
 
 /**
  * @summary Generates supercell config for the specified material.
- * @param material
- * @param supercellMatrix {Number[][]}
  */
-function generateConfig(material: Material, supercellMatrix: Matrix3X3Schema) {
+function generateConfig<Schemas extends MaterialSchemaMap = MaterialSchemaMap>(
+    material: Material<Schemas>,
+    supercellMatrix: Matrix3X3Schema,
+) {
     const det = Utils.math.det(supercellMatrix);
     if (det === 0) {
         throw new Error("Scaling matrix is degenerate.");
     }
-    const cell = material.Lattice.vectors;
+    const cell = material.getLattice().vectors;
     const supercell = cell.cloneAndScaleByMatrix(supercellMatrix);
     const newBasis = generateNewBasisWithinSupercell(
-        material.Basis,
+        material.getBasis(),
         cell,
         supercell,
         supercellMatrix,

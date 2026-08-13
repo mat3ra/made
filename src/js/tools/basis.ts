@@ -5,7 +5,6 @@ import { chunk, flatten } from "lodash";
 import { Basis } from "../basis/basis";
 import { AtomicCoordinateValue, Coordinate } from "../basis/coordinates";
 
-
 const ADD = Utils.math.add;
 const MULT = Utils.math.multiply;
 

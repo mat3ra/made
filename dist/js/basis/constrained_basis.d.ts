@@ -1,11 +1,13 @@
-import { AtomicConstraintsSchema } from "@mat3ra/esse/dist/js/types";
+import { AtomicConstraintsSchema, BasisConstrainedSchema } from "@mat3ra/esse/dist/js/types";
+import { Cell } from "../cell/cell";
 import { AtomicConstraints, AtomicConstraintValue } from "../constraints/constraints";
-import { Basis, BasisConfig, ElementsAndCoordinatesConfig } from "./basis";
+import { Basis, ElementsAndCoordinatesConfig } from "./basis";
 import { AtomicCoordinateValue } from "./coordinates";
 import { AtomicElementValue } from "./elements";
 import { AtomicLabelValue } from "./labels";
-export interface ConstrainedBasisConfig extends BasisConfig {
-    constraints: AtomicConstraintsSchema;
+export interface ConstrainedBasisConfig extends BasisConstrainedSchema {
+    cell?: Cell;
+    isEmpty?: boolean;
 }
 export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoordinatesConfig {
     constraints: AtomicConstraintValue[];
@@ -14,14 +16,14 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
  * @summary Extension of the Basis class able to deal with atomic constraints.
  * @extends Basis
  */
-export declare class ConstrainedBasis extends Basis {
-    _constraints: AtomicConstraints;
+export declare class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
+    private _constraints;
     constructor(config: ConstrainedBasisConfig);
     static fromElementsCoordinatesAndConstraints(config: ElementsCoordinatesAndConstraintsConfig): ConstrainedBasis;
     get constraints(): AtomicConstraintsSchema;
     set constraints(constraints: AtomicConstraintsSchema);
     get AtomicConstraints(): AtomicConstraints;
-    toJSON(): ConstrainedBasisConfig;
+    toJSON(exclude?: (keyof ConstrainedBasisConfig)[]): ConstrainedBasisConfig;
     getConstraintByIndex(idx: number): AtomicConstraintValue;
     getConstraintById(id: number): AtomicConstraintValue;
     /**

@@ -1,7 +1,7 @@
 import type { MaterialSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
-import { Material } from "../../../src/js/material";
+import Material from "../../../src/js/Material";
 import tools from "../../../src/js/tools";
 import { SlabConfigSchema } from "../../../src/js/tools/surface";
 import { Silicon, SiSlab100, SiSlab111, SiSlab111NoVacuum } from "../fixtures";
@@ -39,6 +39,7 @@ describe("Tools:Surface", () => {
         const adjustedSilicon: MaterialSchema = {
             ...Silicon,
             basis: {
+                ...Silicon.basis,
                 elements: [
                     {
                         id: 10,
@@ -72,9 +73,8 @@ describe("Tools:Surface", () => {
         const vacuumRatio = 0.5;
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
-        const expectedMaterialJSON = expectedSlabMaterial.toJSON();
-        const slabMaterialJSON = slabMaterial.toJSON();
-        assertDeepAlmostEqual(expectedMaterialJSON, slabMaterialJSON);
+        // Structural comparison: omit hash (now included in Material.toJSON).
+        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnhanced(), slabMaterial.toJSONEnhanced());
     });
 
     it("should return slab (111) with vacuum for gamma = 59.999", () => {
@@ -90,9 +90,7 @@ describe("Tools:Surface", () => {
         const vacuumRatio = 0.5;
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
-        const expectedMaterialJSON = expectedSlabMaterial.toJSON();
-        const slabMaterialJSON = slabMaterial.toJSON();
-        assertDeepAlmostEqual(expectedMaterialJSON, slabMaterialJSON);
+        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnhanced(), slabMaterial.toJSONEnhanced());
     });
 
     it("should return slab (111) with vacuum for gamma = 60.001", () => {
@@ -108,8 +106,6 @@ describe("Tools:Surface", () => {
         const vacuumRatio = 0.5;
         const slabMaterial = generateSlabWithVacuum(slabConfig, vacuumRatio);
         const expectedSlabMaterial = new Material(SiSlab111);
-        const expectedMaterialJSON = expectedSlabMaterial.toJSON();
-        const slabMaterialJSON = slabMaterial.toJSON();
-        assertDeepAlmostEqual(expectedMaterialJSON, slabMaterialJSON);
+        assertDeepAlmostEqual(expectedSlabMaterial.toJSONEnhanced(), slabMaterial.toJSONEnhanced());
     });
 });

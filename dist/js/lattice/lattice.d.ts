@@ -1,5 +1,5 @@
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import { LatticeSchema, LatticeTypeEnum, LatticeTypeExtendedEnum, LatticeVectorsSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
+import { BaseInMemoryEntitySchema, LatticeSchema, LatticeTypeEnum, LatticeTypeExtendedEnum, LatticeVectorsSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
 import { Cell } from "../cell/cell";
 import { UnitCell } from "./unit_cell";
 /**
@@ -10,7 +10,8 @@ export { defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, mol
 export declare class LatticeVectors extends Cell implements LatticeVectorsSchema {
 }
 export type { LatticeVectorsSchema };
-export declare class Lattice extends InMemoryEntity implements LatticeSchema {
+type LatticeEntitySchema = LatticeSchema & BaseInMemoryEntitySchema;
+export declare class Lattice extends InMemoryEntity<LatticeEntitySchema> implements LatticeSchema {
     static defaultConfig: LatticeSchema;
     a: LatticeSchema["a"];
     b: LatticeSchema["b"];
@@ -63,5 +64,5 @@ export declare class Lattice extends InMemoryEntity implements LatticeSchema {
      * @example {a: true, b: false, c: false, alpha: true, beta: false, gamma: false}
      */
     get editables(): {};
-    toJSON(exclude?: string[]): LatticeSchema;
+    toJSON(exclude?: (keyof LatticeSchema)[]): LatticeSchema;
 }

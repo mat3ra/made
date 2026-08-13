@@ -6,7 +6,7 @@ import { defaultNonPeriodicMinimumLatticeSize, diatomicLatticePaddingFactor, Lat
 import { DEFAULT_LATTICE_UNITS, LATTICE_TYPE_CONFIGS } from "./lattice/lattice_types";
 import { ReciprocalLattice } from "./lattice/reciprocal/lattice_reciprocal";
 import { UnitCell } from "./lattice/unit_cell";
-import { defaultMaterialConfig, Material } from "./material";
+import Material, { defaultMaterialConfig } from "./Material";
 import parsers from "./parsers/parsers";
 import tools from "./tools/index";
 export declare const Made: {
@@ -33,7 +33,7 @@ export declare const Made: {
         cartesian: string;
     };
     Material: typeof Material;
-    defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema;
+    defaultMaterialConfig: import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema;
     Lattice: typeof Lattice;
     Cell: typeof Cell;
     UnitCell: typeof UnitCell;
@@ -46,15 +46,15 @@ export declare const Made: {
     parsers: {
         xyz: {
             validate: typeof import("./parsers/xyz").validate;
-            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, fractional?: boolean) => string;
+            fromMaterial: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema, fractional?: boolean) => string;
             toBasisConfig: (txt: string, units?: string, cell?: Cell) => import("./basis/constrained_basis").ConstrainedBasisConfig;
             fromBasis: (basisClsInstance: import("./basis/constrained_basis").ConstrainedBasis, coordinatePrintFormat: string) => string;
             CombinatorialBasis: typeof import("./parsers/xyz_combinatorial_basis").CombinatorialBasis;
         };
         poscar: {
             isPoscar: (text: string) => boolean;
-            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema, omitConstraints?: boolean) => string;
-            fromPoscar: (fileContent: string) => object;
+            toPoscar: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema, omitConstraints?: boolean) => string;
+            fromPoscar: (fileContent: string) => import("./Material").MaterialConfig;
             atomicConstraintsCharFromBool: (bool: boolean) => string;
             atomsCount: typeof import("./parsers/poscar").atomsCount;
         };
@@ -62,21 +62,21 @@ export declare const Made: {
             parseMeta: (txt: string) => import("./parsers/cif").Meta;
         };
         espresso: {
-            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema) => string;
+            toEspressoFormat: (materialOrConfig: import("@mat3ra/esse/dist/js/types").MaterialSchema | import("@mat3ra/esse/dist/js/types").MaterialEnhancedSchema) => string;
         };
         nativeFormatParsers: {
-            detectFormat: (text: string) => string;
-            convertFromNativeFormat: (text: string) => any;
+            detectFormat: (text: string) => "json" | "poscar" | "unknown";
+            convertFromNativeFormat: (text: string) => import("./Material").MaterialConfig;
         };
     };
     tools: {
         surface: {
-            generateConfig: (material: Material, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
+            generateConfig: <Schemas extends import("./Material").MaterialSchemaMap = import("./Material").MaterialSchemaMap>(material: Material<Schemas>, millerIndices: import("@mat3ra/esse/dist/js/types").Coordinate3DSchema, numberOfLayers?: number, vx?: number, vy?: number) => import("./tools/surface").SlabConfigSchema;
         };
         supercell: {
-            generateConfig: (material: Material, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
+            generateConfig: <Schemas extends import("./Material").MaterialSchemaMap = import("./Material").MaterialSchemaMap>(material: Material<Schemas>, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => {
                 name: string;
-                basis: import("@mat3ra/esse/dist/js/types").BasisSchema;
+                basis: import("./basis/basis").BasisConfig & import("@mat3ra/esse/dist/js/types").BaseInMemoryEntitySchema;
                 lattice: import("@mat3ra/esse/dist/js/types").LatticeSchema;
             };
             generateNewBasisWithinSupercell: (basis: Basis | import("./basis/constrained_basis").ConstrainedBasis, cell: Cell, supercell: Cell, supercellMatrix: import("@mat3ra/esse/dist/js/types").Matrix3X3Schema) => Basis;
@@ -88,7 +88,7 @@ export declare const Made: {
         };
         basis: {
             repeat: (basis: Basis, repetitions: number[]) => Basis;
-            interpolate: (initialBasis: Basis, finalBasis: Basis, numberOfSteps?: number) => Basis[];
+            interpolate: (initialBasis: Basis, finalBasis: Basis, numberOfSteps?: number) => Basis<import("./basis/basis").BasisConfig>[];
         };
     };
     LATTICE_TYPE_CONFIGS: import("./lattice/lattice_types").LatticeTypeConfig[];
