@@ -5,9 +5,11 @@ import pytest
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
 from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
 from mat3ra.made.material import Material
-from mat3ra.made.tools.build_components.operations.core.modifications.perturb import SineWavePerturbationFunctionHolder
+from mat3ra.made.tools.build_components.operations.core.modifications.perturb import (
+    SineWavePerturbationFunctionHolder,
+)
 from mat3ra.made.tools.operations.core.binary import stack_two_materials
-from mat3ra.made.tools.operations.core.unary import perturb, strain
+from mat3ra.made.tools.operations.core.unary import perturb, strain, translate_atoms
 from mat3ra.made.tools.operations.reusable.unary import transform_material_by_matrix
 from unit.fixtures.bulk import BULK_Si_CONVENTIONAL
 from unit.fixtures.strain import BULK_Si_CONVENTIONAL_STRAINED
@@ -100,3 +102,25 @@ def test_transform_material_by_matrix(matrix, expected_a, expected_b, expected_c
     assert transformed_material.lattice.a == pytest.approx(expected_a, abs=1e-6)
     assert transformed_material.lattice.b == pytest.approx(expected_b, abs=1e-6)
     assert transformed_material.lattice.c == pytest.approx(expected_c, abs=1e-6)
+
+
+@pytest.mark.parametrize(
+    "material_config, atom_ids, vector, expected_coord_change",
+    [
+        (SI_CONVENTIONAL_SLAB_001, [3], [0.0, 0.0, -1.5], [0.0, 0.0, -1.5]),
+    ],
+)
+def test_translate_atoms(material_config, atom_ids, vector, expected_coord_change):
+    material = Material.create(material_config)
+    original_coords = [coord[:] for coord in material.basis.coordinates.values]
+
+    translated_material = translate_atoms(material, atom_ids, vector)
+    lattice_vectors = np.array(material.lattice.vector_arrays)
+
+    actual_delta = (
+        np.array(translated_material.basis.coordinates.values[atom_ids[0]]) - np.array(original_coords[atom_ids[0]])
+    ) @ lattice_vectors
+    assert np.isclose(actual_delta, expected_coord_change, atol=1e-4).all()
+
+    untouched_id = atom_ids[0] - 1
+    assert np.allclose(translated_material.basis.coordinates.values[untouched_id], original_coords[untouched_id])
