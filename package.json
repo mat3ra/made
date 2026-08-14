@@ -17,6 +17,9 @@
         "url": "https://github.com/mat3ra/made.git"
     },
     "main": "dist/js/made.js",
+    "files": [
+        "dist"
+    ],
     "author": "Exabyte Inc.",
     "bugs": {
         "url": "https://github.com/mat3ra/made/issues"
@@ -34,11 +37,11 @@
         "@babel/register": "^7.29.7",
         "@babel/runtime-corejs3": "^7.29.7",
         "@exabyte-io/eslint-config": "^2026.7.3-0",
-        "@mat3ra/code": "2026.8.13-0",
-        "@mat3ra/esse": "2026.8.13-0",
+        "@mat3ra/code": "https://github.com/mat3ra/code/releases/download/wip-c893e27/code.tgz",
+        "@mat3ra/esse": "https://github.com/mat3ra/esse/releases/download/wip-b8494e3c7/esse.tgz",
         "@mat3ra/standata": "2026.6.30-0",
         "@mat3ra/tsconfig": "^2024.6.3-0",
-        "@mat3ra/utils": "^2026.7.8-0",
+        "@mat3ra/utils": "https://github.com/mat3ra/utils/releases/download/wip-8b2c388/utils.tgz",
         "@types/crypto-js": "^4.2.2",
         "@typescript-eslint/eslint-plugin": "^5.62.0",
         "@typescript-eslint/parser": "^5.62.0",
