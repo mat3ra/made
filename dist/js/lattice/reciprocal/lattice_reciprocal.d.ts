@@ -1,5 +1,6 @@
 import { Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Lattice } from "../lattice";
+import { BrillouinZoneFace } from "./brillouin_zone";
 export type KPointCoordinates = number[];
 export type KPointPath = Array<{
     point: string;
@@ -40,6 +41,17 @@ export declare class ReciprocalLattice extends Lattice {
      * @return {SymmetryPoint[]}
      */
     get symmetryPoints(): SymmetryPoint[];
+    /**
+     * Get the first Brillouin zone — the Wigner-Seitz cell of the reciprocal lattice — as a
+     * list of polygonal faces, ready to be projected and drawn.
+     *
+     * The zone follows from this lattice's own vectors rather than from its Bravais type, so
+     * materials sharing a type but differing in axial ratios (a bulk crystal and a slab with
+     * vacuum padding, say) yield correctly differing zones.
+     *
+     * @return {BrillouinZoneFace[] | null} null for a degenerate lattice.
+     */
+    get brillouinZone(): BrillouinZoneFace[] | null;
     /**
      * Get the default path in reciprocal space for the current lattice.
      * @return {Array<{point: string; steps: number}>}

@@ -8,6 +8,7 @@ const constants_1 = require("@mat3ra/code/dist/js/constants");
 const utils_1 = require("@mat3ra/utils");
 const lodash_1 = __importDefault(require("lodash"));
 const lattice_1 = require("../lattice");
+const brillouin_zone_1 = require("./brillouin_zone");
 const paths_1 = require("./paths");
 const symmetry_points_1 = require("./symmetry_points");
 class ReciprocalLattice extends lattice_1.Lattice {
@@ -53,6 +54,19 @@ class ReciprocalLattice extends lattice_1.Lattice {
      */
     get symmetryPoints() {
         return (0, symmetry_points_1.symmetryPoints)(this);
+    }
+    /**
+     * Get the first Brillouin zone — the Wigner-Seitz cell of the reciprocal lattice — as a
+     * list of polygonal faces, ready to be projected and drawn.
+     *
+     * The zone follows from this lattice's own vectors rather than from its Bravais type, so
+     * materials sharing a type but differing in axial ratios (a bulk crystal and a slab with
+     * vacuum padding, say) yield correctly differing zones.
+     *
+     * @return {BrillouinZoneFace[] | null} null for a degenerate lattice.
+     */
+    get brillouinZone() {
+        return (0, brillouin_zone_1.computeBrillouinZone)(this.reciprocalVectors);
     }
     /**
      * Get the default path in reciprocal space for the current lattice.
