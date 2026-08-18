@@ -3,4 +3,4 @@
 
 npx lint-staged --allow-empty
 npm run transpile
-git add dist
+# dist/ is gitignored - not staged here
