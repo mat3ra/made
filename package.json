@@ -10,7 +10,8 @@
         "prettier": "prettier --check src/js tests/js",
         "test": "nyc --reporter=text mocha --recursive --bail tests/js/**/*.ts",
         "generate-mixins": "ts-node scripts/generate-mixins.ts",
-        "transpile": "tsc -p tsconfig-transpile.json"
+        "transpile": "tsc -p tsconfig-transpile.json",
+        "prepublishOnly": "npm run transpile"
     },
     "repository": {
         "type": "git",
