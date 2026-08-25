@@ -19,7 +19,6 @@ from .fixtures.slab import ATOMIC_LAYERS_NI_001
 from .utils import assert_two_entities_deep_almost_equal
 
 MILLER_INDICES = (0, 0, 1)
-# Ni primitive differs from its own conventional cell, so a builder that conventionalizes fails.
 BULK_Ni_PRIMITIVE_WITH_ID: Dict[str, Any] = {**BULK_Ni_PRIMITIVE, "_id": "platform-id-abc"}
 
 BUILDERS = {
@@ -57,8 +56,6 @@ def get_recorded_source_crystals(node: Any) -> List[Dict[str, Any]]:
     if node.get("merge_components"):
         crystals.append(node["merge_components"][0])
         collected.add("merge_components")
-    # Do not descend into what was just collected: an input with its own build history would
-    # otherwise contribute the crystals nested inside it.
     return crystals + [
         found for key, value in node.items() if key not in collected for found in get_recorded_source_crystals(value)
     ]
@@ -78,9 +75,6 @@ def test_recorded_crystal_is_the_input(build):
 
 @pytest.mark.parametrize("material_config, expected_number_of_atoms, expected_gamma", [(BULK_Ni_PRIMITIVE, 8, 90.0)])
 def test_create_interface_twisted_uses_conventional_cell(material_config, expected_number_of_atoms, expected_gamma):
-    # TwistedNanoribbonsInterfaceAnalyzer reads atomic_layers.crystal as geometry and never calls
-    # the builder, so this helper has to conventionalize up front. Moving that into the builder
-    # collapses the result onto the primitive one -- 8 atoms to 1, gamma 90 to 120.
     crystal = Material.create(material_config)
 
     interface = create_interface_twisted(material1=crystal, material2=crystal, angle=10.0, use_conventional_cell=True)

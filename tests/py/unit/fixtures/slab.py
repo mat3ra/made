@@ -606,8 +606,6 @@ SLAB_SrTiO3_011_TERMINATION_O2_BOTTOM = {
 }
 
 
-# create_atomic_layers builds its configuration directly, where use_conventional_cell defaults True;
-# this pins the primitive cell it has always produced.
 ATOMIC_LAYERS_NI_001: Dict[str, Any] = {
     "name": "Ni(001), termination Ni_P4/mmm_2",
     "basis": {

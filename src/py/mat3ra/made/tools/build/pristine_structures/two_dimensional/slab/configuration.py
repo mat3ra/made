@@ -65,9 +65,6 @@ class SlabConfiguration(StackConfiguration, SlabConfigurationSchema):
             termination_bottom_formula (Optional[str]): Formula of the bottom termination to use for the slab.
 
             vacuum (float): Size of the vacuum layer in Angstroms.
-            use_conventional_cell (bool): Whether the slab is built in the conventional cell.
-                Stored on the configuration and applied at build time; `crystal` always keeps
-                the material that was passed in.
 
         Returns:
             SlabConfiguration: The created slab configuration.
