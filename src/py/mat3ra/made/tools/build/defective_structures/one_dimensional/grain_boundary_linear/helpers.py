@@ -45,8 +45,6 @@ def create_grain_boundary_linear(
         miller_indices (Tuple[int, int, int]): Miller indices for the slab surface.
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
-        use_conventional_cell (bool): Accepted for signature compatibility but not honored --
-            the slab configuration takes the schema default and conventionalizes either way.
 
     Returns:
         Material: The grain boundary material.

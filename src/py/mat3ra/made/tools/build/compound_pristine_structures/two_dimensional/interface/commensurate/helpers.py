@@ -44,8 +44,6 @@ def get_commensurate_strained_configurations(
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
         match_id (int): ID of the match to use (0 for first match).
-        use_conventional_cell (bool): Accepted for signature compatibility but not honored --
-            the slab configuration takes the schema default and conventionalizes either way.
 
     Returns:
         Tuple[List[SlabStrainedSupercellConfiguration], float]:
@@ -118,9 +116,7 @@ def create_interface_commensurate(
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
         match_id (int): ID of the match to use (0 for first match).
-        use_conventional_cell (bool): Accepted for signature compatibility but not honored --
-            the slab configuration below takes the schema default, which conventionalizes
-            either way. Making it live changes built geometry; see SOF-8034.
+        use_conventional_cell (bool): Whether to use the conventional cell for the material.
         remove_overlapping_atoms (bool): Whether to resolve overlapping atoms in the interface after creation.
         tolerance_for_overlap (float): Tolerance for resolving overlapping atoms, in Angstroms.
     Returns:
