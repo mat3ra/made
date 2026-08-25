@@ -144,6 +144,8 @@ def get_slab_with_builder(
     atomic_layers_repeated_configuration = AtomicLayersUniqueRepeatedConfiguration(
         crystal=material,
         miller_indices=miller_indices,
+        # Explicit: the schema defaults this True, and this helper builds primitive slabs.
+        use_conventional_cell=False,
         termination_top=termination_top,
         termination_bottom=termination_bottom,
         number_of_repetitions=number_of_layers,

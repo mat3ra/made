@@ -4,7 +4,6 @@ from mat3ra.made.material import Material
 from .builder import GrainBoundaryPlanarBuilder
 from .configuration import GrainBoundaryPlanarConfiguration
 from .....analyze.interface import GrainBoundaryPlanarAnalyzer
-from .....analyze.lattice import get_material_with_conventional_lattice
 from .....build_components import MaterialWithBuildMetadata
 
 
@@ -29,6 +28,7 @@ def create_grain_boundary_planar(
 
     Args:
         phase_1_material: The material to use for each phase of the grain boundary
+        phase_2_material: Material for the second phase; defaults to phase_1_material
         phase_1_miller_indices: Miller indices for phase 1
         phase_2_miller_indices: Miller indices for phase 2
         phase_1_thickness: Number of layers for phase 1
@@ -40,15 +40,14 @@ def create_grain_boundary_planar(
         max_area_ratio_tol: Area ratio tolerance for ZSL matching
         max_length_tol: Length tolerance for ZSL matching
         max_angle_tol: Angle tolerance for ZSL matching
+        use_conventional_cell: Accepted for signature compatibility but not honored -- the
+            analyzer's slab configurations take the schema default, which conventionalizes
+            either way. Making it live changes built geometry; see SOF-8034.
 
     Returns:
         Material: The grain boundary material
     """
     phase_2_material = phase_2_material or phase_1_material
-    if use_conventional_cell:
-        phase_1_material = get_material_with_conventional_lattice(phase_1_material)
-        phase_2_material = get_material_with_conventional_lattice(phase_2_material)
-
     analyzer = GrainBoundaryPlanarAnalyzer(
         phase_1_material=phase_1_material,
         phase_2_material=phase_2_material,

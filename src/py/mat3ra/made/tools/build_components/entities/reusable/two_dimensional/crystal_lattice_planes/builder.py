@@ -21,7 +21,13 @@ class CrystalLatticePlanesBuilder(BaseSingleBuilder):
     def _generate(self, configuration: CrystalLatticePlanesConfiguration) -> MaterialWithBuildMetadata:
         crystal_lattice_planes_analyzer = self.get_analyzer(configuration)
         miller_supercell_matrix = crystal_lattice_planes_analyzer.miller_supercell_matrix
-        miller_supercell_material = supercell(configuration.crystal, miller_supercell_matrix)
+        # The configuration stores the crystal that was passed in, untransformed, so that build
+        # metadata records the caller's own material. Conventionalizing happens here instead --
+        # any consumer reading configuration.crystal as geometry must do its own transform.
+        crystal = configuration.crystal
+        if configuration.use_conventional_cell:
+            crystal = crystal_lattice_planes_analyzer.material_with_conventional_lattice
+        miller_supercell_material = supercell(crystal, miller_supercell_matrix)
         return miller_supercell_material
 
     def _enforce_convention(self, material: MaterialWithBuildMetadata) -> MaterialWithBuildMetadata:

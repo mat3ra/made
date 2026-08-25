@@ -4,7 +4,6 @@ from mat3ra.code.array_with_ids import ArrayWithIds
 
 from mat3ra.made.material import Material
 from ......analyze.interface import ZSLInterfaceAnalyzer
-from ......analyze.lattice import get_material_with_conventional_lattice
 from ......analyze.slab import SlabMaterialAnalyzer
 from ......build.compound_pristine_structures.two_dimensional.interface import (
     InterfaceBuilderParameters,
@@ -37,10 +36,6 @@ def create_interface_zsl(
     reduce_result_cell: bool = True,
     reduce_result_cell_to_primitive: bool = False,
 ) -> MaterialWithBuildMetadata:
-    if use_conventional_cell:
-        substrate_crystal = get_material_with_conventional_lattice(substrate_crystal)
-        film_crystal = get_material_with_conventional_lattice(film_crystal)
-
     substrate_slab = create_slab(
         crystal=substrate_crystal,
         miller_indices=substrate_miller_indices,

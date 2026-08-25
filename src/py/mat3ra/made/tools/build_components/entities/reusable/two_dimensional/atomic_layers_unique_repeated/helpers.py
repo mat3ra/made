@@ -32,6 +32,8 @@ def create_atomic_layers(
     atomic_layers_config = AtomicLayersUniqueRepeatedConfiguration(
         crystal=material,
         miller_indices=miller_indices,
+        # Explicit: the schema defaults this True, and this path has never conventionalized.
+        use_conventional_cell=False,
         termination_top=termination,
         number_of_repetitions=number_of_layers,
     )

@@ -65,6 +65,9 @@ class SlabConfiguration(StackConfiguration, SlabConfigurationSchema):
             termination_bottom_formula (Optional[str]): Formula of the bottom termination to use for the slab.
 
             vacuum (float): Size of the vacuum layer in Angstroms.
+            use_conventional_cell (bool): Whether the slab is built in the conventional cell.
+                Stored on the configuration and applied at build time; `crystal` always keeps
+                the material that was passed in.
 
         Returns:
             SlabConfiguration: The created slab configuration.
@@ -81,11 +84,10 @@ class SlabConfiguration(StackConfiguration, SlabConfigurationSchema):
         termination_top = select_slab_termination(terminations, termination_top_formula)
         termination_bottom = select_slab_termination(terminations, termination_bottom_formula)
 
-        if use_conventional_cell:
-            material = crystal_lattice_planes_analyzer.material_with_conventional_lattice
         atomic_layers_repeated_configuration = AtomicLayersUniqueRepeatedConfiguration(
             crystal=material,
             miller_indices=miller_indices,
+            use_conventional_cell=use_conventional_cell,
             termination_top=termination_top,
             termination_bottom=termination_bottom,
             number_of_repetitions=number_of_layers,

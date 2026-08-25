@@ -10,7 +10,6 @@ from .....pristine_structures.two_dimensional.slab_strained_supercell.configurat
     SlabStrainedSupercellConfiguration,
 )
 from ......analyze.interface import CommensurateLatticeInterfaceAnalyzer
-from ......analyze.lattice import get_material_with_conventional_lattice
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
 from ......build_components.metadata import MaterialWithBuildMetadata
 
@@ -45,6 +44,8 @@ def get_commensurate_strained_configurations(
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
         match_id (int): ID of the match to use (0 for first match).
+        use_conventional_cell (bool): Accepted for signature compatibility but not honored --
+            the slab configuration takes the schema default and conventionalizes either way.
 
     Returns:
         Tuple[List[SlabStrainedSupercellConfiguration], float]:
@@ -53,9 +54,6 @@ def get_commensurate_strained_configurations(
     Raises:
         ValueError: If no commensurate lattice matches are found.
     """
-    if use_conventional_cell:
-        material = get_material_with_conventional_lattice(material)
-
     slab_config = SlabConfiguration.from_parameters(
         material_or_dict=material,
         miller_indices=miller_indices,
@@ -120,7 +118,9 @@ def create_interface_commensurate(
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
         match_id (int): ID of the match to use (0 for first match).
-        use_conventional_cell (bool): Whether to use the conventional cell for the material.
+        use_conventional_cell (bool): Accepted for signature compatibility but not honored --
+            the slab configuration below takes the schema default, which conventionalizes
+            either way. Making it live changes built geometry; see SOF-8034.
         remove_overlapping_atoms (bool): Whether to resolve overlapping atoms in the interface after creation.
         tolerance_for_overlap (float): Tolerance for resolving overlapping atoms, in Angstroms.
     Returns:
