@@ -6,6 +6,7 @@ from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
 from mat3ra.made.material import Material
 from .. import InterfaceBuilder, InterfaceConfiguration
 from ......analyze.interface import TwistedNanoribbonsInterfaceAnalyzer
+from ......analyze.lattice import get_material_with_conventional_lattice
 from ......build_components import MaterialWithBuildMetadata
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
 
@@ -33,6 +34,9 @@ def create_interface_twisted(
     Returns:
         Material: The twisted interface material.
     """
+    if use_conventional_cell:
+        material1 = get_material_with_conventional_lattice(material1)
+        material2 = get_material_with_conventional_lattice(material2)
     slab1 = SlabConfiguration.from_parameters(
         material_or_dict=material1,
         miller_indices=(0, 0, 1),
