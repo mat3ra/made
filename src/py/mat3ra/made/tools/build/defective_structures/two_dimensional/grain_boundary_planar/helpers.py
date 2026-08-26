@@ -4,7 +4,6 @@ from mat3ra.made.material import Material
 from .builder import GrainBoundaryPlanarBuilder
 from .configuration import GrainBoundaryPlanarConfiguration
 from .....analyze.interface import GrainBoundaryPlanarAnalyzer
-from .....analyze.lattice import get_material_with_conventional_lattice
 from .....build_components import MaterialWithBuildMetadata
 
 
@@ -45,10 +44,6 @@ def create_grain_boundary_planar(
         Material: The grain boundary material
     """
     phase_2_material = phase_2_material or phase_1_material
-    if use_conventional_cell:
-        phase_1_material = get_material_with_conventional_lattice(phase_1_material)
-        phase_2_material = get_material_with_conventional_lattice(phase_2_material)
-
     analyzer = GrainBoundaryPlanarAnalyzer(
         phase_1_material=phase_1_material,
         phase_2_material=phase_2_material,
