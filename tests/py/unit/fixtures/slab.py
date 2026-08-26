@@ -604,25 +604,3 @@ SLAB_SrTiO3_011_TERMINATION_O2_BOTTOM = {
         "type": "TRI",
     },
 }
-
-
-ATOMIC_LAYERS_NI_001: Dict[str, Any] = {
-    "name": "Ni(001), termination Ni_P4/mmm_2",
-    "basis": {
-        "elements": [{"id": 0, "value": "Ni"}],
-        "coordinates": [{"id": 0, "value": [0.0, 0.0, 1e-06]}],
-        "units": "crystal",
-        "labels": [],
-        "constraints": [],
-    },
-    "lattice": {
-        "a": 2.478974,
-        "b": 2.478974,
-        "c": 2.478974,
-        "alpha": 60.0,
-        "beta": 60.0,
-        "gamma": 60.0,
-        "units": {"length": "angstrom", "angle": "degree"},
-        "type": "TRI",
-    },
-}
