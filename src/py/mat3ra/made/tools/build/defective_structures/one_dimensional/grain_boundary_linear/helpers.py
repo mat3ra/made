@@ -7,7 +7,6 @@ from mat3ra.made.material import Material
 from .builder import GrainBoundaryLinearBuilder
 from .configuration import GrainBoundaryLinearConfiguration
 from ....compound_pristine_structures.two_dimensional.interface import get_commensurate_strained_configurations
-from .....analyze.lattice import get_material_with_conventional_lattice
 from .....build_components import MaterialWithBuildMetadata
 
 
@@ -53,9 +52,6 @@ def create_grain_boundary_linear(
     Raises:
         ValueError: If no commensurate lattice matches are found.
     """
-    if use_conventional_cell:
-        material = get_material_with_conventional_lattice(material)
-
     strained_configs, actual_angle = get_commensurate_strained_configurations(
         material=material,
         target_angle=target_angle,

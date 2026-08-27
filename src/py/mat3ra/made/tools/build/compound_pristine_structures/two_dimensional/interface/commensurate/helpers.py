@@ -10,7 +10,6 @@ from .....pristine_structures.two_dimensional.slab_strained_supercell.configurat
     SlabStrainedSupercellConfiguration,
 )
 from ......analyze.interface import CommensurateLatticeInterfaceAnalyzer
-from ......analyze.lattice import get_material_with_conventional_lattice
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
 from ......build_components.metadata import MaterialWithBuildMetadata
 
@@ -53,9 +52,6 @@ def get_commensurate_strained_configurations(
     Raises:
         ValueError: If no commensurate lattice matches are found.
     """
-    if use_conventional_cell:
-        material = get_material_with_conventional_lattice(material)
-
     slab_config = SlabConfiguration.from_parameters(
         material_or_dict=material,
         miller_indices=miller_indices,

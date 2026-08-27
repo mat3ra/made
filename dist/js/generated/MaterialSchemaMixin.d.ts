@@ -1,5 +1,0 @@
-import type { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
-import type { BaseInMemoryEntitySchema, MaterialPropertiesSchema } from "@mat3ra/esse/dist/js/types";
-export type MaterialSchemaMixin = MaterialPropertiesSchema;
-export type MaterialInMemoryEntity = InMemoryEntity<BaseInMemoryEntitySchema & MaterialSchemaMixin>;
-export declare function materialSchemaMixin<T extends InMemoryEntity>(item: InMemoryEntity): asserts item is T & MaterialSchemaMixin;
