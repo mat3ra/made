@@ -1,107 +1,65 @@
-import copy
-from typing import Any, Dict, Final
+from typing import Final
 
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
-from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
+from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer, get_film_site_occupation
+from mat3ra.made.tools.build.compound_pristine_structures.two_dimensional.interface.zsl.helpers import (
+    create_interface_zsl,
+)
+from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.helpers import create_slab
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from pydantic import ValidationError
-from unit.fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
-from unit.fixtures.surface_nets import RECTANGULAR_NET, SQUARE_NET
+from mat3ra.standata.materials import Materials
 
+from .fixtures.bulk import BULK_GRAPHENE, BULK_Cu, BULK_Ni_PRIMITIVE
 
-def substrate_of(config: Dict[str, Any]) -> Material:
-    material = Material.create(config)
-    material.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
-    return material
+NI111_SLAB: Final = create_slab(
+    crystal=BULK_Ni_PRIMITIVE, miller_indices=(1, 1, 1), number_of_layers=3, vacuum=10.0, use_conventional_cell=False
+)
+CU001_SLAB: Final = create_slab(crystal=BULK_Cu, miller_indices=(0, 0, 1), number_of_layers=1, vacuum=10.0)
+CU110_SLAB: Final = create_slab(crystal=BULK_Cu, miller_indices=(1, 1, 0), number_of_layers=1, vacuum=10.0)
+MOS2_MONOLAYER: Final = Material.create(Materials.get_by_name_and_categories("MoS2", "2D"))
 
-
-def cartesian_xy(config: Dict[str, Any], atom_index: int) -> np.ndarray:
-    material = Material.create(config)
-    material.to_cartesian()
-    return np.array(material.coordinates_array[atom_index][:2])
-
-
-def shifted_by_one_cell(config: Dict[str, Any]) -> Dict[str, Any]:
-    """The same substrate with every atom moved by +1 along a — positions on and past the boundary."""
-    moved = copy.deepcopy(config)
-    for item in moved["basis"]["coordinates"]:
-        item["value"] = [item["value"][0] + 1.0, item["value"][1], item["value"][2]]
-    return moved
-
-
-def reversed_basis(config: Dict[str, Any]) -> Dict[str, Any]:
-    reordered = copy.deepcopy(config)
-    for key in ("elements", "coordinates", "labels"):
-        items = list(reversed(reordered["basis"][key]))
-        reordered["basis"][key] = [{"id": i, "value": item["value"]} for i, item in enumerate(items)]
-    return reordered
-
-
-def site_counts(analyzer: SurfaceSiteAnalyzer) -> Dict[str, int]:
-    return {name: len(points) for name, points in analyzer.sites.items()}
-
-
-SUBSTRATE_1X1: Final = substrate_of(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)
-SUBSTRATE_2X2: Final = create_supercell(SUBSTRATE_1X1, scaling_factor=[2, 2, 1])
-SUBSTRATE_REVERSED_BASIS: Final = substrate_of(reversed_basis(GRAPHENE_NICKEL_INTERFACE_TOP_HCP))
-SUBSTRATE_SHIFTED_BY_ONE_CELL: Final = substrate_of(shifted_by_one_cell(GRAPHENE_NICKEL_INTERFACE_TOP_HCP))
-SQUARE_NET_MATERIAL: Final = Material.create(SQUARE_NET)
-RECTANGULAR_NET_MATERIAL: Final = Material.create(RECTANGULAR_NET)
-
-SITE_COUNTS_1X1: Final = {"atop": 1, "bridge": 3, "fcc": 1, "hcp": 1}
-SITE_COUNTS_2X2: Final = {name: 4 * count for name, count in SITE_COUNTS_1X1.items()}
-SITE_COUNTS_NET: Final = {"atop": 1, "bridge": 2, "hollow": 1}
-
-SURFACE_SITE_ANALYZER_CASES = [
-    (SUBSTRATE_1X1, SITE_COUNTS_1X1),
-    (SUBSTRATE_2X2, SITE_COUNTS_2X2),
-    (SUBSTRATE_REVERSED_BASIS, SITE_COUNTS_1X1),
-    (SUBSTRATE_SHIFTED_BY_ONE_CELL, SITE_COUNTS_1X1),
-    (SQUARE_NET_MATERIAL, SITE_COUNTS_NET),
-    (RECTANGULAR_NET_MATERIAL, SITE_COUNTS_NET),
+SURFACE_SITE_ANALYZER_SITES_CASES = [
+    (NI111_SLAB, {"atop": [[1.2394, 0.7155]], "fcc": [[0.0, 0.0]], "hcp": [[2.4787, 1.4311]]}),
+    (CU001_SLAB, {"atop": [[0.0, 0.0], [1.8106, 1.8106]], "hollow": [[0.0, 1.8106], [1.8106, 0.0]]}),
+    (
+        CU110_SLAB,
+        {
+            "atop": [[0.0, 1.2803], [0.0, 3.8409]],
+            # two distinct bridge-to-atop distances: 1.2803 along the close-packed rows, 1.8106 across.
+            "bridge": [[0.0, 0.0], [0.0, 2.5606], [1.8106, 1.2803], [1.8106, 3.8409]],
+            "hollow": [[1.8106, 0.0], [1.8106, 2.5606]],
+        },
+    ),
+    (MOS2_MONOLAYER, {"atop": [[0.0, 1.8454]], "hcp": [[1.5978, 0.9229]], "hollow": [[0.0, 0.0]]}),
 ]
 
 
-@pytest.mark.parametrize("material, expected_site_counts", SURFACE_SITE_ANALYZER_CASES)
-def test_surface_site_analyzer(material, expected_site_counts):
-    assert site_counts(SurfaceSiteAnalyzer(material=material)) == expected_site_counts
+@pytest.mark.parametrize("material, expected_sites", SURFACE_SITE_ANALYZER_SITES_CASES)
+def test_surface_site_analyzer_sites(material, expected_sites):
+    """Site coordinates for a subset of site types, not only counts — a systematic displacement of
+    every site of one type would otherwise go unnoticed."""
+    sites = SurfaceSiteAnalyzer(material=material).sites
+    for name, points in expected_sites.items():
+        rounded = sorted(np.round(sites[name], 3).tolist())
+        assert np.allclose(rounded, sorted(points), atol=1e-3)
 
 
-EXPECTED_SITES_1X1: Final = {
-    "atop": [[-0.000124, 1.431308]],
-    "bridge": [[0.61962, 0.357881], [1.859107, 0.357881], [1.239363, 1.431308]],
-    "fcc": [[0.0, 0.0]],
-    "hcp": [[1.239239, 0.715761]],
-}
-
-SURFACE_SITE_ANALYZER_SITES_CASES = list(EXPECTED_SITES_1X1.items())
+def test_surface_site_analyzer_no_fcc_or_hcp_on_square_net():
+    """Cu(001) hollows are 4-fold: no third layer to distinguish fcc from hcp."""
+    sites = SurfaceSiteAnalyzer(material=CU001_SLAB).sites
+    assert "fcc" not in sites
+    assert "hcp" not in sites
 
 
-@pytest.mark.parametrize("site_name, expected_points", SURFACE_SITE_ANALYZER_SITES_CASES)
-def test_surface_site_analyzer_sites(site_name, expected_points):
-    """Site coordinates, not only counts — a systematic displacement of every site of one type
-    (e.g. the hollows) has the same counts as the true sites and would otherwise go unnoticed."""
-    sites = SurfaceSiteAnalyzer(material=SUBSTRATE_1X1).sites
-    assert np.allclose(sorted(sites[site_name]), sorted(expected_points), atol=1e-3)
-
-
-def test_surface_site_analyzer_frozen():
-    with pytest.raises(ValidationError):
-        SurfaceSiteAnalyzer(material=SUBSTRATE_1X1).site_match_tolerance = 1.0
-
-
-ANALYZER: Final = SurfaceSiteAnalyzer(material=SUBSTRATE_1X1)
-CARBON_ATOP_XY: Final = cartesian_xy(GRAPHENE_NICKEL_INTERFACE_TOP_HCP, 3)
-CARBON_HCP_XY: Final = cartesian_xy(GRAPHENE_NICKEL_INTERFACE_TOP_HCP, 4)
+ANALYZER: Final = SurfaceSiteAnalyzer(material=NI111_SLAB)
 ATOP_XY: Final = np.array(ANALYZER.sites["atop"][0])
 HALFWAY_TO_FCC_XY: Final = ATOP_XY + np.array(ANALYZER.get_displacement_to_site(ATOP_XY, "fcc")[:2]) / 2
 
 GET_SITE_NAME_CASES = [
-    (CARBON_ATOP_XY, "atop"),
-    (CARBON_HCP_XY, "hcp"),
+    (ATOP_XY, "atop"),
+    (np.array(ANALYZER.sites["hcp"][0]), "hcp"),
     (HALFWAY_TO_FCC_XY, None),
 ]
 
@@ -111,18 +69,50 @@ def test_get_site_name(coordinate_xy, expected_site_name):
     assert ANALYZER.get_site_name(coordinate_xy) == expected_site_name
 
 
-GET_DISPLACEMENT_TO_SITE_CASES = [
-    (CARBON_HCP_XY, "fcc"),
-]
-
-
-@pytest.mark.parametrize("coordinate_xy, site_name", GET_DISPLACEMENT_TO_SITE_CASES)
-def test_get_displacement_to_site(coordinate_xy, site_name):
-    shift = ANALYZER.get_displacement_to_site(coordinate_xy, site_name)
+def test_get_displacement_to_site():
+    hcp_xy = np.array(ANALYZER.sites["hcp"][0])
+    shift = ANALYZER.get_displacement_to_site(hcp_xy, "fcc")
     assert shift[2] == 0.0
-    assert ANALYZER.get_site_name(coordinate_xy + np.array(shift[:2])) == site_name
+    assert ANALYZER.get_site_name(hcp_xy + np.array(shift[:2])) == "fcc"
 
 
 def test_get_displacement_to_site_invalid():
     with pytest.raises(ValueError):
-        ANALYZER.get_displacement_to_site(CARBON_HCP_XY, "hollow")
+        ANALYZER.get_displacement_to_site(ATOP_XY, "hollow")
+
+
+GR_NI_111_INTERFACE: Final = create_interface_zsl(
+    substrate_crystal=BULK_Ni_PRIMITIVE,
+    film_crystal=BULK_GRAPHENE,
+    substrate_miller_indices=(1, 1, 1),
+    film_miller_indices=(0, 0, 1),
+    substrate_number_of_layers=3,
+    film_number_of_layers=1,
+    gap=3.0,
+    vacuum=10.0,
+    max_area=90,
+    max_area_ratio_tol=0.09,
+    max_length_tol=0.05,
+    max_angle_tol=0.02,
+    use_conventional_cell=True,
+    reduce_result_cell=False,
+    reduce_result_cell_to_primitive=True,
+)
+
+
+def test_get_film_site_occupation():
+    assert get_film_site_occupation(GR_NI_111_INTERFACE) == {3: "atop", 4: "hcp"}
+
+
+def test_get_film_site_occupation_no_film_invalid():
+    substrate_only = GR_NI_111_INTERFACE.clone()
+    substrate_only.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
+    with pytest.raises(ValueError):
+        get_film_site_occupation(substrate_only)
+
+
+def test_get_film_site_occupation_no_substrate_invalid():
+    film_only = GR_NI_111_INTERFACE.clone()
+    film_only.basis.filter_atoms_by_labels([InterfacePartsEnum.FILM.value])
+    with pytest.raises(ValueError):
+        get_film_site_occupation(film_only)

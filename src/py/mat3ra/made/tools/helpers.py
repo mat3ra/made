@@ -1,11 +1,7 @@
 # Analyzers
-from .analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer, get_film_site_occupation
+from .analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer, SurfaceSiteEnum, get_film_site_occupation
 from .analyze.lattice import get_material_with_conventional_lattice, get_material_with_primitive_lattice
-from .analyze.other import (
-    get_atom_indices_by_layer,
-    get_atom_indices_in_bottom_layers,
-    get_closest_site_id_from_coordinate_within_radius,
-)
+from .analyze.other import get_atom_indices_by_layer
 
 # Defective Structures
 from .build.compound_pristine_structures.two_dimensional.heterostructure import create_heterostructure
@@ -95,7 +91,6 @@ from .build_components.operations.core.modifications.perturb.helpers import crea
 
 # Entities
 from .entities.coordinate import CoordinateCondition
-from .modify import interface_displace_film_to_site
 
 __all__ = [
     # Crystal and related analyzer functions
@@ -156,11 +151,9 @@ __all__ = [
     # Utility Functions
     "get_optimal_film_displacement",
     "SurfaceSiteAnalyzer",
+    "SurfaceSiteEnum",
     "get_film_site_occupation",
     "get_atom_indices_by_layer",
-    "get_atom_indices_in_bottom_layers",
-    "get_closest_site_id_from_coordinate_within_radius",
-    "interface_displace_film_to_site",
     # Type Definitions
     "AdatomDefectDict",
     "PointDefectDict",

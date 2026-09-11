@@ -135,59 +135,6 @@ def get_closest_site_id_from_coordinate_and_element(
         return int(np.argmin(distances))
 
 
-def get_closest_site_id_from_coordinate_within_radius(
-    material: Material,
-    coordinate: List[float],
-    radius: float,
-    chemical_element: Optional[str] = None,
-    use_cartesian_coordinates: bool = False,
-) -> int:
-    """
-    The site ID of the closest site (of `chemical_element`, when given) within `radius` Angstrom of
-    a coordinate in the crystal — the way a person points at an atom: "the Mo near (0.9, 0.1, 0.5)".
-
-    Args:
-        material (Material): The material object to find the closest site in.
-        coordinate (List[float]): The coordinate to find the closest site to.
-        radius (float): Search radius, in Angstrom.
-        chemical_element (str): Restrict the search to this element.
-        use_cartesian_coordinates (bool): Whether `coordinate` is cartesian.
-
-    Returns:
-        int: The site ID of the closest qualifying site.
-
-    Raises:
-        ValueError: when no site qualifies, stating how far the nearest one of that element is.
-    """
-    found = get_atom_indices_within_radius_pbc(
-        material,
-        atom_index=None,
-        coordinate=coordinate,
-        radius=radius,
-        chemical_element=chemical_element,
-        use_cartesian_coordinates=use_cartesian_coordinates,
-    )
-    if found:
-        return found[0]
-
-    elements = material.basis.elements.values
-    candidates = [
-        index for index, element in enumerate(elements) if chemical_element is None or element == chemical_element
-    ]
-    what = chemical_element or "atom"
-    if not candidates:
-        raise ValueError(f"No {what} in the material")
-
-    structure = to_pymatgen(material)
-    point = np.array(coordinate, dtype=float)
-    fractional_point = structure.lattice.get_fractional_coords(point) if use_cartesian_coordinates else point
-    nearest = min(
-        structure.lattice.get_distance_and_image(fractional_point, structure.frac_coords[index])[0]
-        for index in candidates
-    )
-    raise ValueError(f"No {what} within {radius} A of {coordinate}; the nearest {what} is {nearest:.2f} A away")
-
-
 def get_atom_indices_within_layer_by_atom_index(material: Material, atom_index: int, layer_thickness: float):
     """
     Select all atoms within a specified layer thickness of a central atom along a direction.
@@ -272,49 +219,31 @@ def get_atom_indices_within_layer(
 
 
 def get_atom_indices_within_radius_pbc(
-    material: Material,
-    atom_index: Optional[int] = 0,
-    coordinate: Optional[List[float]] = None,
-    radius: float = 1,
-    chemical_element: Optional[str] = None,
-    use_cartesian_coordinates: bool = False,
-) -> List[int]:
+    material: Material, atom_index: Optional[int] = 0, coordinate: Optional[List[float]] = None, radius: float = 1
+):
     """
-    Select the atoms (of `chemical_element`, when given) within a specified radius of a point,
-    nearest first, considering periodic boundary conditions via pymatgen's `get_sites_in_sphere` —
-    the correct minimum image on any cell, including non-orthogonal ones.
-
-    When `coordinate` is given, the sphere is centred on the coordinate itself — the way a person
-    points at an atom: "the Mo near (0.25, 0.25, 0.5)". Without a `coordinate`, the sphere is
-    centred on `atom_index`.
+    Select all atoms within a specified radius of a central atom considering periodic boundary conditions.
 
     Args:
         material (Material): Material object
-        atom_index (int): Index of the central atom; used when `coordinate` is None
-        coordinate (List[float]): Centre of the sphere; crystal unless `use_cartesian_coordinates`
+        atom_index (int): Index of the central atom
+        coordinate (List[float]): Coordinate of the central atom in crystal coordinates
         radius (float): Radius of the sphere in angstroms
-        chemical_element (str): Restrict the result to this element
-        use_cartesian_coordinates (bool): Whether `coordinate` is cartesian
 
     Returns:
-        List[int]: Indices of atoms within the radius, nearest first
+        List[int]: List of indices of atoms within the specified
     """
-    structure = to_pymatgen(material)
 
     if coordinate is not None:
-        point = np.array(coordinate, dtype=float)
-        center = point if use_cartesian_coordinates else structure.lattice.get_cartesian_coords(point)
-    else:
-        immutable_structure = PymatgenIStructure.from_sites(structure.sites)
-        center = immutable_structure[atom_index].coords
+        atom_index = get_closest_site_id_from_coordinate(material, coordinate)
 
-    sites_within_radius = sorted(structure.get_sites_in_sphere(center, radius), key=lambda site: site.nn_distance)
-    selected_indices: List[int] = []
-    for site in sites_within_radius:
-        if chemical_element is not None and site.species_string != chemical_element:
-            continue
-        if int(site.index) not in selected_indices:
-            selected_indices.append(int(site.index))
+    structure = to_pymatgen(material)
+    immutable_structure = PymatgenIStructure.from_sites(structure.sites)
+
+    central_atom = immutable_structure[atom_index]
+    sites_within_radius = structure.get_sites_in_sphere(central_atom.coords, radius)
+
+    selected_indices = [site.index for site in sites_within_radius]
     return selected_indices
 
 
@@ -527,30 +456,3 @@ def get_atom_indices_by_layer(material: Material, tolerance: float = 0.5) -> Lis
         layers[-1].append(int(index))
         previous_height = float(heights[index])
     return layers
-
-
-def get_atom_indices_in_bottom_layers(
-    material: Material,
-    layer_count: int,
-    atom_indices: Optional[List[int]] = None,
-    tolerance: float = 0.5,
-) -> List[int]:
-    """
-    Indices of the atoms in the `layer_count` lowest layers, restricted to `atom_indices` when
-    given — e.g. the substrate's, to hold its deepest layers fixed during a relaxation.
-
-    Args:
-        material: Material object.
-        layer_count: How many layers to take, counting from the bottom.
-        atom_indices: Restrict the selection to these atoms; all atoms when None.
-        tolerance: Height gap, in Angstrom, that separates two layers.
-    """
-    if layer_count < 1:
-        raise ValueError("layer_count must be at least 1")
-    selected = None if atom_indices is None else set(atom_indices)
-    layers = [
-        [index for index in layer if selected is None or index in selected]
-        for layer in get_atom_indices_by_layer(material, tolerance)
-    ]
-    occupied = [layer for layer in layers if layer]
-    return sorted(index for layer in occupied[:layer_count] for index in layer)

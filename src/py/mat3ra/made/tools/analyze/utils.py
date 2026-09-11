@@ -137,22 +137,6 @@ def calculate_von_mises_strain(strain_matrix: np.ndarray) -> float:
     return abs(e_von_mises) * 100.0
 
 
-def get_in_plane_periodic_images(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
-    """
-    The 3x3 in-plane periodic images of `points_xy`, home cell included, so points across a cell
-    boundary are seen.
-
-    Args:
-        points_xy (np.ndarray): In-plane points, shape (N, 2).
-        vectors_2d (np.ndarray): The two in-plane lattice vectors, shape (2, 2).
-
-    Returns:
-        np.ndarray: The 9 tiled copies stacked together, shape (9 * N, 2).
-    """
-    shifts = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
-    return np.vstack([points_xy + i * vectors_2d[0] + j * vectors_2d[1] for i, j in shifts])
-
-
 def minimum_image_distances(frac_coords: np.ndarray, lattice_vectors: np.ndarray) -> np.ndarray:
     """
     Compute pairwise distances between fractional coordinates under periodic boundary conditions.

@@ -7,10 +7,10 @@ from mat3ra.made.material import Material
 from pydantic import ConfigDict
 from scipy.spatial import Voronoi, cKDTree
 
+from ...build.processed_structures.two_dimensional.passivation.enums import SurfaceTypesEnum
 from ...convert.interface_parts_enum import InterfacePartsEnum
 from .. import BaseMaterialAnalyzer
 from ..other import get_atom_indices_by_layer
-from ..utils import get_in_plane_periodic_images
 
 FRACTIONAL_DECIMALS = 4
 
@@ -23,27 +23,25 @@ class SurfaceSiteEnum(str, Enum):
     HOLLOW = "hollow"
 
 
+def _in_plane_periodic_images(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
+    """The 3x3 in-plane periodic images of `points_xy`, home cell included."""
+    shifts = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
+    return np.vstack([points_xy + i * vectors_2d[0] + j * vectors_2d[1] for i, j in shifts])
+
+
 class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     """
-    High-symmetry adsorption sites of a slab's top surface, as cartesian in-plane coordinates.
+    `sites`: one instance of each named site (atop, bridge, fcc, hcp, hollow) per home cell, as
+    [x, y] in Angstrom. `get_site_name` and `get_displacement_to_site` resolve a point against it.
 
-    Sites come from the surface layer's geometry alone: "atop" over a surface atom, "bridge" at the
-    midpoint of two natural-neighbour surface atoms, and hollows at the points equidistant from
-    three or more surface atoms (the Voronoi vertices of the surface net). A three-fold hollow is
-    "hcp" when an atom of the second layer lies beneath it and "fcc" when one of the third layer
-    does; any other hollow — a four-fold hollow, or an hcp(0001) hollow over an empty column — is
-    "hollow". Any lattice and Miller index whose surface is flat within `layer_tolerance` works.
-
-    Tolerances, in Angstrom: `layer_tolerance` separates layers (interlayer spacings exceed 1.5 in
-    metals; 0.5 absorbs relaxation buckling); `site_match_tolerance` is how close a point must be to
-    count as on a site, and how close a subsurface atom must be to name a hollow; `tie_tolerance` is
-    the distance difference below which two site types count as equally close.
-
-    Frozen: sites are computed once and cached; a different tolerance is a different analyzer.
+    Tolerances, in Angstrom: `layer_tolerance` separates layers; `site_match_tolerance` is how close
+    a point must be to count as on a site; `tie_tolerance` is the gap below which two site types
+    count as equally close.
     """
 
     model_config = ConfigDict(frozen=True)
 
+    surface: SurfaceTypesEnum = SurfaceTypesEnum.TOP
     layer_tolerance: float = 0.5
     site_match_tolerance: float = 0.3
     tie_tolerance: float = 0.05
@@ -54,46 +52,38 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
 
     @cached_property
     def layers_xy(self) -> List[np.ndarray]:
-        """In-plane coordinates of each layer, top surface first."""
+        """In-plane coordinates of each layer, surface layer first."""
         cartesian = self.material.clone()
         cartesian.to_cartesian()
         coordinates = np.array(cartesian.coordinates_array)
         layers = get_atom_indices_by_layer(self.material, self.layer_tolerance)
-        return [self._wrap_points(coordinates[indices][:, :2]) for indices in reversed(layers)]
+        ordered = layers if self.surface == SurfaceTypesEnum.BOTTOM else list(reversed(layers))
+        return [self._wrap(coordinates[indices][:, :2]) for indices in ordered]
 
     @cached_property
     def sites(self) -> Dict[str, List[List[float]]]:
         """Site name -> every instance of that site in the cell, as [x, y] in Angstrom."""
         surface_xy = self.layers_xy[0]
         sites = {
-            SurfaceSiteEnum.ATOP.value: self._wrap_into_cell(surface_xy).tolist(),
+            SurfaceSiteEnum.ATOP.value: self._wrap(surface_xy).tolist(),
             SurfaceSiteEnum.BRIDGE.value: self._bridges().tolist(),
         }
         for name, points in self._hollows().items():
             sites[name] = np.array(points).tolist()
         return sites
 
-    def _fractional(self, points_xy: np.ndarray) -> np.ndarray:
-        return np.round(points_xy @ np.linalg.inv(self.in_plane_vectors), FRACTIONAL_DECIMALS)
-
-    def _wrap_points(self, points_xy: np.ndarray) -> np.ndarray:
-        """Points mapped into the home cell, so the periodic tiling is always centred on it."""
-        return (np.mod(self._fractional(points_xy), 1.0) % 1.0) @ self.in_plane_vectors
-
-    def _wrap_into_cell(self, points_xy: np.ndarray) -> np.ndarray:
-        """Lattice-periodic points (atoms) mapped into the home cell, one instance each."""
-        fractional = np.mod(self._fractional(points_xy), 1.0)
-        return np.unique(np.round(fractional, FRACTIONAL_DECIMALS) % 1.0, axis=0) @ self.in_plane_vectors
-
-    def _inside_home_cell(self, points_xy: np.ndarray) -> np.ndarray:
-        """Derived points (from the 3x3 tiling) that fall in the home cell, one instance each."""
-        fractional = self._fractional(points_xy)
-        inside = np.all((fractional >= 0.0) & (fractional < 1.0), axis=1)
-        return np.unique(fractional[inside], axis=0) @ self.in_plane_vectors
+    def _wrap(self, points_xy: np.ndarray) -> np.ndarray:
+        """Points mapped into the home cell, one instance each. A point already inside is kept as
+        rounded, not refolded, so periodic copies of the same point round to the same value and
+        merge exactly; only a point with no in-cell copy at all is brought in by modulo."""
+        fractional = np.round(points_xy @ np.linalg.inv(self.in_plane_vectors), FRACTIONAL_DECIMALS)
+        outside = ~np.all((fractional >= 0.0) & (fractional < 1.0), axis=1)
+        fractional[outside] = np.round(np.mod(fractional[outside], 1.0), FRACTIONAL_DECIMALS)
+        return np.unique(fractional, axis=0) @ self.in_plane_vectors
 
     @cached_property
     def _surface_voronoi(self) -> Voronoi:
-        return Voronoi(get_in_plane_periodic_images(self.layers_xy[0], self.in_plane_vectors))
+        return Voronoi(_in_plane_periodic_images(self.layers_xy[0], self.in_plane_vectors))
 
     def _bridges(self) -> np.ndarray:
         """Midpoints of natural-neighbour pairs: atoms whose Voronoi cells share a ridge of real
@@ -107,12 +97,12 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
             if degenerate:
                 continue
             midpoints.append((voronoi.points[a] + voronoi.points[b]) / 2)
-        return self._inside_home_cell(np.array(midpoints))
+        return self._wrap(np.array(midpoints))
 
     def _hollows(self) -> Dict[str, List[np.ndarray]]:
         tiled = self._surface_voronoi.points
         hollows: Dict[str, List[np.ndarray]] = {}
-        for vertex in self._inside_home_cell(self._surface_voronoi.vertices):
+        for vertex in self._wrap(self._surface_voronoi.vertices):
             distances = np.linalg.norm(tiled - vertex, axis=1)
             coordination = int(np.sum(distances < distances.min() + self.site_match_tolerance))
             hollows.setdefault(self._hollow_name(vertex, coordination), []).append(vertex)
@@ -131,7 +121,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
 
     def _distance_to_points(self, coordinate_xy: np.ndarray, points_xy: np.ndarray) -> float:
         """Distance to the nearest periodic image of any of the points."""
-        return float(cKDTree(get_in_plane_periodic_images(points_xy, self.in_plane_vectors)).query(coordinate_xy)[0])
+        return float(cKDTree(_in_plane_periodic_images(points_xy, self.in_plane_vectors)).query(coordinate_xy)[0])
 
     def get_site_name(self, coordinate_xy: List[float]) -> Optional[str]:
         """
@@ -156,7 +146,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         if name not in self.sites:
             raise ValueError(f"No '{name}' site on this surface; present: {sorted(self.sites)}")
         point = np.array(coordinate_xy[:2], dtype=float)
-        images = get_in_plane_periodic_images(np.array(self.sites[name]), self.in_plane_vectors)
+        images = _in_plane_periodic_images(np.array(self.sites[name]), self.in_plane_vectors)
         nearest = images[np.argmin(np.linalg.norm(images - point, axis=1))]
         return [float(nearest[0] - point[0]), float(nearest[1] - point[1]), 0.0]
 

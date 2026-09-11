@@ -1,5 +1,3 @@
-from typing import Final
-
 import numpy as np
 import pytest
 from mat3ra.made.material import Material, defaultMaterialConfig
@@ -11,26 +9,24 @@ from mat3ra.made.tools.analyze.crystal_site.crystal_site_analyzer import Crystal
 from mat3ra.made.tools.analyze.crystal_site.voronoi_crystal_site_analyzer import VoronoiCrystalSiteAnalyzer
 from mat3ra.made.tools.analyze.other import (
     SurfaceTypesEnum,
-    get_atom_indices_within_radius_pbc,
+    get_atom_indices_by_layer,
     get_average_interlayer_distance,
-    get_closest_site_id_from_coordinate_within_radius,
     get_surface_area,
     get_surface_atom_indices,
 )
 from mat3ra.made.tools.analyze.rdf import RadialDistributionFunction
-from mat3ra.made.tools.analyze.utils import calculate_von_mises_strain, get_in_plane_periodic_images
+from mat3ra.made.tools.analyze.utils import calculate_von_mises_strain
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
 from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.atom_placement_method_enum import (
     AtomPlacementMethodEnum,
 )
-from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
+from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.helpers import create_slab
 from mat3ra.made.tools.build_components.operations.core.combinations.enums import AdatomPlacementMethodEnum
 from unit.fixtures.nanoribbon.nanoribbon import GRAPHENE_ZIGZAG_NANORIBBON
 from unit.utils import OSPlatform, get_platform_specific_value
 
-from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
+from .fixtures.bulk import BULK_Cu, BULK_Ni_PRIMITIVE, BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
 from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
-from .fixtures.mos2 import MOS2
 from .fixtures.slab import SI_CONVENTIONAL_SLAB_001
 
 COMPARISON_PRECISION = 1e-4
@@ -225,62 +221,17 @@ def test_calculate_von_mises_strain(strain_matrix, expected_strain):
     assert np.isclose(strain_percentage, expected_strain, atol=0.01)
 
 
-def test_get_in_plane_periodic_images():
-    points_xy = np.array([[0.3, 0.7], [0.6, 0.2]])
-    vectors_2d = np.array([[3.19, 0.0], [-1.595, 2.7626]])
-    images = get_in_plane_periodic_images(points_xy, vectors_2d)
-    assert images.shape == (9 * len(points_xy), 2)
-    assert any(np.allclose(image, points_xy[0]) for image in images)
-    assert any(np.allclose(image, points_xy[1]) for image in images)
+NI111_SLAB = create_slab(
+    crystal=BULK_Ni_PRIMITIVE, miller_indices=(1, 1, 1), number_of_layers=3, vacuum=10.0, use_conventional_cell=False
+)
+CU001_SLAB = create_slab(crystal=BULK_Cu, miller_indices=(0, 0, 1), number_of_layers=1, vacuum=10.0)
 
-
-MOS2_MATERIAL: Final = Material.create(MOS2)
-MOS2_4X4: Final = create_supercell(MOS2_MATERIAL, scaling_factor=[4, 4, 1])
-
-GET_ATOM_INDICES_WITHIN_RADIUS_PBC_CASES = [
-    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 1.0, "S", [1]),
-    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 3.0, "S", [1, 2]),
-    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 0.1, "S", []),
-    (MOS2_4X4, [0.5, 0.5, 0.5], 4.5, None, 18),
+GET_ATOM_INDICES_BY_LAYER_CASES = [
+    (NI111_SLAB, [[0], [1], [2]]),
+    (CU001_SLAB, [[1, 2], [0, 3]]),
 ]
 
 
-@pytest.mark.parametrize(
-    "material, coordinate, radius, chemical_element, expected",
-    GET_ATOM_INDICES_WITHIN_RADIUS_PBC_CASES,
-)
-def test_get_atom_indices_within_radius_pbc(material, coordinate, radius, chemical_element, expected):
-    indices = get_atom_indices_within_radius_pbc(
-        material,
-        coordinate=coordinate,
-        radius=radius,
-        chemical_element=chemical_element,
-    )
-    if isinstance(expected, list):
-        assert indices == expected
-    else:
-        assert len(indices) == expected
-
-
-GET_CLOSEST_SITE_ID_FROM_COORDINATE_WITHIN_RADIUS_CASES = [
-    (MOS2_MATERIAL, [0.25, 0.75, 0.5], 1.0, "Mo", 0),
-    (MOS2_MATERIAL, [0.6, 0.3, 0.58], 1.0, "S", 2),
-]
-
-
-@pytest.mark.parametrize(
-    "material, coordinate, radius, chemical_element, expected_index",
-    GET_CLOSEST_SITE_ID_FROM_COORDINATE_WITHIN_RADIUS_CASES,
-)
-def test_get_closest_site_id_from_coordinate_within_radius(
-    material, coordinate, radius, chemical_element, expected_index
-):
-    assert (
-        get_closest_site_id_from_coordinate_within_radius(material, coordinate, radius, chemical_element)
-        == expected_index
-    )
-
-
-def test_get_closest_site_id_from_coordinate_within_radius_invalid():
-    with pytest.raises(ValueError, match=r"No Mo within 0.5 A .* nearest Mo is 1\.\d\d A away"):
-        get_closest_site_id_from_coordinate_within_radius(MOS2_MATERIAL, [0.0, 0.0, 0.5], 0.5, "Mo")
+@pytest.mark.parametrize("material, expected_layers", GET_ATOM_INDICES_BY_LAYER_CASES)
+def test_get_atom_indices_by_layer(material, expected_layers):
+    assert get_atom_indices_by_layer(material) == expected_layers
