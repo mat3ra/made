@@ -9,6 +9,7 @@ BULK_Hf2O_MCL = Materials.get_by_name_first_match("Hafnium IV Oxide, MCL")
 BULK_TiN = Materials.get_by_name_first_match("TiN")
 BULK_Ni_PRIMITIVE = Materials.get_by_name_first_match("Nickel")
 BULK_GRAPHENE = Materials.get_by_name_first_match("Graphene")
+BULK_Cu = Materials.get_by_name_first_match("Copper")
 
 BULK_Si_PRIMITIVE: Dict[str, Any] = {
     "name": "Silicon FCC",
