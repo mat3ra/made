@@ -31,12 +31,12 @@ def _in_plane_periodic_images(points_xy: np.ndarray, vectors_2d: np.ndarray) -> 
 
 class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     """
-    `sites`: one instance of each named site (atop, bridge, fcc, hcp, hollow) per home cell, as
+    `sites`: every instance of each named site (atop, bridge, fcc, hcp, hollow) in the home cell, as
     [x, y] in Angstrom. `get_site_name` and `get_displacement_to_site` resolve a point against it.
+    fcc/hcp need a layer at depth 2 below the surface; otherwise a three-fold hollow is `hollow`.
 
     Tolerances, in Angstrom: `layer_tolerance` separates layers; `site_match_tolerance` is how close
-    a point must be to count as on a site; `tie_tolerance` is the gap below which two site types
-    count as equally close.
+    a point must be to count as on a site.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -44,14 +44,13 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     surface: SurfaceTypesEnum = SurfaceTypesEnum.TOP
     layer_tolerance: float = 0.5
     site_match_tolerance: float = 0.3
-    tie_tolerance: float = 0.05
 
     @cached_property
-    def in_plane_vectors(self) -> np.ndarray:
+    def _in_plane_vectors(self) -> np.ndarray:
         return np.array(self.material.lattice.vector_arrays)[:2, :2]
 
     @cached_property
-    def layers_xy(self) -> List[np.ndarray]:
+    def _layers_xy(self) -> List[np.ndarray]:
         """In-plane coordinates of each layer, surface layer first."""
         cartesian = self.material.clone()
         cartesian.to_cartesian()
@@ -63,9 +62,8 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     @cached_property
     def sites(self) -> Dict[str, List[List[float]]]:
         """Site name -> every instance of that site in the cell, as [x, y] in Angstrom."""
-        surface_xy = self.layers_xy[0]
         sites = {
-            SurfaceSiteEnum.ATOP.value: self._wrap(surface_xy).tolist(),
+            SurfaceSiteEnum.ATOP.value: self._layers_xy[0].tolist(),
             SurfaceSiteEnum.BRIDGE.value: self._bridges().tolist(),
         }
         for name, points in self._hollows().items():
@@ -73,30 +71,30 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         return sites
 
     def _wrap(self, points_xy: np.ndarray) -> np.ndarray:
-        """Points mapped into the home cell, one instance each. A point already inside is kept as
-        rounded, not refolded, so periodic copies of the same point round to the same value and
-        merge exactly; only a point with no in-cell copy at all is brought in by modulo."""
-        fractional = np.round(points_xy @ np.linalg.inv(self.in_plane_vectors), FRACTIONAL_DECIMALS)
-        outside = ~np.all((fractional >= 0.0) & (fractional < 1.0), axis=1)
-        fractional[outside] = np.round(np.mod(fractional[outside], 1.0), FRACTIONAL_DECIMALS)
-        return np.unique(fractional, axis=0) @ self.in_plane_vectors
+        """Points mapped into the home cell, one instance each."""
+        fractional = points_xy @ np.linalg.inv(self._in_plane_vectors)
+        shift = np.floor(np.round(fractional, FRACTIONAL_DECIMALS))
+        wrapped = fractional - shift
+        key = np.round(wrapped, FRACTIONAL_DECIMALS) % 1.0
+        _, index = np.unique(key, axis=0, return_index=True)
+        return wrapped[index] @ self._in_plane_vectors
 
     @cached_property
     def _surface_voronoi(self) -> Voronoi:
-        return Voronoi(_in_plane_periodic_images(self.layers_xy[0], self.in_plane_vectors))
+        return Voronoi(_in_plane_periodic_images(self._layers_xy[0], self._in_plane_vectors))
 
     def _bridges(self) -> np.ndarray:
         """Midpoints of natural-neighbour pairs: atoms whose Voronoi cells share a ridge of real
-        length (a square net's degenerate diagonal is not a bond)."""
+        length."""
         voronoi = self._surface_voronoi
         midpoints = []
-        for (a, b), ridge in zip(voronoi.ridge_points, voronoi.ridge_vertices):
+        for (first_atom_index, second_atom_index), ridge in zip(voronoi.ridge_points, voronoi.ridge_vertices):
             degenerate = (
                 -1 in ridge or np.linalg.norm(np.diff(voronoi.vertices[ridge], axis=0)) < self.site_match_tolerance
             )
             if degenerate:
                 continue
-            midpoints.append((voronoi.points[a] + voronoi.points[b]) / 2)
+            midpoints.append((voronoi.points[first_atom_index] + voronoi.points[second_atom_index]) / 2)
         return self._wrap(np.array(midpoints))
 
     def _hollows(self) -> Dict[str, List[np.ndarray]]:
@@ -113,30 +111,22 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
             return SurfaceSiteEnum.HOLLOW.value
         for name, depth in ((SurfaceSiteEnum.HCP.value, 1), (SurfaceSiteEnum.FCC.value, 2)):
             if (
-                depth < len(self.layers_xy)
-                and self._distance_to_points(hollow_xy, self.layers_xy[depth]) < self.site_match_tolerance
+                depth < len(self._layers_xy)
+                and self._distance_to_points(hollow_xy, self._layers_xy[depth]) < self.site_match_tolerance
             ):
                 return name
         return SurfaceSiteEnum.HOLLOW.value
 
     def _distance_to_points(self, coordinate_xy: np.ndarray, points_xy: np.ndarray) -> float:
         """Distance to the nearest periodic image of any of the points."""
-        return float(cKDTree(_in_plane_periodic_images(points_xy, self.in_plane_vectors)).query(coordinate_xy)[0])
+        return float(cKDTree(_in_plane_periodic_images(points_xy, self._in_plane_vectors)).query(coordinate_xy)[0])
 
     def get_site_name(self, coordinate_xy: List[float]) -> Optional[str]:
-        """
-        The site a point sits on, within `site_match_tolerance`; None when it is on no site or two
-        site types are equally close — an ambiguous label is how an adsorbed structure gets reported
-        under the wrong registry.
-        """
+        """The site a point sits on, within `site_match_tolerance`; None when it is on no site."""
         point = np.array(coordinate_xy[:2], dtype=float)
         distances = {name: self._distance_to_points(point, np.array(points)) for name, points in self.sites.items()}
-        ranked = sorted(distances, key=lambda name: distances[name])
-        if distances[ranked[0]] > self.site_match_tolerance:
-            return None
-        if len(ranked) > 1 and distances[ranked[1]] - distances[ranked[0]] < self.tie_tolerance:
-            return None
-        return ranked[0]
+        nearest = min(distances, key=lambda name: distances[name])
+        return nearest if distances[nearest] <= self.site_match_tolerance else None
 
     def get_displacement_to_site(
         self, coordinate_xy: List[float], site_name: Union[str, SurfaceSiteEnum]
@@ -146,7 +136,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         if name not in self.sites:
             raise ValueError(f"No '{name}' site on this surface; present: {sorted(self.sites)}")
         point = np.array(coordinate_xy[:2], dtype=float)
-        images = _in_plane_periodic_images(np.array(self.sites[name]), self.in_plane_vectors)
+        images = _in_plane_periodic_images(np.array(self.sites[name]), self._in_plane_vectors)
         nearest = images[np.argmin(np.linalg.norm(images - point, axis=1))]
         return [float(nearest[0] - point[0]), float(nearest[1] - point[1]), 0.0]
 
@@ -156,7 +146,7 @@ def get_film_site_occupation(
 ) -> Dict[int, Optional[str]]:
     """
     Which named substrate site each film atom sits on — atom index -> site name, None for no site.
-    Parts are told apart by their labels, so relaxed and file-loaded interfaces work.
+    The default analyzer takes the substrate's top surface.
 
     Raises:
         ValueError: when the material carries no film-labelled or no substrate-labelled atoms.

@@ -438,8 +438,7 @@ def get_atom_indices_by_layer(material: Material, tolerance: float = 0.5) -> Lis
     """
     Atom indices grouped into layers along z, bottom layer first.
 
-    Consecutive heights closer than `tolerance` Angstrom belong to one layer, so the grouping is
-    the same whatever order the basis lists the atoms in.
+    Consecutive heights closer than `tolerance` Angstrom belong to one layer.
 
     Args:
         material: Material object.

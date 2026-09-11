@@ -20,14 +20,13 @@ from mat3ra.made.tools.build import MaterialWithBuildMetadata
 from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.atom_placement_method_enum import (
     AtomPlacementMethodEnum,
 )
-from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.helpers import create_slab
 from mat3ra.made.tools.build_components.operations.core.combinations.enums import AdatomPlacementMethodEnum
 from unit.fixtures.nanoribbon.nanoribbon import GRAPHENE_ZIGZAG_NANORIBBON
 from unit.utils import OSPlatform, get_platform_specific_value
 
-from .fixtures.bulk import BULK_Cu, BULK_Ni_PRIMITIVE, BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
+from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
 from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
-from .fixtures.slab import SI_CONVENTIONAL_SLAB_001
+from .fixtures.slab import CU001_SLAB, NI111_SLAB, SI_CONVENTIONAL_SLAB_001
 
 COMPARISON_PRECISION = 1e-4
 
@@ -220,11 +219,6 @@ def test_calculate_von_mises_strain(strain_matrix, expected_strain):
     strain_percentage = calculate_von_mises_strain(np.array(strain_matrix))
     assert np.isclose(strain_percentage, expected_strain, atol=0.01)
 
-
-NI111_SLAB = create_slab(
-    crystal=BULK_Ni_PRIMITIVE, miller_indices=(1, 1, 1), number_of_layers=3, vacuum=10.0, use_conventional_cell=False
-)
-CU001_SLAB = create_slab(crystal=BULK_Cu, miller_indices=(0, 0, 1), number_of_layers=1, vacuum=10.0)
 
 GET_ATOM_INDICES_BY_LAYER_CASES = [
     (NI111_SLAB, [[0], [1], [2]]),

@@ -1,7 +1,18 @@
 import copy
-from typing import Any, Dict
+from typing import Any, Dict, Final
 
-from .bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE  # , SI_CONVENTIONAL_CELL_FILTERED
+from mat3ra.made.material import Material
+from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.helpers import create_slab
+from mat3ra.standata.materials import Materials
+
+from .bulk import BULK_Cu, BULK_Ni_PRIMITIVE, BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE  # , SI_CONVENTIONAL_CELL_FILTERED
+
+NI111_SLAB: Final = create_slab(
+    crystal=BULK_Ni_PRIMITIVE, miller_indices=(1, 1, 1), number_of_layers=3, vacuum=10.0, use_conventional_cell=False
+)
+CU001_SLAB: Final = create_slab(crystal=BULK_Cu, miller_indices=(0, 0, 1), number_of_layers=1, vacuum=10.0)
+CU110_SLAB: Final = create_slab(crystal=BULK_Cu, miller_indices=(1, 1, 0), number_of_layers=1, vacuum=10.0)
+MOS2_MONOLAYER: Final = Material.create(Materials.get_by_name_and_categories("MoS2", "2D"))
 
 SI_SLAB_001_CONFIGURATION_FROM_PRIMITIVE = {
     "type": "SlabConfiguration",
