@@ -13,9 +13,7 @@ from ase.cluster import Octahedron as ASEOctahedron
 from ase.cluster import SimpleCubic as ASESimpleCubic
 from ase.cluster.wulff import wulff_construction as ASEWulffConstruction
 from ase.constraints import FixAtoms as ASEFixAtoms
-from ase.constraints import FixedLine as ASEFixedLine
 from ase.constraints import FixedPlane as ASEFixedPlane
-from ase.optimize import BFGS as ASEBFGS
 from pymatgen.analysis.defects.core import Interstitial as PymatgenInterstitial
 from pymatgen.analysis.defects.core import Substitution as PymatgenSubstitution
 from pymatgen.analysis.defects.core import Vacancy as PymatgenVacancy
