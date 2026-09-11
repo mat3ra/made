@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 
 import numpy as np
 from mat3ra.made.material import Material
@@ -46,6 +46,8 @@ def relax_material(
 
     Holding the deepest substrate layers fixed is the usual slab protocol (they stand in for bulk);
     z-only motion keeps an adsorbed film in its registry, which an unconstrained relaxation can lose.
+    Calculators that install their own constraints, such as FilmSubstrateDistanceASECalculator,
+    replace the ones set here.
 
     Args:
         material: The structure to relax; labels and build metadata are preserved in the result.
@@ -58,35 +60,16 @@ def relax_material(
 
     Returns:
         The relaxed material, same type and units as the input.
+
+    Raises:
+        RuntimeError: when the optimizer stops before the forces fall below `fmax`.
     """
     atoms = to_ase(material)
     constraints = _build_constraints(len(atoms), fixed_atom_indices, along_z_only)
     if constraints:
         atoms.set_constraint(constraints)
     atoms.calc = calculator
-    ASEBFGS(atoms, logfile=logfile).run(fmax=fmax, steps=max_steps)
+    converged = ASEBFGS(atoms, logfile=logfile).run(fmax=fmax, steps=max_steps)
+    if not converged:
+        raise RuntimeError(f"Relaxation of '{material.name}' did not reach fmax={fmax} eV/A within {max_steps} steps.")
     return _with_positions(material, atoms.positions)
-
-
-def get_atom_indices_in_bottom_layers(
-    material: Material,
-    layer_count: int,
-    atom_indices: Optional[Sequence[int]] = None,
-    tolerance: float = 0.5,
-) -> List[int]:
-    """
-    Indices of the atoms in the `layer_count` lowest layers, among `atom_indices` (all atoms by
-    default). Atoms within `tolerance` Angstrom in height belong to one layer.
-    """
-    cartesian = material.clone()
-    cartesian.to_cartesian()
-    heights = np.array(cartesian.coordinates_array)[:, 2]
-    candidates = list(range(len(heights))) if atom_indices is None else list(atom_indices)
-    layer_tops: List[float] = []
-    for z in sorted(heights[i] for i in candidates):
-        if not layer_tops or z - layer_tops[-1] > tolerance:
-            layer_tops.append(z)
-        else:
-            layer_tops[-1] = z
-    cutoff = layer_tops[min(layer_count, len(layer_tops)) - 1] + tolerance / 2
-    return [i for i in candidates if heights[i] <= cutoff]

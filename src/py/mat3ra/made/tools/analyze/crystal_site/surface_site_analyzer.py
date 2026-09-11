@@ -1,10 +1,15 @@
 from enum import Enum
-from typing import Dict, List, Optional
+from functools import cached_property
+from typing import Dict, List, Optional, Union
 
 import numpy as np
-from scipy.spatial import Delaunay
+from scipy.spatial import Voronoi, cKDTree
 
 from .. import BaseMaterialAnalyzer
+from ..other import get_atom_indices_by_layer
+
+PERIODIC_SHIFTS = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
+FRACTIONAL_DECIMALS = 4
 
 
 class SurfaceSiteEnum(str, Enum):
@@ -15,95 +20,122 @@ class SurfaceSiteEnum(str, Enum):
     HOLLOW = "hollow"
 
 
-def _tile_periodic_images(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
-    shifts = [i * vectors_2d[0] + j * vectors_2d[1] for i in (-1, 0, 1) for j in (-1, 0, 1)]
-    return np.vstack([points_xy + shift for shift in shifts])
-
-
-def _triangle_edges(corners: np.ndarray) -> List[tuple]:
-    a, b, c = corners
-    return [(a, b), (b, c), (a, c)]
+def _tile(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
+    """The 3x3 periodic images, home cell included, so sites across a cell boundary are seen."""
+    return np.vstack([points_xy + i * vectors_2d[0] + j * vectors_2d[1] for i, j in PERIODIC_SHIFTS])
 
 
 class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     """
-    High-symmetry adsorption sites of the top surface of a slab, in cartesian in-plane coordinates.
+    High-symmetry adsorption sites of a slab's top surface, as cartesian in-plane coordinates.
 
-    Sites are found geometrically from the surface layer alone, so any lattice and Miller index whose
-    surface is flat within `layer_tolerance` works. A three-fold hollow is named by the subsurface
-    layer beneath it: "hcp" when the second layer's atom lies under it, "fcc" when the third layer's
-    does, "hollow" when neither.
+    Sites come from the surface layer's geometry alone: "atop" over a surface atom, "bridge" at the
+    midpoint of two nearest-neighbour surface atoms, and hollows at the points equidistant from
+    three or more surface atoms (the Voronoi vertices of the surface net). A three-fold hollow is
+    "hcp" when an atom of the second layer lies beneath it and "fcc" when one of the third layer
+    does; any other hollow, the four-fold hollow of a square net included, is "hollow".
+
+    Tolerances, in Angstrom: `layer_tolerance` separates layers (interlayer spacings exceed 1.5 in
+    metals; 0.5 absorbs relaxation buckling); `site_match_tolerance` is how close a point must be
+    to count as on a site, and how close a subsurface atom must be to name a hollow (a fraction of
+    the ~1.4 site-to-site distance on Ni(111)); `tie_tolerance` is the distance difference below
+    which two site types count as equally close (numerical noise, far below any real separation).
+
+    Extends BaseMaterialAnalyzer rather than CrystalSiteAnalyzer or SlabMaterialAnalyzer: it
+    describes the whole surface, not one reference coordinate, and works on a plain Material —
+    a relaxed or file-loaded slab carries no build metadata.
     """
 
     layer_tolerance: float = 0.5
     site_match_tolerance: float = 0.3
     tie_tolerance: float = 0.05
 
-    @property
+    @cached_property
     def in_plane_vectors(self) -> np.ndarray:
         return np.array(self.material.lattice.vector_arrays)[:2, :2]
 
-    @property
-    def layers(self) -> List[np.ndarray]:
-        """Cartesian coordinates grouped into layers, top surface first."""
+    @cached_property
+    def layers_xy(self) -> List[np.ndarray]:
+        """In-plane coordinates of each layer, top surface first."""
         cartesian = self.material.clone()
         cartesian.to_cartesian()
         coordinates = np.array(cartesian.coordinates_array)
-        layers: List[np.ndarray] = []
-        for z in sorted(coordinates[:, 2], reverse=True):
-            if any(abs(z - layer[0][2]) < self.layer_tolerance for layer in layers):
-                continue
-            layers.append(coordinates[np.abs(coordinates[:, 2] - z) < self.layer_tolerance])
-        return layers
+        layers = get_atom_indices_by_layer(self.material, self.layer_tolerance)
+        return [coordinates[indices][:, :2] for indices in reversed(layers)]
 
-    @property
-    def sites(self) -> Dict[str, List[float]]:
-        """Site name -> [x, y] in Angstrom; one representative per site type present."""
-        layers = self.layers
-        surface_xy = layers[0][:, :2]
-        tiled = _tile_periodic_images(surface_xy, self.in_plane_vectors)
-        triangles = Delaunay(tiled).simplices
-        centroids = [tiled[corners].mean(axis=0) for corners in triangles]
-        midpoints = [tiled[list(edge)].mean(axis=0) for corners in triangles for edge in _triangle_edges(corners)]
-        atop = surface_xy[0]
-        sites: Dict[str, List[float]] = {SurfaceSiteEnum.ATOP.value: atop.tolist()}
-        for point in sorted(midpoints, key=lambda p: np.linalg.norm(p - atop)):
-            sites.setdefault(SurfaceSiteEnum.BRIDGE.value, point.tolist())
-        for point in sorted(centroids, key=lambda p: np.linalg.norm(p - atop)):
-            sites.setdefault(self._hollow_name(point, layers), point.tolist())
+    @cached_property
+    def sites(self) -> Dict[str, List[List[float]]]:
+        """Site name -> every instance of that site in the cell, as [x, y] in Angstrom."""
+        surface_xy = self.layers_xy[0]
+        sites = {
+            SurfaceSiteEnum.ATOP.value: self._inside_home_cell(surface_xy).tolist(),
+            SurfaceSiteEnum.BRIDGE.value: self._bridges(surface_xy).tolist(),
+        }
+        for name, points in self._hollows(surface_xy).items():
+            sites[name] = np.array(points).tolist()
         return sites
 
-    def _hollow_name(self, hollow_xy: np.ndarray, layers: List[np.ndarray]) -> str:
+    def _inside_home_cell(self, points_xy: np.ndarray) -> np.ndarray:
+        """The unique points whose fractional coordinates lie in [0, 1)."""
+        fractional = np.round(points_xy @ np.linalg.inv(self.in_plane_vectors), FRACTIONAL_DECIMALS)
+        inside = np.all((fractional >= 0.0) & (fractional < 1.0), axis=1)
+        return np.unique(fractional[inside], axis=0) @ self.in_plane_vectors
+
+    def _bridges(self, surface_xy: np.ndarray) -> np.ndarray:
+        tiled = _tile(surface_xy, self.in_plane_vectors)
+        tree = cKDTree(tiled)
+        nearest_neighbour_distance = tree.query(tiled, k=2)[0][:, 1].min()
+        pairs = tree.query_pairs(nearest_neighbour_distance + self.site_match_tolerance)
+        midpoints = np.array([(tiled[a] + tiled[b]) / 2 for a, b in pairs])
+        return self._inside_home_cell(midpoints)
+
+    def _hollows(self, surface_xy: np.ndarray) -> Dict[str, List[np.ndarray]]:
+        tiled = _tile(surface_xy, self.in_plane_vectors)
+        hollows: Dict[str, List[np.ndarray]] = {}
+        for vertex in self._inside_home_cell(Voronoi(tiled).vertices):
+            distances = np.linalg.norm(tiled - vertex, axis=1)
+            coordination = int(np.sum(distances < distances.min() + self.site_match_tolerance))
+            hollows.setdefault(self._hollow_name(vertex, coordination), []).append(vertex)
+        return hollows
+
+    def _hollow_name(self, hollow_xy: np.ndarray, coordination: int) -> str:
+        if coordination != 3:
+            return SurfaceSiteEnum.HOLLOW.value
         for name, depth in ((SurfaceSiteEnum.HCP.value, 1), (SurfaceSiteEnum.FCC.value, 2)):
-            if depth >= len(layers):
-                continue
-            images = _tile_periodic_images(layers[depth][:, :2], self.in_plane_vectors)
-            if np.linalg.norm(images - hollow_xy, axis=1).min() < self.site_match_tolerance:
+            if (
+                depth < len(self.layers_xy)
+                and self._distance_to_points(hollow_xy, self.layers_xy[depth]) < self.site_match_tolerance
+            ):
                 return name
         return SurfaceSiteEnum.HOLLOW.value
 
-    def _distance_to_site(self, coordinate_xy: np.ndarray, site_xy: List[float]) -> float:
-        images = _tile_periodic_images(np.array([site_xy]), self.in_plane_vectors)
-        return float(np.linalg.norm(images - coordinate_xy, axis=1).min())
+    def _distance_to_points(self, coordinate_xy: np.ndarray, points_xy: np.ndarray) -> float:
+        """Distance to the nearest periodic image of any of the points."""
+        return float(cKDTree(_tile(points_xy, self.in_plane_vectors)).query(coordinate_xy)[0])
 
     def get_site_name(self, coordinate_xy: List[float]) -> Optional[str]:
         """
-        The named site a point sits on, or None when two sites are equally close.
-
-        None rather than a guess: an ambiguous label is how a structure gets reported under the
-        wrong registry.
+        The site a point sits on, within `site_match_tolerance`; None when it is on no site or two
+        site types are equally close — an ambiguous label is how an adsorbed structure gets reported
+        under the wrong registry.
         """
-        point = np.array(coordinate_xy[:2])
-        distances = {name: self._distance_to_site(point, site) for name, site in self.sites.items()}
-        ordered = sorted(distances.values())
-        if len(ordered) > 1 and ordered[1] - ordered[0] < self.tie_tolerance:
+        point = np.array(coordinate_xy[:2], dtype=float)
+        distances = {name: self._distance_to_points(point, np.array(points)) for name, points in self.sites.items()}
+        ranked = sorted(distances, key=lambda name: distances[name])
+        if distances[ranked[0]] > self.site_match_tolerance:
             return None
-        return min(distances, key=lambda name: distances[name])
+        if len(ranked) > 1 and distances[ranked[1]] - distances[ranked[0]] < self.tie_tolerance:
+            return None
+        return ranked[0]
 
-    def get_displacement_to_site(self, coordinate_xy: List[float], site_name: str) -> List[float]:
-        """The in-plane shift, as a 3D vector, that moves a point onto the named site."""
-        site = np.array(self.sites[site_name])
-        point = np.array(coordinate_xy[:2])
-        images = _tile_periodic_images(np.array([site]), self.in_plane_vectors)
+    def get_displacement_to_site(
+        self, coordinate_xy: List[float], site_name: Union[str, SurfaceSiteEnum]
+    ) -> List[float]:
+        """The in-plane shift, as a 3D vector, that moves a point onto the nearest instance of a site."""
+        name = SurfaceSiteEnum(site_name).value
+        if name not in self.sites:
+            raise ValueError(f"No '{name}' site on this surface; present: {sorted(self.sites)}")
+        point = np.array(coordinate_xy[:2], dtype=float)
+        images = _tile(np.array(self.sites[name]), self.in_plane_vectors)
         nearest = images[np.argmin(np.linalg.norm(images - point, axis=1))]
         return [float(nearest[0] - point[0]), float(nearest[1] - point[1]), 0.0]

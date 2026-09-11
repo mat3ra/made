@@ -432,3 +432,54 @@ def get_local_extremum_atom_index(
         extremum_z_atom = min(z_values, key=lambda item: item[1])
 
     return extremum_z_atom[0]
+
+
+def get_atom_indices_by_layer(material: Material, tolerance: float = 0.5) -> List[List[int]]:
+    """
+    Atom indices grouped into layers along z, bottom layer first.
+
+    Consecutive heights closer than `tolerance` Angstrom belong to one layer, so the grouping is
+    the same whatever order the basis lists the atoms in.
+
+    Args:
+        material: Material object.
+        tolerance: Height gap, in Angstrom, that separates two layers.
+    """
+    cartesian = material.clone()
+    cartesian.to_cartesian()
+    heights = np.array(cartesian.coordinates_array)[:, 2]
+    layers: List[List[int]] = []
+    previous_height: Optional[float] = None
+    for index in np.argsort(heights, kind="stable"):
+        if previous_height is None or heights[index] - previous_height > tolerance:
+            layers.append([])
+        layers[-1].append(int(index))
+        previous_height = float(heights[index])
+    return layers
+
+
+def get_atom_indices_in_bottom_layers(
+    material: Material,
+    layer_count: int,
+    atom_indices: Optional[List[int]] = None,
+    tolerance: float = 0.5,
+) -> List[int]:
+    """
+    Indices of the atoms in the `layer_count` lowest layers, restricted to `atom_indices` when
+    given — e.g. the substrate's, to hold its deepest layers fixed during a relaxation.
+
+    Args:
+        material: Material object.
+        layer_count: How many layers to take, counting from the bottom.
+        atom_indices: Restrict the selection to these atoms; all atoms when None.
+        tolerance: Height gap, in Angstrom, that separates two layers.
+    """
+    if layer_count < 1:
+        raise ValueError("layer_count must be at least 1")
+    selected = None if atom_indices is None else set(atom_indices)
+    layers = [
+        [index for index in layer if selected is None or index in selected]
+        for layer in get_atom_indices_by_layer(material, tolerance)
+    ]
+    occupied = [layer for layer in layers if layer]
+    return sorted(index for layer in occupied[:layer_count] for index in layer)
