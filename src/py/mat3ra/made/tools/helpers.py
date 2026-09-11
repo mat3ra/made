@@ -1,5 +1,12 @@
 # Analyzers
+from .analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer, get_film_site_occupation
 from .analyze.lattice import get_material_with_conventional_lattice, get_material_with_primitive_lattice
+from .analyze.other import (
+    get_atom_indices_by_layer,
+    get_atom_indices_in_bottom_layers,
+    get_atom_indices_within_radius_of_coordinate,
+    get_closest_site_id_within_radius,
+)
 
 # Defective Structures
 from .build.compound_pristine_structures.two_dimensional.heterostructure import create_heterostructure
@@ -23,6 +30,7 @@ from .build.compound_pristine_structures.two_dimensional.interface.zsl.helpers i
 
 # Defective Structures
 from .build.defective_structures.one_dimensional.grain_boundary_linear.helpers import create_grain_boundary_linear
+from .build.defective_structures.three_dimensional.solid_solution.helpers import create_solid_solution
 from .build.defective_structures.two_dimensional.adatom.helpers import (
     create_defect_adatom,
     create_multiple_adatom_defects,
@@ -42,7 +50,6 @@ from .build.defective_structures.zero_dimensional.point_defect.substitutional.he
 )
 from .build.defective_structures.zero_dimensional.point_defect.types import PointDefectDict
 from .build.defective_structures.zero_dimensional.point_defect.vacancy.helpers import create_defect_point_vacancy
-from .build.defective_structures.three_dimensional.solid_solution.helpers import create_solid_solution
 
 # Pristine Structures
 from .build.pristine_structures.three_dimensional.ideal_crystal.helpers import create_monolayer
@@ -89,6 +96,7 @@ from .build_components.operations.core.modifications.perturb.helpers import crea
 
 # Entities
 from .entities.coordinate import CoordinateCondition
+from .modify import interface_displace_film_to_site
 
 __all__ = [
     # Crystal and related analyzer functions
@@ -148,6 +156,13 @@ __all__ = [
     "get_coordination_numbers_distribution",
     # Utility Functions
     "get_optimal_film_displacement",
+    "SurfaceSiteAnalyzer",
+    "get_film_site_occupation",
+    "get_atom_indices_by_layer",
+    "get_atom_indices_in_bottom_layers",
+    "get_atom_indices_within_radius_of_coordinate",
+    "get_closest_site_id_within_radius",
+    "interface_displace_film_to_site",
     # Type Definitions
     "AdatomDefectDict",
     "PointDefectDict",

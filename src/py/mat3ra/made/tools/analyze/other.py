@@ -8,7 +8,7 @@ from ..build.processed_structures.two_dimensional.passivation.enums import Surfa
 from ..convert import decorator_convert_material_args_kwargs_to_atoms, to_pymatgen
 from ..third_party import ASEAtoms, PymatgenIStructure
 from ..utils import decorator_convert_position_to_coordinate
-from .utils import decorator_handle_periodic_boundary_conditions
+from .utils import decorator_handle_periodic_boundary_conditions, minimum_image_distances
 
 
 @decorator_convert_material_args_kwargs_to_atoms
@@ -483,3 +483,72 @@ def get_atom_indices_in_bottom_layers(
     ]
     occupied = [layer for layer in layers if layer]
     return sorted(index for layer in occupied[:layer_count] for index in layer)
+
+
+def get_distances_from_coordinate(
+    material: Material, coordinate: List[float], use_cartesian_coordinates: bool = False
+) -> np.ndarray:
+    """Distance from a point to every atom, in Angstrom, under the minimum-image convention."""
+    crystal = material.clone()
+    crystal.to_crystal()
+    vectors = np.array(material.lattice.vector_arrays, dtype=float)
+    point = np.array(coordinate, dtype=float)
+    if use_cartesian_coordinates:
+        point = point @ np.linalg.inv(vectors)
+    fractional = np.vstack([point, np.array(crystal.coordinates_array, dtype=float)])
+    return minimum_image_distances(fractional, vectors)[0, 1:]
+
+
+def get_atom_indices_within_radius_of_coordinate(
+    material: Material,
+    coordinate: List[float],
+    radius: float,
+    chemical_element: Optional[str] = None,
+    use_cartesian_coordinates: bool = False,
+) -> List[int]:
+    """
+    Indices of the atoms (of `chemical_element`, when given) within `radius` Angstrom of a point,
+    nearest first, periodic images included — the way a person points at an atom: "the Mo near
+    (0.25, 0.25, 0.5)". Unlike `get_atom_indices_within_radius_pbc`, the sphere is centred on the
+    coordinate itself, not on the atom closest to it.
+
+    Args:
+        material: Material object.
+        coordinate: Centre of the search, crystal unless `use_cartesian_coordinates`.
+        radius: Search radius, in Angstrom.
+        chemical_element: Restrict to this element.
+        use_cartesian_coordinates: Whether `coordinate` is cartesian.
+    """
+    distances = get_distances_from_coordinate(material, coordinate, use_cartesian_coordinates)
+    elements = material.basis.elements.values
+    candidates = [i for i, e in enumerate(elements) if chemical_element is None or e == chemical_element]
+    return sorted((i for i in candidates if distances[i] <= radius), key=lambda i: distances[i])
+
+
+def get_closest_site_id_within_radius(
+    material: Material,
+    coordinate: List[float],
+    radius: float,
+    chemical_element: Optional[str] = None,
+    use_cartesian_coordinates: bool = False,
+) -> int:
+    """
+    The one atom (of `chemical_element`) within `radius` Angstrom of a point; the nearest when
+    several qualify.
+
+    Raises:
+        ValueError: when none qualifies, stating how far the nearest atom of that element is.
+    """
+    found = get_atom_indices_within_radius_of_coordinate(
+        material, coordinate, radius, chemical_element, use_cartesian_coordinates
+    )
+    if found:
+        return found[0]
+    distances = get_distances_from_coordinate(material, coordinate, use_cartesian_coordinates)
+    elements = material.basis.elements.values
+    candidates = [i for i, e in enumerate(elements) if chemical_element is None or e == chemical_element]
+    what = chemical_element or "atom"
+    if not candidates:
+        raise ValueError(f"No {what} in the material")
+    nearest = min(distances[i] for i in candidates)
+    raise ValueError(f"No {what} within {radius} A of {list(coordinate)}; the nearest {what} is {nearest:.2f} A away")

@@ -3,9 +3,11 @@ from functools import cached_property
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+from mat3ra.made.material import Material
 from pydantic import ConfigDict
 from scipy.spatial import Voronoi, cKDTree
 
+from ...convert.interface_parts_enum import InterfacePartsEnum
 from .. import BaseMaterialAnalyzer
 from ..other import get_atom_indices_by_layer
 
@@ -31,21 +33,18 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     High-symmetry adsorption sites of a slab's top surface, as cartesian in-plane coordinates.
 
     Sites come from the surface layer's geometry alone: "atop" over a surface atom, "bridge" at the
-    midpoint of two nearest-neighbour surface atoms, and hollows at the points equidistant from
+    midpoint of two natural-neighbour surface atoms, and hollows at the points equidistant from
     three or more surface atoms (the Voronoi vertices of the surface net). A three-fold hollow is
     "hcp" when an atom of the second layer lies beneath it and "fcc" when one of the third layer
-    does; any other hollow, the four-fold hollow of a square net included, is "hollow".
+    does; any other hollow — a four-fold hollow, or an hcp(0001) hollow over an empty column — is
+    "hollow". Any lattice and Miller index whose surface is flat within `layer_tolerance` works.
 
     Tolerances, in Angstrom: `layer_tolerance` separates layers (interlayer spacings exceed 1.5 in
-    metals; 0.5 absorbs relaxation buckling); `site_match_tolerance` is how close a point must be
-    to count as on a site, and how close a subsurface atom must be to name a hollow (a fraction of
-    the ~1.4 site-to-site distance on Ni(111)); `tie_tolerance` is the distance difference below
-    which two site types count as equally close (numerical noise, far below any real separation).
+    metals; 0.5 absorbs relaxation buckling); `site_match_tolerance` is how close a point must be to
+    count as on a site, and how close a subsurface atom must be to name a hollow; `tie_tolerance` is
+    the distance difference below which two site types count as equally close.
 
-    Extends BaseMaterialAnalyzer rather than CrystalSiteAnalyzer or SlabMaterialAnalyzer: it
-    describes the whole surface, not one reference coordinate, and works on a plain Material —
-    a relaxed or file-loaded slab carries no build metadata. Frozen, because the sites are computed
-    once and cached; a different tolerance means a different analyzer.
+    Frozen: sites are computed once and cached; a different tolerance is a different analyzer.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -65,23 +64,35 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         cartesian.to_cartesian()
         coordinates = np.array(cartesian.coordinates_array)
         layers = get_atom_indices_by_layer(self.material, self.layer_tolerance)
-        return [coordinates[indices][:, :2] for indices in reversed(layers)]
+        return [self._wrap_points(coordinates[indices][:, :2]) for indices in reversed(layers)]
 
     @cached_property
     def sites(self) -> Dict[str, List[List[float]]]:
         """Site name -> every instance of that site in the cell, as [x, y] in Angstrom."""
         surface_xy = self.layers_xy[0]
         sites = {
-            SurfaceSiteEnum.ATOP.value: self._inside_home_cell(surface_xy).tolist(),
-            SurfaceSiteEnum.BRIDGE.value: self._bridges(surface_xy).tolist(),
+            SurfaceSiteEnum.ATOP.value: self._wrap_into_cell(surface_xy).tolist(),
+            SurfaceSiteEnum.BRIDGE.value: self._bridges().tolist(),
         }
-        for name, points in self._hollows(surface_xy).items():
+        for name, points in self._hollows().items():
             sites[name] = np.array(points).tolist()
         return sites
 
+    def _fractional(self, points_xy: np.ndarray) -> np.ndarray:
+        return np.round(points_xy @ np.linalg.inv(self.in_plane_vectors), FRACTIONAL_DECIMALS)
+
+    def _wrap_points(self, points_xy: np.ndarray) -> np.ndarray:
+        """Points mapped into the home cell, so the periodic tiling is always centred on it."""
+        return (np.mod(self._fractional(points_xy), 1.0) % 1.0) @ self.in_plane_vectors
+
+    def _wrap_into_cell(self, points_xy: np.ndarray) -> np.ndarray:
+        """Lattice-periodic points (atoms) mapped into the home cell, one instance each."""
+        fractional = np.mod(self._fractional(points_xy), 1.0)
+        return np.unique(np.round(fractional, FRACTIONAL_DECIMALS) % 1.0, axis=0) @ self.in_plane_vectors
+
     def _inside_home_cell(self, points_xy: np.ndarray) -> np.ndarray:
-        """The unique points whose fractional coordinates lie in [0, 1)."""
-        fractional = np.round(points_xy @ np.linalg.inv(self.in_plane_vectors), FRACTIONAL_DECIMALS)
+        """Derived points (from the 3x3 tiling) that fall in the home cell, one instance each."""
+        fractional = self._fractional(points_xy)
         inside = np.all((fractional >= 0.0) & (fractional < 1.0), axis=1)
         return np.unique(fractional[inside], axis=0) @ self.in_plane_vectors
 
@@ -89,19 +100,22 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     def _surface_voronoi(self) -> Voronoi:
         return Voronoi(_tile(self.layers_xy[0], self.in_plane_vectors))
 
-    def _bridges(self, surface_xy: np.ndarray) -> np.ndarray:
-        """Midpoints of natural-neighbour pairs — atoms whose Voronoi cells share a ridge of real
-        length; a degenerate ridge (a square net's diagonal) is not a bond."""
+    def _bridges(self) -> np.ndarray:
+        """Midpoints of natural-neighbour pairs: atoms whose Voronoi cells share a ridge of real
+        length (a square net's degenerate diagonal is not a bond)."""
         voronoi = self._surface_voronoi
         midpoints = []
         for (a, b), ridge in zip(voronoi.ridge_points, voronoi.ridge_vertices):
-            if -1 in ridge or np.linalg.norm(np.diff(voronoi.vertices[ridge], axis=0)) < self.site_match_tolerance:
+            degenerate = (
+                -1 in ridge or np.linalg.norm(np.diff(voronoi.vertices[ridge], axis=0)) < self.site_match_tolerance
+            )
+            if degenerate:
                 continue
             midpoints.append((voronoi.points[a] + voronoi.points[b]) / 2)
         return self._inside_home_cell(np.array(midpoints))
 
-    def _hollows(self, surface_xy: np.ndarray) -> Dict[str, List[np.ndarray]]:
-        tiled = _tile(surface_xy, self.in_plane_vectors)
+    def _hollows(self) -> Dict[str, List[np.ndarray]]:
+        tiled = self._surface_voronoi.points
         hollows: Dict[str, List[np.ndarray]] = {}
         for vertex in self._inside_home_cell(self._surface_voronoi.vertices):
             distances = np.linalg.norm(tiled - vertex, axis=1)
@@ -150,3 +164,23 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         images = _tile(np.array(self.sites[name]), self.in_plane_vectors)
         nearest = images[np.argmin(np.linalg.norm(images - point, axis=1))]
         return [float(nearest[0] - point[0]), float(nearest[1] - point[1]), 0.0]
+
+
+def get_film_site_occupation(
+    interface: Material, analyzer: Optional[SurfaceSiteAnalyzer] = None
+) -> Dict[int, Optional[str]]:
+    """
+    Which named substrate site each film atom sits on — atom index -> site name, None for no site.
+    Parts are told apart by their labels, so relaxed and file-loaded interfaces work.
+    """
+    if analyzer is None:
+        substrate = interface.clone()
+        substrate.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
+        analyzer = SurfaceSiteAnalyzer(material=substrate)
+    cartesian = interface.clone()
+    cartesian.to_cartesian()
+    xy = np.array(cartesian.coordinates_array)[:, :2]
+    labels = interface.basis.labels.values
+    return {
+        i: analyzer.get_site_name(xy[i]) for i, label in enumerate(labels) if label == InterfacePartsEnum.FILM.value
+    }

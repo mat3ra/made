@@ -1,4 +1,5 @@
-from typing import Callable, List, Literal, Optional, Tuple, Union
+from itertools import product
+from typing import Callable, List, Literal, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from mat3ra.made.material import Material
@@ -625,3 +626,69 @@ def interface_get_part(
     interface_part_material = interface.clone()
     interface_part_material.basis.filter_atoms_by_labels([part.value])
     return interface_part_material
+
+
+SITE_NEIGHBOUR_STRETCH = (
+    1.3  # substrate atoms farther apart than this times the layer's nearest-neighbour distance do not form a site
+)
+
+
+def _periodic_shifts_2d(vectors_2d: np.ndarray) -> np.ndarray:
+    return np.array([i * vectors_2d[0] + j * vectors_2d[1] for i in (-1, 0, 1) for j in (-1, 0, 1)])
+
+
+def _nearest_image_2d(point_xy: np.ndarray, reference_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
+    images = point_xy + _periodic_shifts_2d(vectors_2d)
+    return images[np.argmin(np.linalg.norm(images - reference_xy, axis=1))]
+
+
+def _compact_images_2d(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
+    """One periodic image per point, chosen so the set is as tight as possible — the images that
+    together form a site, not the ones that each happen to be nearest to the first atom."""
+    if len(points_xy) == 1:
+        return points_xy
+    shifts = _periodic_shifts_2d(vectors_2d)
+    best, best_spread = points_xy, np.inf
+    for choice in product(range(len(shifts)), repeat=len(points_xy) - 1):
+        images = np.vstack([points_xy[0], points_xy[1:] + shifts[list(choice)]])
+        spread = max(np.linalg.norm(a - b) for k, a in enumerate(images) for b in images[k + 1 :])
+        if spread < best_spread:
+            best, best_spread = images, spread
+    return best
+
+
+def _nearest_neighbour_distance_2d(positions: np.ndarray, atom: int, vectors_2d: np.ndarray) -> float:
+    same_layer = [i for i in range(len(positions)) if i != atom and abs(positions[i, 2] - positions[atom, 2]) < 0.5]
+    shifts = _periodic_shifts_2d(vectors_2d)
+    return float(min(np.linalg.norm(positions[i, :2] + s - positions[atom, :2]) for i in same_layer for s in shifts))
+
+
+def interface_displace_film_to_site(interface: Material, film_atom: int, substrate_atoms: Sequence[int]) -> Material:
+    """
+    Translate the film so one film atom sits over one substrate atom (atop), the midpoint of two
+    (bridge) or the centre of three (hollow). Indices are the interface's own, as a viewer shows
+    them; the rest of the film follows rigidly and nothing rotates.
+
+    Raises:
+        ValueError: when the indices are not film / substrate atoms, or the chosen substrate atoms
+            are not neighbours of one another (their centre would not be a site).
+    """
+    labels = interface.basis.labels.values
+    if labels[film_atom] != InterfacePartsEnum.FILM.value:
+        raise ValueError(f"Atom {film_atom} is not in the film")
+    if any(labels[i] != InterfacePartsEnum.SUBSTRATE.value for i in substrate_atoms):
+        raise ValueError(f"Not all of {list(substrate_atoms)} are substrate atoms")
+    cartesian = interface.clone()
+    cartesian.to_cartesian()
+    positions = np.array(cartesian.coordinates_array)
+    vectors_2d = np.array(interface.lattice.vector_arrays)[:2, :2]
+    chosen = _compact_images_2d(positions[list(substrate_atoms), :2], vectors_2d)
+    if len(chosen) > 1:
+        gaps = [np.linalg.norm(a - b) for k, a in enumerate(chosen) for b in chosen[k + 1 :]]
+        nearest = _nearest_neighbour_distance_2d(positions, substrate_atoms[0], vectors_2d)
+        if max(gaps) > SITE_NEIGHBOUR_STRETCH * nearest or min(gaps) < 1e-6:
+            distances = ", ".join(f"{gap:.2f}" for gap in gaps)
+            raise ValueError(f"Substrate atoms {list(substrate_atoms)} are not one site's neighbours ({distances} A)")
+    target = chosen.mean(axis=0)
+    shift = target - _nearest_image_2d(positions[film_atom, :2], target, vectors_2d)
+    return interface_displace_part(interface, displacement=[float(shift[0]), float(shift[1]), 0.0])

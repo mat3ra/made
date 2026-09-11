@@ -4,10 +4,10 @@ from typing import Final
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
-from pydantic import ValidationError
 from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from pydantic import ValidationError
 from unit.fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
 
 
@@ -21,6 +21,14 @@ def cartesian_xy(config: dict, atom_index: int) -> np.ndarray:
     material = Material.create(config)
     material.to_cartesian()
     return np.array(material.coordinates_array[atom_index][:2])
+
+
+def shifted_by_one_cell(config: dict) -> dict:
+    """The same substrate with every atom moved by +1 along a — positions on and past the boundary."""
+    moved = copy.deepcopy(config)
+    for item in moved["basis"]["coordinates"]:
+        item["value"] = [item["value"][0] + 1.0, item["value"][1], item["value"][2]]
+    return moved
 
 
 def reversed_basis(config: dict) -> dict:
@@ -134,3 +142,9 @@ def test_rectangular_net_keeps_both_bridges():
 def test_analyzer_is_frozen_because_sites_are_cached():
     with pytest.raises(ValidationError):
         ANALYZER.site_match_tolerance = 1.0
+
+
+def test_atoms_on_or_past_the_cell_boundary_still_count():
+    analyzer = SurfaceSiteAnalyzer(material=substrate_of(shifted_by_one_cell(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)))
+    assert site_counts(analyzer) == SITE_COUNTS_1X1
+    assert analyzer.get_site_name(CARBON_ATOP_XY) == "atop"

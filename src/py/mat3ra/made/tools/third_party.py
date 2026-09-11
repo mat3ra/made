@@ -41,8 +41,6 @@ __all__ = [
     "ASECalculatorEMT",
     "ASEFixAtoms",
     "ASEFixedPlane",
-    "ASEFixedLine",
-    "ASEBFGS",
     "ase_all_changes",
     "PymatgenLattice",
     "PymatgenStructure",
