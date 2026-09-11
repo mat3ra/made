@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import Dict, List, Optional, Union
 
 import numpy as np
+from pydantic import ConfigDict
 from scipy.spatial import Voronoi, cKDTree
 
 from .. import BaseMaterialAnalyzer
@@ -43,8 +44,11 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
 
     Extends BaseMaterialAnalyzer rather than CrystalSiteAnalyzer or SlabMaterialAnalyzer: it
     describes the whole surface, not one reference coordinate, and works on a plain Material —
-    a relaxed or file-loaded slab carries no build metadata.
+    a relaxed or file-loaded slab carries no build metadata. Frozen, because the sites are computed
+    once and cached; a different tolerance means a different analyzer.
     """
+
+    model_config = ConfigDict(frozen=True)
 
     layer_tolerance: float = 0.5
     site_match_tolerance: float = 0.3
@@ -81,18 +85,25 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         inside = np.all((fractional >= 0.0) & (fractional < 1.0), axis=1)
         return np.unique(fractional[inside], axis=0) @ self.in_plane_vectors
 
+    @cached_property
+    def _surface_voronoi(self) -> Voronoi:
+        return Voronoi(_tile(self.layers_xy[0], self.in_plane_vectors))
+
     def _bridges(self, surface_xy: np.ndarray) -> np.ndarray:
-        tiled = _tile(surface_xy, self.in_plane_vectors)
-        tree = cKDTree(tiled)
-        nearest_neighbour_distance = tree.query(tiled, k=2)[0][:, 1].min()
-        pairs = tree.query_pairs(nearest_neighbour_distance + self.site_match_tolerance)
-        midpoints = np.array([(tiled[a] + tiled[b]) / 2 for a, b in pairs])
-        return self._inside_home_cell(midpoints)
+        """Midpoints of natural-neighbour pairs — atoms whose Voronoi cells share a ridge of real
+        length; a degenerate ridge (a square net's diagonal) is not a bond."""
+        voronoi = self._surface_voronoi
+        midpoints = []
+        for (a, b), ridge in zip(voronoi.ridge_points, voronoi.ridge_vertices):
+            if -1 in ridge or np.linalg.norm(np.diff(voronoi.vertices[ridge], axis=0)) < self.site_match_tolerance:
+                continue
+            midpoints.append((voronoi.points[a] + voronoi.points[b]) / 2)
+        return self._inside_home_cell(np.array(midpoints))
 
     def _hollows(self, surface_xy: np.ndarray) -> Dict[str, List[np.ndarray]]:
         tiled = _tile(surface_xy, self.in_plane_vectors)
         hollows: Dict[str, List[np.ndarray]] = {}
-        for vertex in self._inside_home_cell(Voronoi(tiled).vertices):
+        for vertex in self._inside_home_cell(self._surface_voronoi.vertices):
             distances = np.linalg.norm(tiled - vertex, axis=1)
             coordination = int(np.sum(distances < distances.min() + self.site_match_tolerance))
             hollows.setdefault(self._hollow_name(vertex, coordination), []).append(vertex)

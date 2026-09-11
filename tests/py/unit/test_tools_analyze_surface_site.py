@@ -4,6 +4,7 @@ from typing import Final
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
+from pydantic import ValidationError
 from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
@@ -57,6 +58,10 @@ SQUARE_NET: Final = {
         "type": "TET",
     },
 }
+
+# Rectangular net: two distinct nearest-neighbour spacings, so two distinct bridges.
+RECTANGULAR_NET: Final = copy.deepcopy(SQUARE_NET)
+RECTANGULAR_NET["lattice"]["b"] = 3.0
 
 SITE_NAME_CASES = [
     (CARBON_ATOP_XY, "atop"),
@@ -119,3 +124,13 @@ def test_square_net_has_a_four_fold_hollow():
     analyzer = SurfaceSiteAnalyzer(material=Material.create(SQUARE_NET))
     assert site_counts(analyzer) == {"atop": 1, "bridge": 2, "hollow": 1}
     assert analyzer.get_site_name([1.25, 1.25]) == "hollow"
+
+
+def test_rectangular_net_keeps_both_bridges():
+    analyzer = SurfaceSiteAnalyzer(material=Material.create(RECTANGULAR_NET))
+    assert site_counts(analyzer) == {"atop": 1, "bridge": 2, "hollow": 1}
+
+
+def test_analyzer_is_frozen_because_sites_are_cached():
+    with pytest.raises(ValidationError):
+        ANALYZER.site_match_tolerance = 1.0
