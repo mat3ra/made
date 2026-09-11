@@ -14,7 +14,7 @@ from mat3ra.made.tools.analyze.other import (
     get_surface_atom_indices,
 )
 from mat3ra.made.tools.analyze.rdf import RadialDistributionFunction
-from mat3ra.made.tools.analyze.utils import calculate_von_mises_strain
+from mat3ra.made.tools.analyze.utils import calculate_von_mises_strain, get_in_plane_periodic_images
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
 from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.atom_placement_method_enum import (
     AtomPlacementMethodEnum,
@@ -217,3 +217,12 @@ def test_calculate_von_mises_strain(strain_matrix, expected_strain):
     """Test von Mises strain calculation used in ZSL interface analysis."""
     strain_percentage = calculate_von_mises_strain(np.array(strain_matrix))
     assert np.isclose(strain_percentage, expected_strain, atol=0.01)
+
+
+def test_get_in_plane_periodic_images():
+    points_xy = np.array([[0.3, 0.7], [0.6, 0.2]])
+    vectors_2d = np.array([[3.19, 0.0], [-1.595, 2.7626]])
+    images = get_in_plane_periodic_images(points_xy, vectors_2d)
+    assert images.shape == (9 * len(points_xy), 2)
+    assert any(np.allclose(image, points_xy[0]) for image in images)
+    assert any(np.allclose(image, points_xy[1]) for image in images)

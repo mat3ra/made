@@ -12,30 +12,14 @@ from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supe
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.made.tools.modify import interface_displace_film_to_site
 from unit.fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
+from unit.fixtures.mos2 import MOS2
+from unit.utils import assert_two_entities_deep_almost_equal
 
 INTERFACE: Final = Material.create(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)  # Ni 0-2 (2 on top), C 3 (atop), C 4 (hcp)
-MOS2: Final = {
-    "name": "MoS2 monolayer",
-    "basis": {
-        "elements": [{"id": 0, "value": "Mo"}, {"id": 1, "value": "S"}, {"id": 2, "value": "S"}],
-        "coordinates": [
-            {"id": 0, "value": [0.3333, 0.6667, 0.5]},
-            {"id": 1, "value": [0.6667, 0.3333, 0.42]},
-            {"id": 2, "value": [0.6667, 0.3333, 0.58]},
-        ],
-        "units": "crystal",
-    },
-    "lattice": {
-        "a": 3.19,
-        "b": 3.19,
-        "c": 20.0,
-        "alpha": 90,
-        "beta": 90,
-        "gamma": 120,
-        "units": {"length": "angstrom", "angle": "degree"},
-        "type": "HEX",
-    },
-}
+SUPERCELL_2X2: Final = create_supercell(INTERFACE, scaling_factor=[2, 2, 1])
+SUPERCELL_4X4: Final = create_supercell(INTERFACE, scaling_factor=[4, 4, 1])
+MOS2_MATERIAL: Final = Material.create(MOS2)
+MOS2_4X4: Final = create_supercell(MOS2_MATERIAL, scaling_factor=[4, 4, 1])
 
 
 def top_nickel(material: Material) -> List[int]:
@@ -73,84 +57,153 @@ def first_carbon(material: Material) -> int:
     return next(i for i, e in enumerate(material.basis.elements.values) if e == "C")
 
 
-def test_atoms_within_a_radius_of_a_coordinate_nearest_first():
-    mos2 = Material.create(MOS2)
-    assert get_atom_indices_within_radius_pbc(
-        mos2, coordinate=[0.6667, 0.3333, 0.45], radius=1.0, chemical_element="S"
-    ) == [1]
-    assert get_atom_indices_within_radius_pbc(
-        mos2, coordinate=[0.6667, 0.3333, 0.45], radius=3.0, chemical_element="S"
-    ) == [1, 2]
+CARBON_2X2: Final = first_carbon(SUPERCELL_2X2)
+
+GET_ATOM_INDICES_WITHIN_RADIUS_PBC_CASES = [
+    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 1.0, "S", True, [1]),
+    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 3.0, "S", True, [1, 2]),
+    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 0.1, "S", True, []),
+    (MOS2_4X4, [0.5, 0.5, 0.5], 4.5, None, False, 19),
+    (MOS2_4X4, [0.5, 0.5, 0.5], 4.5, None, True, 18),
+]
+
+
+@pytest.mark.parametrize(
+    "material, coordinate, radius, chemical_element, centre_on_coordinate, expected",
+    GET_ATOM_INDICES_WITHIN_RADIUS_PBC_CASES,
+)
+def test_get_atom_indices_within_radius_pbc(
+    material, coordinate, radius, chemical_element, centre_on_coordinate, expected
+):
+    indices = get_atom_indices_within_radius_pbc(
+        material,
+        coordinate=coordinate,
+        radius=radius,
+        chemical_element=chemical_element,
+        centre_on_coordinate=centre_on_coordinate,
+    )
+    if isinstance(expected, list):
+        assert indices == expected
+    else:
+        assert len(indices) == expected
+
+
+GET_CLOSEST_SITE_ID_FROM_COORDINATE_WITHIN_RADIUS_CASES = [
+    (MOS2_MATERIAL, [0.25, 0.75, 0.5], 1.0, "Mo", 0),
+    (MOS2_MATERIAL, [0.6, 0.3, 0.58], 1.0, "S", 2),
+]
+
+
+@pytest.mark.parametrize(
+    "material, coordinate, radius, chemical_element, expected_index",
+    GET_CLOSEST_SITE_ID_FROM_COORDINATE_WITHIN_RADIUS_CASES,
+)
+def test_get_closest_site_id_from_coordinate_within_radius(
+    material, coordinate, radius, chemical_element, expected_index
+):
     assert (
-        get_atom_indices_within_radius_pbc(mos2, coordinate=[0.6667, 0.3333, 0.45], radius=0.1, chemical_element="S")
-        == []
+        get_closest_site_id_from_coordinate_within_radius(material, coordinate, radius, chemical_element)
+        == expected_index
     )
 
 
-def test_closest_site_within_radius_by_element():
-    mos2 = Material.create(MOS2)
-    assert get_closest_site_id_from_coordinate_within_radius(mos2, [0.25, 0.75, 0.5], 1.0, "Mo") == 0
-    assert get_closest_site_id_from_coordinate_within_radius(mos2, [0.6, 0.3, 0.58], 1.0, "S") == 2
+def test_get_closest_site_id_from_coordinate_within_radius_invalid():
     with pytest.raises(ValueError, match=r"No Mo within 0.5 A .* nearest Mo is 1\.\d\d A away"):
-        get_closest_site_id_from_coordinate_within_radius(mos2, [0.0, 0.0, 0.5], 0.5, "Mo")
+        get_closest_site_id_from_coordinate_within_radius(MOS2_MATERIAL, [0.0, 0.0, 0.5], 0.5, "Mo")
 
 
-def test_film_over_one_substrate_atom_is_atop():
+EXPECTED_BASIS_ATOP: Final = {
+    "elements": [
+        {"id": 0, "value": "Ni"},
+        {"id": 1, "value": "Ni"},
+        {"id": 2, "value": "Ni"},
+        {"id": 3, "value": "C"},
+        {"id": 4, "value": "C"},
+    ],
+    "coordinates": [
+        {"id": 0, "value": [0.0, 0.0, 3.03e-07]},
+        {"id": 1, "value": [0.666666667, 0.333333333, 0.100960811]},
+        {"id": 2, "value": [0.333333333, 0.666666667, 0.201921319]},
+        {"id": 3, "value": [0.0, 0.0, 0.351561882]},
+        {"id": 4, "value": [0.333333333, 0.666666667, 0.351561882]},
+    ],
+    "units": "crystal",
+    "labels": [
+        {"id": 0, "value": 0},
+        {"id": 1, "value": 0},
+        {"id": 2, "value": 0},
+        {"id": 3, "value": 1},
+        {"id": 4, "value": 1},
+    ],
+}
+
+
+def test_interface_displace_film_to_site():
     placed = interface_displace_film_to_site(INTERFACE, film_atom=4, substrate_atoms=[2])
-    assert get_film_site_occupation(placed)[4] == "atop"
+    assert_two_entities_deep_almost_equal(placed.basis, EXPECTED_BASIS_ATOP, atol=1e-6)
 
 
-def test_film_over_two_neighbours_is_a_bridge():
-    supercell = create_supercell(INTERFACE, scaling_factor=[2, 2, 1])
-    # The 2x2 cell's four equivalent top-Ni images; any two are natural neighbours.
-    assert top_nickel(supercell) == [2, 7, 12, 17]
-    carbon = first_carbon(supercell)
-    placed = interface_displace_film_to_site(supercell, carbon, [2, 7])
-    assert get_film_site_occupation(placed)[carbon] == "bridge"
+INTERFACE_DISPLACE_FILM_TO_SITE_INVALID_CASES = [
+    (INTERFACE, 99, [2], "out of range"),
+    (INTERFACE, 3, [99], "out of range"),
+    (INTERFACE, 0, [2], "not in the film"),
+    (INTERFACE, 3, [4], "Not all"),
+    (INTERFACE, 4, [], "one, two or three"),
+    (INTERFACE, 3, [0, 1], "not in one layer"),
+    (
+        SUPERCELL_4X4,
+        first_carbon(SUPERCELL_4X4),
+        far_apart(SUPERCELL_4X4, top_nickel(SUPERCELL_4X4), 3),
+        "not one site's neighbours",
+    ),
+]
 
 
-def test_film_over_three_neighbours_is_a_hollow():
-    supercell = create_supercell(INTERFACE, scaling_factor=[2, 2, 1])
-    assert top_nickel(supercell) == [2, 7, 12, 17]
-    carbon = first_carbon(supercell)
-    placed = interface_displace_film_to_site(supercell, carbon, [2, 7, 12])
-    assert get_film_site_occupation(placed)[carbon] == "hcp"
+@pytest.mark.parametrize("material, film_atom, substrate_atoms, match", INTERFACE_DISPLACE_FILM_TO_SITE_INVALID_CASES)
+def test_interface_displace_film_to_site_invalid(material, film_atom, substrate_atoms, match):
+    with pytest.raises(ValueError, match=match):
+        interface_displace_film_to_site(material, film_atom=film_atom, substrate_atoms=substrate_atoms)
 
 
-def test_rejects_substrate_atoms_that_are_not_one_site():
-    supercell = create_supercell(INTERFACE, scaling_factor=[4, 4, 1])
-    with pytest.raises(ValueError, match="not one site's neighbours"):
-        interface_displace_film_to_site(
-            supercell, first_carbon(supercell), far_apart(supercell, top_nickel(supercell), 3)
-        )
+GET_FILM_SITE_OCCUPATION_CASES = [
+    (interface_displace_film_to_site(INTERFACE, film_atom=4, substrate_atoms=[2]), 4, "atop"),
+    (
+        interface_displace_film_to_site(SUPERCELL_2X2, film_atom=CARBON_2X2, substrate_atoms=[2, 7]),
+        CARBON_2X2,
+        "bridge",
+    ),
+    (
+        interface_displace_film_to_site(SUPERCELL_2X2, film_atom=CARBON_2X2, substrate_atoms=[2, 7, 12]),
+        CARBON_2X2,
+        "hcp",
+    ),
+]
 
 
-def test_rejects_wrong_parts():
-    with pytest.raises(ValueError, match="not in the film"):
-        interface_displace_film_to_site(INTERFACE, film_atom=0, substrate_atoms=[2])
-    with pytest.raises(ValueError, match="Not all"):
-        interface_displace_film_to_site(INTERFACE, film_atom=3, substrate_atoms=[4])
+@pytest.mark.parametrize("placed, film_atom, expected_site_name", GET_FILM_SITE_OCCUPATION_CASES)
+def test_get_film_site_occupation(placed, film_atom, expected_site_name):
+    assert get_film_site_occupation(placed)[film_atom] == expected_site_name
 
 
-def test_rejects_wrong_arity():
-    with pytest.raises(ValueError, match="one, two or three"):
-        interface_displace_film_to_site(INTERFACE, film_atom=4, substrate_atoms=[])
+def substrate_only() -> Material:
+    material = INTERFACE.clone()
+    material.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
+    return material
 
 
-def test_rejects_out_of_range_indices():
-    with pytest.raises(ValueError, match="out of range"):
-        interface_displace_film_to_site(INTERFACE, film_atom=99, substrate_atoms=[2])
-    with pytest.raises(ValueError, match="out of range"):
-        interface_displace_film_to_site(INTERFACE, film_atom=3, substrate_atoms=[99])
+def film_only() -> Material:
+    material = INTERFACE.clone()
+    material.basis.filter_atoms_by_labels([InterfacePartsEnum.FILM.value])
+    return material
 
 
-def test_rejects_substrate_atoms_not_in_one_layer():
-    with pytest.raises(ValueError, match="not in one layer"):
-        interface_displace_film_to_site(INTERFACE, film_atom=3, substrate_atoms=[0, 1])
+GET_FILM_SITE_OCCUPATION_INVALID_CASES = [
+    (substrate_only(), "not an interface"),
+    (film_only(), "not an interface"),
+]
 
 
-def test_film_site_occupation_of_a_non_interface_raises():
-    substrate_only = INTERFACE.clone()
-    substrate_only.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
-    with pytest.raises(ValueError, match="not an interface"):
-        get_film_site_occupation(substrate_only)
+@pytest.mark.parametrize("material, match", GET_FILM_SITE_OCCUPATION_INVALID_CASES)
+def test_get_film_site_occupation_invalid(material, match):
+    with pytest.raises(ValueError, match=match):
+        get_film_site_occupation(material)

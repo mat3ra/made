@@ -169,11 +169,13 @@ def get_film_site_occupation(
     Parts are told apart by their labels, so relaxed and file-loaded interfaces work.
 
     Raises:
-        ValueError: when the material carries no film-labelled atoms.
+        ValueError: when the material carries no film-labelled or no substrate-labelled atoms.
     """
     labels = interface.basis.labels.values
     if InterfacePartsEnum.FILM.value not in labels:
         raise ValueError("The material is not an interface — no film labels.")
+    if InterfacePartsEnum.SUBSTRATE.value not in labels:
+        raise ValueError("The material is not an interface — no substrate labels.")
     if analyzer is None:
         substrate = interface.clone()
         substrate.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])

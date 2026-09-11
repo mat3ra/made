@@ -19,6 +19,9 @@ from .entities.coordinate import (
 from .third_party import ase_add_vacuum
 
 LAYER_TOLERANCE = 0.5  # height gap, in Angstrom, that separates two atomic layers
+SITE_NEIGHBOUR_STRETCH = (
+    1.3  # substrate atoms farther apart than this times the layer's nearest-neighbour distance do not form a site
+)
 
 
 def filter_by_label(material: Material, label: Union[int, str]) -> Material:
@@ -631,11 +634,6 @@ def interface_get_part(
     return interface_part_material
 
 
-SITE_NEIGHBOUR_STRETCH = (
-    1.3  # substrate atoms farther apart than this times the layer's nearest-neighbour distance do not form a site
-)
-
-
 def _periodic_shifts_2d(vectors_2d: np.ndarray) -> np.ndarray:
     return get_in_plane_periodic_images(np.zeros((1, 2)), vectors_2d)
 
@@ -663,15 +661,23 @@ def _compact_images_2d(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndar
 def _nearest_neighbour_distance_2d(
     positions: np.ndarray, labels: Sequence[int], atom: int, vectors_2d: np.ndarray
 ) -> float:
-    same_layer = [
+    """The layer's own nearest-neighbour distance: the minimum separation between any two substrate
+    atoms in the same layer as `atom`, independent of which atom the caller lists first."""
+    layer = [
         i
         for i in range(len(positions))
-        if i != atom
-        and labels[i] == InterfacePartsEnum.SUBSTRATE.value
-        and abs(positions[i, 2] - positions[atom, 2]) < LAYER_TOLERANCE
+        if labels[i] == InterfacePartsEnum.SUBSTRATE.value
+        and abs(positions[i, 2] - positions[atom, 2]) <= LAYER_TOLERANCE
     ]
     shifts = _periodic_shifts_2d(vectors_2d)
-    return float(min(np.linalg.norm(positions[i, :2] + s - positions[atom, :2]) for i in same_layer for s in shifts))
+    return float(
+        min(
+            np.linalg.norm(positions[i, :2] + s - positions[j, :2])
+            for k, i in enumerate(layer)
+            for j in layer[k + 1 :]
+            for s in shifts
+        )
+    )
 
 
 def _validate_film_to_site_inputs(interface: Material, film_atom: int, substrate_atoms: Sequence[int]) -> None:
