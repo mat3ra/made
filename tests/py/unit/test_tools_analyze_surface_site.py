@@ -8,6 +8,7 @@ from mat3ra.made.tools.build.compound_pristine_structures.two_dimensional.interf
     create_interface_zsl,
 )
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.helpers import create_slab
+from mat3ra.made.tools.build.processed_structures.two_dimensional.passivation.enums import SurfaceTypesEnum
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.standata.materials import Materials
 
@@ -21,10 +22,22 @@ CU110_SLAB: Final = create_slab(crystal=BULK_Cu, miller_indices=(1, 1, 0), numbe
 MOS2_MONOLAYER: Final = Material.create(Materials.get_by_name_and_categories("MoS2", "2D"))
 
 SURFACE_SITE_ANALYZER_SITES_CASES = [
-    (NI111_SLAB, {"atop": [[1.2394, 0.7155]], "fcc": [[0.0, 0.0]], "hcp": [[2.4787, 1.4311]]}),
-    (CU001_SLAB, {"atop": [[0.0, 0.0], [1.8106, 1.8106]], "hollow": [[0.0, 1.8106], [1.8106, 0.0]]}),
+    (NI111_SLAB, SurfaceTypesEnum.TOP, {"atop": [[1.2394, 0.7155]], "fcc": [[0.0, 0.0]], "hcp": [[2.4787, 1.4311]]}),
+    (
+        # Bottom surface: atop is the bottom layer's own atom; fcc/hcp count layers upward from it,
+        # so the naming swaps versus the top view (fcc <-> hcp) without changing which xy is which.
+        NI111_SLAB,
+        SurfaceTypesEnum.BOTTOM,
+        {"atop": [[0.0, 0.0]], "fcc": [[1.2394, 0.7155]], "hcp": [[2.4791, 1.4313]]},
+    ),
+    (
+        CU001_SLAB,
+        SurfaceTypesEnum.TOP,
+        {"atop": [[0.0, 0.0], [1.8106, 1.8106]], "hollow": [[0.0, 1.8106], [1.8106, 0.0]]},
+    ),
     (
         CU110_SLAB,
+        SurfaceTypesEnum.TOP,
         {
             "atop": [[0.0, 1.2803], [0.0, 3.8409]],
             # two distinct bridge-to-atop distances: 1.2803 along the close-packed rows, 1.8106 across.
@@ -32,15 +45,19 @@ SURFACE_SITE_ANALYZER_SITES_CASES = [
             "hollow": [[1.8106, 0.0], [1.8106, 2.5606]],
         },
     ),
-    (MOS2_MONOLAYER, {"atop": [[0.0, 1.8454]], "hcp": [[1.5978, 0.9229]], "hollow": [[0.0, 0.0]]}),
+    (
+        MOS2_MONOLAYER,
+        SurfaceTypesEnum.TOP,
+        {"atop": [[0.0, 1.8454]], "hcp": [[1.5978, 0.9229]], "hollow": [[0.0, 0.0]]},
+    ),
 ]
 
 
-@pytest.mark.parametrize("material, expected_sites", SURFACE_SITE_ANALYZER_SITES_CASES)
-def test_surface_site_analyzer_sites(material, expected_sites):
+@pytest.mark.parametrize("material, surface, expected_sites", SURFACE_SITE_ANALYZER_SITES_CASES)
+def test_surface_site_analyzer_sites(material, surface, expected_sites):
     """Site coordinates for a subset of site types, not only counts — a systematic displacement of
     every site of one type would otherwise go unnoticed."""
-    sites = SurfaceSiteAnalyzer(material=material).sites
+    sites = SurfaceSiteAnalyzer(material=material, surface=surface).sites
     for name, points in expected_sites.items():
         rounded = sorted(np.round(sites[name], 3).tolist())
         assert np.allclose(rounded, sorted(points), atol=1e-3)
