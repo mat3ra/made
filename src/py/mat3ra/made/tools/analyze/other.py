@@ -166,7 +166,6 @@ def get_closest_site_id_from_coordinate_within_radius(
         radius=radius,
         chemical_element=chemical_element,
         use_cartesian_coordinates=use_cartesian_coordinates,
-        centre_on_coordinate=True,
     )
     if found:
         return found[0]
@@ -279,41 +278,33 @@ def get_atom_indices_within_radius_pbc(
     radius: float = 1,
     chemical_element: Optional[str] = None,
     use_cartesian_coordinates: bool = False,
-    centre_on_coordinate: bool = False,
 ) -> List[int]:
     """
     Select the atoms (of `chemical_element`, when given) within a specified radius of a point,
     nearest first, considering periodic boundary conditions via pymatgen's `get_sites_in_sphere` —
     the correct minimum image on any cell, including non-orthogonal ones.
 
-    When `coordinate` is given and `centre_on_coordinate` is False (the default), the sphere is
-    centred on the atom closest to the coordinate — the pre-existing behaviour that
-    `filter_by_sphere` and `create_cluster_sphere.ipynb` rely on. When `centre_on_coordinate` is
-    True, the sphere is centred on the coordinate itself — the way a person points at an atom: "the
-    Mo near (0.25, 0.25, 0.5)". Without a `coordinate`, the sphere is centred on `atom_index`.
+    When `coordinate` is given, the sphere is centred on the coordinate itself — the way a person
+    points at an atom: "the Mo near (0.25, 0.25, 0.5)". Without a `coordinate`, the sphere is
+    centred on `atom_index`.
 
     Args:
         material (Material): Material object
         atom_index (int): Index of the central atom; used when `coordinate` is None
-        coordinate (List[float]): Centre (or near-centre) of the sphere; crystal unless
-            `use_cartesian_coordinates`
+        coordinate (List[float]): Centre of the sphere; crystal unless `use_cartesian_coordinates`
         radius (float): Radius of the sphere in angstroms
         chemical_element (str): Restrict the result to this element
         use_cartesian_coordinates (bool): Whether `coordinate` is cartesian
-        centre_on_coordinate (bool): Whether the sphere is centred on `coordinate` itself rather
-            than on the atom closest to it
 
     Returns:
         List[int]: Indices of atoms within the radius, nearest first
     """
     structure = to_pymatgen(material)
 
-    if coordinate is not None and centre_on_coordinate:
+    if coordinate is not None:
         point = np.array(coordinate, dtype=float)
         center = point if use_cartesian_coordinates else structure.lattice.get_cartesian_coords(point)
     else:
-        if coordinate is not None:
-            atom_index = get_closest_site_id_from_coordinate(material, coordinate, use_cartesian_coordinates)
         immutable_structure = PymatgenIStructure.from_sites(structure.sites)
         center = immutable_structure[atom_index].coords
 

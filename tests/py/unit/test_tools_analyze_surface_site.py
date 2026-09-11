@@ -7,6 +7,7 @@ from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from pydantic import ValidationError
 from unit.fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
 from unit.fixtures.surface_nets import RECTANGULAR_NET, SQUARE_NET
 
@@ -67,6 +68,29 @@ SURFACE_SITE_ANALYZER_CASES = [
 @pytest.mark.parametrize("material, expected_site_counts", SURFACE_SITE_ANALYZER_CASES)
 def test_surface_site_analyzer(material, expected_site_counts):
     assert site_counts(SurfaceSiteAnalyzer(material=material)) == expected_site_counts
+
+
+EXPECTED_SITES_1X1: Final = {
+    "atop": [[-0.000124, 1.431308]],
+    "bridge": [[0.61962, 0.357881], [1.859107, 0.357881], [1.239363, 1.431308]],
+    "fcc": [[0.0, 0.0]],
+    "hcp": [[1.239239, 0.715761]],
+}
+
+SURFACE_SITE_ANALYZER_SITES_CASES = list(EXPECTED_SITES_1X1.items())
+
+
+@pytest.mark.parametrize("site_name, expected_points", SURFACE_SITE_ANALYZER_SITES_CASES)
+def test_surface_site_analyzer_sites(site_name, expected_points):
+    """Site coordinates, not only counts — a systematic displacement of every site of one type
+    (e.g. the hollows) has the same counts as the true sites and would otherwise go unnoticed."""
+    sites = SurfaceSiteAnalyzer(material=SUBSTRATE_1X1).sites
+    assert np.allclose(sorted(sites[site_name]), sorted(expected_points), atol=1e-3)
+
+
+def test_surface_site_analyzer_frozen():
+    with pytest.raises(ValidationError):
+        SurfaceSiteAnalyzer(material=SUBSTRATE_1X1).site_match_tolerance = 1.0
 
 
 ANALYZER: Final = SurfaceSiteAnalyzer(material=SUBSTRATE_1X1)

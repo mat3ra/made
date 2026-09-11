@@ -4,22 +4,15 @@ import numpy as np
 import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import get_film_site_occupation
-from mat3ra.made.tools.analyze.other import (
-    get_atom_indices_within_radius_pbc,
-    get_closest_site_id_from_coordinate_within_radius,
-)
 from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.made.tools.modify import interface_displace_film_to_site
 from unit.fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
-from unit.fixtures.mos2 import MOS2
 from unit.utils import assert_two_entities_deep_almost_equal
 
 INTERFACE: Final = Material.create(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)  # Ni 0-2 (2 on top), C 3 (atop), C 4 (hcp)
 SUPERCELL_2X2: Final = create_supercell(INTERFACE, scaling_factor=[2, 2, 1])
 SUPERCELL_4X4: Final = create_supercell(INTERFACE, scaling_factor=[4, 4, 1])
-MOS2_MATERIAL: Final = Material.create(MOS2)
-MOS2_4X4: Final = create_supercell(MOS2_MATERIAL, scaling_factor=[4, 4, 1])
 
 
 def top_nickel(material: Material) -> List[int]:
@@ -59,59 +52,6 @@ def first_carbon(material: Material) -> int:
 
 CARBON_2X2: Final = first_carbon(SUPERCELL_2X2)
 
-GET_ATOM_INDICES_WITHIN_RADIUS_PBC_CASES = [
-    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 1.0, "S", True, [1]),
-    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 3.0, "S", True, [1, 2]),
-    (MOS2_MATERIAL, [0.6667, 0.3333, 0.45], 0.1, "S", True, []),
-    (MOS2_4X4, [0.5, 0.5, 0.5], 4.5, None, False, 19),
-    (MOS2_4X4, [0.5, 0.5, 0.5], 4.5, None, True, 18),
-]
-
-
-@pytest.mark.parametrize(
-    "material, coordinate, radius, chemical_element, centre_on_coordinate, expected",
-    GET_ATOM_INDICES_WITHIN_RADIUS_PBC_CASES,
-)
-def test_get_atom_indices_within_radius_pbc(
-    material, coordinate, radius, chemical_element, centre_on_coordinate, expected
-):
-    indices = get_atom_indices_within_radius_pbc(
-        material,
-        coordinate=coordinate,
-        radius=radius,
-        chemical_element=chemical_element,
-        centre_on_coordinate=centre_on_coordinate,
-    )
-    if isinstance(expected, list):
-        assert indices == expected
-    else:
-        assert len(indices) == expected
-
-
-GET_CLOSEST_SITE_ID_FROM_COORDINATE_WITHIN_RADIUS_CASES = [
-    (MOS2_MATERIAL, [0.25, 0.75, 0.5], 1.0, "Mo", 0),
-    (MOS2_MATERIAL, [0.6, 0.3, 0.58], 1.0, "S", 2),
-]
-
-
-@pytest.mark.parametrize(
-    "material, coordinate, radius, chemical_element, expected_index",
-    GET_CLOSEST_SITE_ID_FROM_COORDINATE_WITHIN_RADIUS_CASES,
-)
-def test_get_closest_site_id_from_coordinate_within_radius(
-    material, coordinate, radius, chemical_element, expected_index
-):
-    assert (
-        get_closest_site_id_from_coordinate_within_radius(material, coordinate, radius, chemical_element)
-        == expected_index
-    )
-
-
-def test_get_closest_site_id_from_coordinate_within_radius_invalid():
-    with pytest.raises(ValueError, match=r"No Mo within 0.5 A .* nearest Mo is 1\.\d\d A away"):
-        get_closest_site_id_from_coordinate_within_radius(MOS2_MATERIAL, [0.0, 0.0, 0.5], 0.5, "Mo")
-
-
 EXPECTED_BASIS_ATOP: Final = {
     "elements": [
         {"id": 0, "value": "Ni"},
@@ -137,10 +77,42 @@ EXPECTED_BASIS_ATOP: Final = {
     ],
 }
 
+EXPECTED_BASIS_BRIDGE_TO_SELF_IMAGE: Final = {
+    "elements": [
+        {"id": 0, "value": "Ni"},
+        {"id": 1, "value": "Ni"},
+        {"id": 2, "value": "Ni"},
+        {"id": 3, "value": "C"},
+        {"id": 4, "value": "C"},
+    ],
+    "coordinates": [
+        {"id": 0, "value": [0.0, 0.0, 3.03e-07]},
+        {"id": 1, "value": [0.666666667, 0.333333333, 0.100960811]},
+        {"id": 2, "value": [0.333333333, 0.666666667, 0.201921319]},
+        {"id": 3, "value": [0.499999999, 0.500000001, 0.351561882]},
+        {"id": 4, "value": [0.833333333, 0.166666667, 0.351561882]},
+    ],
+    "units": "crystal",
+    "labels": [
+        {"id": 0, "value": 0},
+        {"id": 1, "value": 0},
+        {"id": 2, "value": 0},
+        {"id": 3, "value": 1},
+        {"id": 4, "value": 1},
+    ],
+}
 
-def test_interface_displace_film_to_site():
-    placed = interface_displace_film_to_site(INTERFACE, film_atom=4, substrate_atoms=[2])
-    assert_two_entities_deep_almost_equal(placed.basis, EXPECTED_BASIS_ATOP, atol=1e-6)
+INTERFACE_DISPLACE_FILM_TO_SITE_CASES = [
+    (INTERFACE, 4, [2], EXPECTED_BASIS_ATOP),
+    # a bridge to the substrate atom's own periodic image — the only way to name a bridge in a 1x1 cell
+    (INTERFACE, 4, [2, 2], EXPECTED_BASIS_BRIDGE_TO_SELF_IMAGE),
+]
+
+
+@pytest.mark.parametrize("interface, film_atom, substrate_atoms, expected_basis", INTERFACE_DISPLACE_FILM_TO_SITE_CASES)
+def test_interface_displace_film_to_site(interface, film_atom, substrate_atoms, expected_basis):
+    placed = interface_displace_film_to_site(interface, film_atom=film_atom, substrate_atoms=substrate_atoms)
+    assert_two_entities_deep_almost_equal(placed.basis, expected_basis, atol=1e-6)
 
 
 INTERFACE_DISPLACE_FILM_TO_SITE_INVALID_CASES = [

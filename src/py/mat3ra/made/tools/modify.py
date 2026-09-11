@@ -22,6 +22,7 @@ LAYER_TOLERANCE = 0.5  # height gap, in Angstrom, that separates two atomic laye
 SITE_NEIGHBOUR_STRETCH = (
     1.3  # substrate atoms farther apart than this times the layer's nearest-neighbour distance do not form a site
 )
+SAME_ATOM_TOLERANCE = 1e-6  # gaps this small mean two chosen images are the same atom, not a neighbour
 
 
 def filter_by_label(material: Material, label: Union[int, str]) -> Material:
@@ -246,7 +247,8 @@ def filter_by_sphere(
     invert: bool = False,
 ) -> Material:
     """
-    Filter out atoms within a specified radius of a central atom considering periodic boundary conditions.
+    Filter out atoms within a specified radius of `center_coordinate`, considering periodic
+    boundary conditions. The sphere is centred on the coordinate itself, not on the nearest atom.
 
     Args:
         material (Material): The material object to filter.
@@ -644,25 +646,31 @@ def _nearest_image_2d(point_xy: np.ndarray, reference_xy: np.ndarray, vectors_2d
 
 
 def _compact_images_2d(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
-    """One periodic image per point, chosen so the set is as tight as possible — the images that
-    together form a site, not the ones that each happen to be nearest to the first atom."""
+    """One periodic image per point, chosen so the set is as tight as possible without collapsing —
+    the images that together form a site, not the ones that each happen to be nearest to the first
+    atom. A repeated atom (the only way to name a bridge to its own periodic image in a 1x1 cell) is
+    matched to its nearest non-zero image rather than to itself."""
     if len(points_xy) == 1:
         return points_xy
     shifts = _periodic_shifts_2d(vectors_2d)
-    best, best_spread = points_xy, np.inf
+    best, best_spread = None, np.inf
     for choice in product(range(len(shifts)), repeat=len(points_xy) - 1):
         images = np.vstack([points_xy[0], points_xy[1:] + shifts[list(choice)]])
-        spread = max(np.linalg.norm(a - b) for k, a in enumerate(images) for b in images[k + 1 :])
+        gaps = [np.linalg.norm(a - b) for k, a in enumerate(images) for b in images[k + 1 :]]
+        if min(gaps) < SAME_ATOM_TOLERANCE:
+            continue
+        spread = max(gaps)
         if spread < best_spread:
             best, best_spread = images, spread
-    return best
+    return best if best is not None else points_xy
 
 
 def _nearest_neighbour_distance_2d(
     positions: np.ndarray, labels: Sequence[int], atom: int, vectors_2d: np.ndarray
 ) -> float:
     """The layer's own nearest-neighbour distance: the minimum separation between any two substrate
-    atoms in the same layer as `atom`, independent of which atom the caller lists first."""
+    atoms in the same layer as `atom`, independent of which atom the caller lists first. A layer
+    holding a single atom in the cell falls back to that atom's own nearest periodic self-image."""
     layer = [
         i
         for i in range(len(positions))
@@ -674,8 +682,9 @@ def _nearest_neighbour_distance_2d(
         min(
             np.linalg.norm(positions[i, :2] + s - positions[j, :2])
             for k, i in enumerate(layer)
-            for j in layer[k + 1 :]
+            for j in layer[k:]
             for s in shifts
+            if i != j or np.any(s)
         )
     )
 
