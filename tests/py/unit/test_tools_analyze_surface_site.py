@@ -48,7 +48,7 @@ CARBON_HCP_XY: Final = cartesian_xy(GRAPHENE_NICKEL_INTERFACE_TOP_HCP, 4)
 SITE_COUNTS_1X1: Final = {"atop": 1, "bridge": 3, "fcc": 1, "hcp": 1}
 
 # Two-layer square net: one atop, two bridges, and a four-fold hollow that is not fcc or hcp.
-SQUARE_NET: Final = {
+SQUARE_NET: Final[dict] = {
     "name": "square net",
     "basis": {
         "elements": [{"id": 0, "value": "Cu"}, {"id": 1, "value": "Cu"}],
@@ -68,7 +68,7 @@ SQUARE_NET: Final = {
 }
 
 # Rectangular net: two distinct nearest-neighbour spacings, so two distinct bridges.
-RECTANGULAR_NET: Final = copy.deepcopy(SQUARE_NET)
+RECTANGULAR_NET: Final[dict] = copy.deepcopy(SQUARE_NET)
 RECTANGULAR_NET["lattice"]["b"] = 3.0
 
 SITE_NAME_CASES = [

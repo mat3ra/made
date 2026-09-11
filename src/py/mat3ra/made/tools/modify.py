@@ -6,6 +6,7 @@ from mat3ra.made.material import Material
 from mat3ra.made.utils import get_atomic_coordinates_extremum
 
 from .analyze.other import get_atom_indices_with_condition_on_coordinates, get_atom_indices_within_radius_pbc
+from .analyze.utils import get_in_plane_periodic_images
 from .build_components.metadata import MaterialWithBuildMetadata
 from .convert import from_ase, to_ase
 from .convert.interface_parts_enum import InterfacePartsEnum
@@ -16,6 +17,8 @@ from .entities.coordinate import (
     is_coordinate_within_layer,
 )
 from .third_party import ase_add_vacuum
+
+LAYER_TOLERANCE = 0.5  # height gap, in Angstrom, that separates two atomic layers
 
 
 def filter_by_label(material: Material, label: Union[int, str]) -> Material:
@@ -634,11 +637,11 @@ SITE_NEIGHBOUR_STRETCH = (
 
 
 def _periodic_shifts_2d(vectors_2d: np.ndarray) -> np.ndarray:
-    return np.array([i * vectors_2d[0] + j * vectors_2d[1] for i in (-1, 0, 1) for j in (-1, 0, 1)])
+    return get_in_plane_periodic_images(np.zeros((1, 2)), vectors_2d)
 
 
 def _nearest_image_2d(point_xy: np.ndarray, reference_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
-    images = point_xy + _periodic_shifts_2d(vectors_2d)
+    images = get_in_plane_periodic_images(point_xy[np.newaxis, :], vectors_2d)
     return images[np.argmin(np.linalg.norm(images - reference_xy, axis=1))]
 
 
@@ -657,10 +660,32 @@ def _compact_images_2d(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndar
     return best
 
 
-def _nearest_neighbour_distance_2d(positions: np.ndarray, atom: int, vectors_2d: np.ndarray) -> float:
-    same_layer = [i for i in range(len(positions)) if i != atom and abs(positions[i, 2] - positions[atom, 2]) < 0.5]
+def _nearest_neighbour_distance_2d(
+    positions: np.ndarray, labels: Sequence[int], atom: int, vectors_2d: np.ndarray
+) -> float:
+    same_layer = [
+        i
+        for i in range(len(positions))
+        if i != atom
+        and labels[i] == InterfacePartsEnum.SUBSTRATE.value
+        and abs(positions[i, 2] - positions[atom, 2]) < LAYER_TOLERANCE
+    ]
     shifts = _periodic_shifts_2d(vectors_2d)
     return float(min(np.linalg.norm(positions[i, :2] + s - positions[atom, :2]) for i in same_layer for s in shifts))
+
+
+def _validate_film_to_site_inputs(interface: Material, film_atom: int, substrate_atoms: Sequence[int]) -> None:
+    """Checked before any geometry: arity, index range, and part labels."""
+    if not 1 <= len(substrate_atoms) <= 3:
+        raise ValueError("A site is one, two or three substrate atoms")
+    labels = interface.basis.labels.values
+    for index in [film_atom, *substrate_atoms]:
+        if not 0 <= index < len(labels):
+            raise ValueError(f"Atom {index} is out of range")
+    if labels[film_atom] != InterfacePartsEnum.FILM.value:
+        raise ValueError(f"Atom {film_atom} is not in the film")
+    if any(labels[i] != InterfacePartsEnum.SUBSTRATE.value for i in substrate_atoms):
+        raise ValueError(f"Not all of {list(substrate_atoms)} are substrate atoms")
 
 
 def interface_displace_film_to_site(interface: Material, film_atom: int, substrate_atoms: Sequence[int]) -> Material:
@@ -670,22 +695,24 @@ def interface_displace_film_to_site(interface: Material, film_atom: int, substra
     them; the rest of the film follows rigidly and nothing rotates.
 
     Raises:
-        ValueError: when the indices are not film / substrate atoms, or the chosen substrate atoms
-            are not neighbours of one another (their centre would not be a site).
+        ValueError: when the indices are out of range or not film / substrate atoms, a site is not
+            one, two or three substrate atoms, the chosen substrate atoms are not in one layer, or
+            they are not neighbours of one another (their centre would not be a site).
     """
-    labels = interface.basis.labels.values
-    if labels[film_atom] != InterfacePartsEnum.FILM.value:
-        raise ValueError(f"Atom {film_atom} is not in the film")
-    if any(labels[i] != InterfacePartsEnum.SUBSTRATE.value for i in substrate_atoms):
-        raise ValueError(f"Not all of {list(substrate_atoms)} are substrate atoms")
+    _validate_film_to_site_inputs(interface, film_atom, substrate_atoms)
     cartesian = interface.clone()
     cartesian.to_cartesian()
     positions = np.array(cartesian.coordinates_array)
+    substrate_z = positions[list(substrate_atoms), 2]
+    if substrate_z.max() - substrate_z.min() > LAYER_TOLERANCE:
+        raise ValueError(f"Substrate atoms {list(substrate_atoms)} are not in one layer")
+
+    labels = interface.basis.labels.values
     vectors_2d = np.array(interface.lattice.vector_arrays)[:2, :2]
     chosen = _compact_images_2d(positions[list(substrate_atoms), :2], vectors_2d)
     if len(chosen) > 1:
         gaps = [np.linalg.norm(a - b) for k, a in enumerate(chosen) for b in chosen[k + 1 :]]
-        nearest = _nearest_neighbour_distance_2d(positions, substrate_atoms[0], vectors_2d)
+        nearest = _nearest_neighbour_distance_2d(positions, labels, substrate_atoms[0], vectors_2d)
         if max(gaps) > SITE_NEIGHBOUR_STRETCH * nearest or min(gaps) < 1e-6:
             distances = ", ".join(f"{gap:.2f}" for gap in gaps)
             raise ValueError(f"Substrate atoms {list(substrate_atoms)} are not one site's neighbours ({distances} A)")

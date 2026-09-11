@@ -4,8 +4,7 @@ from .analyze.lattice import get_material_with_conventional_lattice, get_materia
 from .analyze.other import (
     get_atom_indices_by_layer,
     get_atom_indices_in_bottom_layers,
-    get_atom_indices_within_radius_of_coordinate,
-    get_closest_site_id_within_radius,
+    get_closest_site_id_from_coordinate_within_radius,
 )
 
 # Defective Structures
@@ -160,8 +159,7 @@ __all__ = [
     "get_film_site_occupation",
     "get_atom_indices_by_layer",
     "get_atom_indices_in_bottom_layers",
-    "get_atom_indices_within_radius_of_coordinate",
-    "get_closest_site_id_within_radius",
+    "get_closest_site_id_from_coordinate_within_radius",
     "interface_displace_film_to_site",
     # Type Definitions
     "AdatomDefectDict",

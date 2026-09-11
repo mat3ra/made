@@ -10,8 +10,8 @@ from scipy.spatial import Voronoi, cKDTree
 from ...convert.interface_parts_enum import InterfacePartsEnum
 from .. import BaseMaterialAnalyzer
 from ..other import get_atom_indices_by_layer
+from ..utils import get_in_plane_periodic_images
 
-PERIODIC_SHIFTS = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
 FRACTIONAL_DECIMALS = 4
 
 
@@ -21,11 +21,6 @@ class SurfaceSiteEnum(str, Enum):
     FCC = "fcc"
     HCP = "hcp"
     HOLLOW = "hollow"
-
-
-def _tile(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
-    """The 3x3 periodic images, home cell included, so sites across a cell boundary are seen."""
-    return np.vstack([points_xy + i * vectors_2d[0] + j * vectors_2d[1] for i, j in PERIODIC_SHIFTS])
 
 
 class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
@@ -98,7 +93,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
 
     @cached_property
     def _surface_voronoi(self) -> Voronoi:
-        return Voronoi(_tile(self.layers_xy[0], self.in_plane_vectors))
+        return Voronoi(get_in_plane_periodic_images(self.layers_xy[0], self.in_plane_vectors))
 
     def _bridges(self) -> np.ndarray:
         """Midpoints of natural-neighbour pairs: atoms whose Voronoi cells share a ridge of real
@@ -136,7 +131,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
 
     def _distance_to_points(self, coordinate_xy: np.ndarray, points_xy: np.ndarray) -> float:
         """Distance to the nearest periodic image of any of the points."""
-        return float(cKDTree(_tile(points_xy, self.in_plane_vectors)).query(coordinate_xy)[0])
+        return float(cKDTree(get_in_plane_periodic_images(points_xy, self.in_plane_vectors)).query(coordinate_xy)[0])
 
     def get_site_name(self, coordinate_xy: List[float]) -> Optional[str]:
         """
@@ -161,7 +156,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         if name not in self.sites:
             raise ValueError(f"No '{name}' site on this surface; present: {sorted(self.sites)}")
         point = np.array(coordinate_xy[:2], dtype=float)
-        images = _tile(np.array(self.sites[name]), self.in_plane_vectors)
+        images = get_in_plane_periodic_images(np.array(self.sites[name]), self.in_plane_vectors)
         nearest = images[np.argmin(np.linalg.norm(images - point, axis=1))]
         return [float(nearest[0] - point[0]), float(nearest[1] - point[1]), 0.0]
 
@@ -172,7 +167,13 @@ def get_film_site_occupation(
     """
     Which named substrate site each film atom sits on — atom index -> site name, None for no site.
     Parts are told apart by their labels, so relaxed and file-loaded interfaces work.
+
+    Raises:
+        ValueError: when the material carries no film-labelled atoms.
     """
+    labels = interface.basis.labels.values
+    if InterfacePartsEnum.FILM.value not in labels:
+        raise ValueError("The material is not an interface — no film labels.")
     if analyzer is None:
         substrate = interface.clone()
         substrate.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
@@ -180,7 +181,6 @@ def get_film_site_occupation(
     cartesian = interface.clone()
     cartesian.to_cartesian()
     xy = np.array(cartesian.coordinates_array)[:, :2]
-    labels = interface.basis.labels.values
     return {
         i: analyzer.get_site_name(xy[i]) for i, label in enumerate(labels) if label == InterfacePartsEnum.FILM.value
     }
