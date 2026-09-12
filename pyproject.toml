@@ -18,14 +18,20 @@ dependencies = [
     "mat3ra-code",
     "mat3ra-esse",
     "mat3ra-utils>=2026.7.3.post0",
-    # new verison of numpy==2.0.0 is not handled by pymatgen yet
-    "numpy<=1.26.4",
+    "numpy",
+    # basis/__init__.py imports scipy.spatial at load time, and material.py
+    # imports basis, so a core install without scipy cannot import Material.
+    "scipy",
 ]
 
 [project.optional-dependencies]
 # tracking separately the deps required to use the tools module
 tools = [
-    "scipy",
+    # pymatgen 2024.4.13 does not handle numpy 2. The pin lives with pymatgen, in
+    # this extra, rather than in the core dependencies: the core (lattice,
+    # reciprocal lattice, material, basis) runs on numpy 2, and pinning it there
+    # forced every downstream package to numpy 1.26 whether or not it used tools.
+    "numpy<=1.26.4",
     "pymatgen==2024.4.13",
     "ase",
     "pymatgen-analysis-defects==2024.4.23",
