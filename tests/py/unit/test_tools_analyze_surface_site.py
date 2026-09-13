@@ -1,12 +1,11 @@
 import numpy as np
 import pytest
+from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer, get_film_site_occupation
 from mat3ra.made.tools.build.processed_structures.two_dimensional.passivation.enums import SurfaceTypesEnum
-from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import SlabBuilder, SlabConfiguration
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.helpers import create_interface_simple_between_slabs
 
-from .fixtures.bulk import BULK_GRAPHENE, BULK_Ni_PRIMITIVE
+from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
 from .fixtures.slab import CU001_SLAB, CU110_SLAB, MOS2_MONOLAYER, NI111_SLAB
 
 SURFACE_SITE_ANALYZER_SITES_CASES = [
@@ -98,48 +97,11 @@ def test_get_displacement_to_site_invalid():
         ANALYZER.get_displacement_to_site(ATOP, "hollow")
 
 
-# Built directly from slabs (no ZSL lattice search) so the registry below is reproducible across
-# dependency versions: create_interface_zsl's supercell match is not pinned to one outcome.
-GR_NI_111_SUBSTRATE_SLAB = SlabBuilder().get_material(
-    SlabConfiguration.from_parameters(
-        material_or_dict=BULK_Ni_PRIMITIVE,
-        miller_indices=(1, 1, 1),
-        number_of_layers=3,
-        vacuum=0.0,
-        use_conventional_cell=False,
-    )
-)
-GR_NI_111_FILM_SLAB = SlabBuilder().get_material(
-    SlabConfiguration.from_parameters(
-        material_or_dict=BULK_GRAPHENE,
-        miller_indices=(0, 0, 1),
-        number_of_layers=1,
-        vacuum=0.0,
-        use_conventional_cell=False,
-    )
-)
-GR_NI_111_GAP = 2.1  # Angstrom, the paper's chemisorption separation (Dahal & Batzill, 2014)
-
-# Shift the film so its first carbon lands exactly on the substrate's atop site.
-GR_NI_111_SUBSTRATE_ANALYZER = SurfaceSiteAnalyzer(material=GR_NI_111_SUBSTRATE_SLAB)
-GR_NI_111_FIRST_CARBON_CARTESIAN = GR_NI_111_SUBSTRATE_SLAB.basis.cell.convert_point_to_cartesian(
-    list(GR_NI_111_FILM_SLAB.coordinates_array[0])
-)
-GR_NI_111_XY_SHIFT = GR_NI_111_SUBSTRATE_ANALYZER.get_displacement_to_site(
-    GR_NI_111_FIRST_CARBON_CARTESIAN, "atop", use_cartesian_coordinates=True
-)[:2]
-
-GR_NI_111_INTERFACE = create_interface_simple_between_slabs(
-    substrate_slab=GR_NI_111_SUBSTRATE_SLAB,
-    film_slab=GR_NI_111_FILM_SLAB,
-    gap=GR_NI_111_GAP,
-    vacuum=10.0,
-    xy_shift=GR_NI_111_XY_SHIFT,
-)
+GR_NI_111_INTERFACE = Material.create(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)
 
 
 def test_get_film_site_occupation():
-    assert get_film_site_occupation(GR_NI_111_INTERFACE) == {3: "atop", 4: None}
+    assert get_film_site_occupation(GR_NI_111_INTERFACE) == {3: "atop", 4: "hcp"}
 
 
 def test_get_film_site_occupation_no_film_invalid():
