@@ -97,6 +97,7 @@ __all__ = [
     # Crystal and related analyzer functions
     "get_material_with_primitive_lattice",
     "get_material_with_conventional_lattice",
+    "SurfaceSiteAnalyzer",
     # Slab and related Functions
     "create_slab",
     "create_slab_if_not",
@@ -151,8 +152,6 @@ __all__ = [
     "get_coordination_numbers_distribution",
     # Utility Functions
     "get_optimal_film_displacement",
-    "SurfaceSiteAnalyzer",
-    "SurfaceSiteTypesEnum",
     "get_film_site_occupation",
     "get_atom_indices_by_layer",
     # Type Definitions
@@ -164,6 +163,7 @@ __all__ = [
     # Enums
     "EdgeTypesEnum",
     "SurfaceTypesEnum",
+    "SurfaceSiteTypesEnum",
 ]
 
 # Aliases

@@ -63,7 +63,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         return float(np.mean(self._layers[0][:, 2]))
 
     @cached_property
-    def _xy_sites(self) -> Dict[str, List[List[float]]]:
+    def _sites_xy(self) -> Dict[str, List[List[float]]]:
         """Site name -> every instance of that site in the cell, as [x, y] in Angstrom."""
         sites = {
             SurfaceSiteTypesEnum.ATOP.value: self._layers_xy[0].tolist(),
@@ -76,7 +76,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
     @cached_property
     def sites(self) -> Dict[str, List[List[float]]]:
         """Site name -> every instance of that site in the cell, as 3D crystal coordinates."""
-        return {name: [self._to_crystal(point) for point in points] for name, points in self._xy_sites.items()}
+        return {name: [self._to_crystal(point) for point in points] for name, points in self._sites_xy.items()}
 
     def _to_crystal(self, point_xy: List[float]) -> List[float]:
         return self.material.basis.cell.convert_point_to_crystal([point_xy[0], point_xy[1], self._surface_z])
@@ -139,9 +139,18 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         return float(cKDTree(_in_plane_periodic_images(points_xy, self._in_plane_vectors)).query(coordinate_xy)[0])
 
     def get_site_name(self, coordinate: List[float], use_cartesian_coordinates: bool = False) -> Optional[str]:
-        """The site a point sits on, within `site_match_tolerance`; None when it is on no site."""
+        """
+        The site a point sits on, within `site_match_tolerance`; None when it is on no site.
+
+        Args:
+            coordinate (List[float]): The coordinate to resolve.
+            use_cartesian_coordinates (bool): Whether `coordinate` is in Cartesian coordinates.
+
+        Returns:
+            Optional[str]: The name of the site, or None when the point is on no site.
+        """
         point = self._to_cartesian_xy(coordinate, use_cartesian_coordinates)
-        distances = {name: self._distance_to_points(point, np.array(points)) for name, points in self._xy_sites.items()}
+        distances = {name: self._distance_to_points(point, np.array(points)) for name, points in self._sites_xy.items()}
         nearest = min(distances, key=lambda name: distances[name])
         return nearest if distances[nearest] <= self.site_match_tolerance else None
 
@@ -151,13 +160,23 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         site_name: Union[str, SurfaceSiteTypesEnum],
         use_cartesian_coordinates: bool = False,
     ) -> List[float]:
-        """The in-plane shift that moves a point onto the nearest instance of a site, in the same units as
-        `coordinate`."""
+        """
+        The in-plane shift that moves a point onto the nearest instance of a site, in the same units as
+        `coordinate`.
+
+        Args:
+            coordinate (List[float]): The coordinate to displace onto the site.
+            site_name (Union[str, SurfaceSiteTypesEnum]): The name of the site to displace onto.
+            use_cartesian_coordinates (bool): Whether `coordinate` is in Cartesian coordinates.
+
+        Returns:
+            List[float]: The displacement, in the same coordinate system as `coordinate`, z zeroed.
+        """
         name = SurfaceSiteTypesEnum(site_name).value
-        if name not in self._xy_sites:
-            raise ValueError(f"No '{name}' site on this surface; present: {sorted(self._xy_sites)}")
+        if name not in self._sites_xy:
+            raise ValueError(f"No '{name}' site on this surface; present: {sorted(self._sites_xy)}")
         point = self._to_cartesian_xy(coordinate, use_cartesian_coordinates)
-        images = _in_plane_periodic_images(np.array(self._xy_sites[name]), self._in_plane_vectors)
+        images = _in_plane_periodic_images(np.array(self._sites_xy[name]), self._in_plane_vectors)
         nearest = images[np.argmin(np.linalg.norm(images - point, axis=1))]
         displacement = [float(nearest[0] - point[0]), float(nearest[1] - point[1]), 0.0]
         if use_cartesian_coordinates:
@@ -171,6 +190,13 @@ def get_film_site_occupation(
     """
     Which named substrate site each film atom sits on — atom index -> site name, None for no site.
     The default analyzer takes the substrate's top surface.
+
+    Args:
+        interface (Material): The interface material, film and substrate labelled.
+        analyzer (Optional[SurfaceSiteAnalyzer]): The substrate surface to resolve film atoms against.
+
+    Returns:
+        Dict[int, Optional[str]]: Film atom index -> site name, None where no site matches.
 
     Raises:
         ValueError: when the material carries no film-labelled or no substrate-labelled atoms.
