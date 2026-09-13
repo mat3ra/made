@@ -139,16 +139,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         return float(cKDTree(_in_plane_periodic_images(points_xy, self._in_plane_vectors)).query(coordinate_xy)[0])
 
     def get_site_name(self, coordinate: List[float], use_cartesian_coordinates: bool = False) -> Optional[str]:
-        """
-        The site a point sits on, within `site_match_tolerance`; None when it is on no site.
-
-        Args:
-            coordinate (List[float]): The coordinate to resolve.
-            use_cartesian_coordinates (bool): Whether `coordinate` is in Cartesian coordinates.
-
-        Returns:
-            Optional[str]: The name of the site, or None when the point is on no site.
-        """
+        """The site a point sits on, within `site_match_tolerance`; None when it is on no site."""
         point = self._to_cartesian_xy(coordinate, use_cartesian_coordinates)
         distances = {name: self._distance_to_points(point, np.array(points)) for name, points in self._sites_xy.items()}
         nearest = min(distances, key=lambda name: distances[name])
@@ -160,18 +151,8 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         site_name: Union[str, SurfaceSiteTypesEnum],
         use_cartesian_coordinates: bool = False,
     ) -> List[float]:
-        """
-        The in-plane shift that moves a point onto the nearest instance of a site, in the same units as
-        `coordinate`.
-
-        Args:
-            coordinate (List[float]): The coordinate to displace onto the site.
-            site_name (Union[str, SurfaceSiteTypesEnum]): The name of the site to displace onto.
-            use_cartesian_coordinates (bool): Whether `coordinate` is in Cartesian coordinates.
-
-        Returns:
-            List[float]: The displacement, in the same coordinate system as `coordinate`, z zeroed.
-        """
+        """The in-plane shift that moves a point onto the nearest instance of a site, in the same units as
+        `coordinate`."""
         name = SurfaceSiteTypesEnum(site_name).value
         if name not in self._sites_xy:
             raise ValueError(f"No '{name}' site on this surface; present: {sorted(self._sites_xy)}")
