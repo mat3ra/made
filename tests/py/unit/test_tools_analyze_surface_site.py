@@ -17,48 +17,48 @@ SURFACE_SITE_ANALYZER_SITES_CASES = [
         NI111_SLAB,
         SurfaceTypesEnum.TOP,
         {
-            "atop": [[1.2395, 0.7156]],
-            "bridge": [[1.8592, 1.789], [2.479, 0.7156], [3.0987, 1.789]],
-            "fcc": [[0.0, 0.0]],
-            "hcp": [[2.479, 1.4312]],
+            "atop": [[0.3333, 0.3333, 0.2843]],
+            "bridge": [[0.3333, 0.8333, 0.2843], [0.8333, 0.3333, 0.2843], [0.8333, 0.8333, 0.2843]],
+            "fcc": [[0.0, 0.0, 0.2843]],
+            "hcp": [[0.6667, 0.6667, 0.2843]],
         },
     ),
     (
         NI111_SLAB,
         SurfaceTypesEnum.BOTTOM,
         {
-            "atop": [[0.0, 0.0]],
-            "bridge": [[0.6197, 1.0734], [1.2395, 0.0], [1.8592, 1.0734]],
-            "fcc": [[1.2395, 0.7156]],
-            "hcp": [[2.479, 1.4312]],
+            "atop": [[0.0, 0.0, 0.0]],
+            "bridge": [[0.0, 0.5, 0.0], [0.5, 0.0, 0.0], [0.5, 0.5, 0.0]],
+            "fcc": [[0.3333, 0.3333, 0.0]],
+            "hcp": [[0.6667, 0.6667, 0.0]],
         },
     ),
     (
         CU001_SLAB,
         SurfaceTypesEnum.TOP,
         {
-            "atop": [[0.0, 0.0], [1.8106, 1.8106]],
-            "bridge": [[0.9053, 0.9053], [0.9053, 2.7159], [2.7159, 0.9053], [2.7159, 2.7159]],
-            "hollow": [[0.0, 1.8106], [1.8106, 0.0]],
+            "atop": [[0.0, 0.0, 0.1329], [0.5, 0.5, 0.1329]],
+            "bridge": [[0.25, 0.25, 0.1329], [0.25, 0.75, 0.1329], [0.75, 0.25, 0.1329], [0.75, 0.75, 0.1329]],
+            "hollow": [[0.0, 0.5, 0.1329], [0.5, 0.0, 0.1329]],
         },
     ),
     (
         CU110_SLAB,
         SurfaceTypesEnum.TOP,
         {
-            "atop": [[0.0, 1.2803], [0.0, 3.8409]],
-            "bridge": [[0.0, 0.0], [0.0, 2.5606], [1.8106, 1.2803], [1.8106, 3.8409]],
-            "hollow": [[1.8106, 0.0], [1.8106, 2.5606]],
+            "atop": [[0.0, 0.25, 0.1329], [0.0, 0.75, 0.1329]],
+            "bridge": [[0.0, 0.0, 0.1329], [0.0, 0.5, 0.1329], [0.5, 0.25, 0.1329], [0.5, 0.75, 0.1329]],
+            "hollow": [[0.5, 0.0, 0.1329], [0.5, 0.5, 0.1329]],
         },
     ),
     (
         MOS2_MONOLAYER,
         SurfaceTypesEnum.TOP,
         {
-            "atop": [[0.0, 1.8453]],
-            "bridge": [[0.7991, 0.4613], [2.3972, 0.4613], [1.5981, 1.8453]],
-            "hcp": [[1.5981, 0.9227]],
-            "hollow": [[0.0, 0.0]],
+            "atop": [[0.3333, 0.6667, 0.5679]],
+            "bridge": [[0.3333, 0.1667, 0.5679], [0.8333, 0.1667, 0.5679], [0.8333, 0.6667, 0.5679]],
+            "hcp": [[0.6667, 0.3333, 0.5679]],
+            "hollow": [[0.0, 0.0, 0.5679]],
         },
     ),
 ]
@@ -74,31 +74,31 @@ def test_surface_site_analyzer_sites(material, surface, expected_sites):
 
 
 ANALYZER: Final = SurfaceSiteAnalyzer(material=NI111_SLAB)
-ATOP_XY: Final = np.array(ANALYZER.sites["atop"][0])
-OFF_SITE_XY: Final = ATOP_XY + np.array(ANALYZER.get_displacement_to_site(ATOP_XY, "fcc")[:2]) / 2
+ATOP: Final = np.array(ANALYZER.sites["atop"][0])
+OFF_SITE: Final = ATOP + np.array(ANALYZER.get_displacement_to_site(ATOP, "fcc")) / 2
 
 GET_SITE_NAME_CASES = [
-    (ATOP_XY, "atop"),
+    (ATOP, "atop"),
     (np.array(ANALYZER.sites["hcp"][0]), "hcp"),
-    (OFF_SITE_XY, None),
+    (OFF_SITE, None),
 ]
 
 
-@pytest.mark.parametrize("coordinate_xy, expected_site_name", GET_SITE_NAME_CASES)
-def test_get_site_name(coordinate_xy, expected_site_name):
-    assert ANALYZER.get_site_name(coordinate_xy) == expected_site_name
+@pytest.mark.parametrize("coordinate, expected_site_name", GET_SITE_NAME_CASES)
+def test_get_site_name(coordinate, expected_site_name):
+    assert ANALYZER.get_site_name(coordinate) == expected_site_name
 
 
 def test_get_displacement_to_site():
-    hcp_xy = np.array(ANALYZER.sites["hcp"][0])
-    shift = ANALYZER.get_displacement_to_site(hcp_xy, "fcc")
-    assert shift[2] == 0.0
-    assert ANALYZER.get_site_name(hcp_xy + np.array(shift[:2])) == "fcc"
+    hcp = np.array(ANALYZER.sites["hcp"][0])
+    shift = ANALYZER.get_displacement_to_site(hcp, "fcc")
+    assert np.isclose(shift[2], 0.0, atol=1e-6)
+    assert ANALYZER.get_site_name((hcp + np.array(shift)).tolist()) == "fcc"
 
 
 def test_get_displacement_to_site_invalid():
     with pytest.raises(ValueError):
-        ANALYZER.get_displacement_to_site(ATOP_XY, "hollow")
+        ANALYZER.get_displacement_to_site(ATOP, "hollow")
 
 
 GR_NI_111_INTERFACE: Final = create_interface_zsl(
