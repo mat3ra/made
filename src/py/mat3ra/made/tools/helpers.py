@@ -1,6 +1,7 @@
 # Analyzers
 from .analyze.crystal_site.enums import SurfaceSiteTypesEnum
-from .analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer, get_film_site_occupation
+from .analyze.crystal_site.helpers import get_film_site_occupation
+from .analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from .analyze.lattice import get_material_with_conventional_lattice, get_material_with_primitive_lattice
 from .analyze.other import get_atom_indices_by_layer
 

@@ -1,7 +1,8 @@
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer, get_film_site_occupation
+from mat3ra.made.tools.analyze.crystal_site.helpers import get_film_site_occupation
+from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from mat3ra.made.tools.build.processed_structures.two_dimensional.passivation.enums import SurfaceTypesEnum
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 
