@@ -16,6 +16,7 @@ from mat3ra.made.tools.modify import (
     filter_by_sphere,
     filter_by_triangle_projection,
     interface_displace_part,
+    interface_label_parts_by_elements,
     remove_vacuum,
     translate_to_z_level,
 )
@@ -23,6 +24,7 @@ from mat3ra.made.tools.operations.core.unary import rotate
 from mat3ra.utils import assertion as assertion_utils
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_CONVENTIONAL_FILTERED
+from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
 from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
 from .fixtures.slab import SI_SLAB_001_2_ATOMS, SI_SLAB_001_WITH_VACUUM
 from .utils import assert_two_entities_deep_almost_equal
@@ -246,3 +248,23 @@ def test_displace_interface_optimized():
     displaced_material = interface_displace_part(material, optimal_displacement, use_cartesian_coordinates=True)
     assertion_utils.assert_deep_almost_equal(expected_coordinates, displaced_material.basis.coordinates.to_dict())
     assertion_utils.assert_deep_almost_equal(expected_labels, displaced_material.basis.labels.to_dict())
+
+
+@pytest.mark.parametrize(
+    "substrate_elements, expected_labels",
+    [
+        (["Ni"], GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["labels"]),
+        (
+            ["C"],
+            [
+                {"id": label["id"], "value": 1 - label["value"]}
+                for label in GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["labels"]
+            ],
+        ),
+    ],
+)
+def test_interface_label_parts_by_elements(substrate_elements, expected_labels):
+    material = Material.create(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)
+    material.set_labels_from_list(None)
+    labeled_material = interface_label_parts_by_elements(material, substrate_elements)
+    assertion_utils.assert_deep_almost_equal(expected_labels, labeled_material.basis.labels.to_dict())

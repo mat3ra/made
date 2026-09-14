@@ -1,4 +1,4 @@
-from typing import Callable, List, Literal, Optional, Tuple, Union
+from typing import Callable, Container, List, Literal, Optional, Tuple, Union
 
 import numpy as np
 from mat3ra.made.material import Material
@@ -625,3 +625,23 @@ def interface_get_part(
     interface_part_material = interface.clone()
     interface_part_material.basis.filter_atoms_by_labels([part.value])
     return interface_part_material
+
+
+def interface_label_parts_by_elements(interface: Material, substrate_elements: Container[str]) -> Material:
+    """
+    Label each atom of an interface as substrate or film by whether its element is in `substrate_elements`.
+
+    Args:
+        interface (Material): The interface Material object.
+        substrate_elements (Container[str]): Elements belonging to the substrate; all others are labeled as film.
+
+    Returns:
+        Material: The material with basis labels set.
+    """
+    new_material = interface.clone()
+    labels = [
+        InterfacePartsEnum.SUBSTRATE.value if element in substrate_elements else InterfacePartsEnum.FILM.value
+        for element in new_material.basis.elements.values
+    ]
+    new_material.set_labels_from_list(labels)
+    return new_material
