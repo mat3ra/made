@@ -109,15 +109,28 @@ GR_NI_111_SUBSTRATE = GR_NI_111_INTERFACE.clone()
 GR_NI_111_SUBSTRATE.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
 GR_NI_111_BOTTOM_ANALYZER = SurfaceSiteAnalyzer(material=GR_NI_111_SUBSTRATE, surface=SurfaceTypesEnum.BOTTOM)
 
+# Raise the atop carbon (atom 3) by a known amount, the way interface_displace_part does: clone,
+# to_cartesian, shift the one atom's coordinate, to_crystal.
+GR_NI_111_RAISED_ATOP_SHIFT = 0.1  # Angstrom
+GR_NI_111_RAISED_ATOP_INTERFACE = GR_NI_111_INTERFACE.clone()
+GR_NI_111_RAISED_ATOP_INTERFACE.to_cartesian()
+GR_NI_111_RAISED_ATOP_COORDINATES = GR_NI_111_RAISED_ATOP_INTERFACE.basis.coordinates.values
+GR_NI_111_RAISED_ATOP_COORDINATES[3] = (
+    np.array(GR_NI_111_RAISED_ATOP_COORDINATES[3]) + [0, 0, GR_NI_111_RAISED_ATOP_SHIFT]
+).tolist()
+GR_NI_111_RAISED_ATOP_INTERFACE.set_coordinates(GR_NI_111_RAISED_ATOP_COORDINATES)
+GR_NI_111_RAISED_ATOP_INTERFACE.to_crystal()
+
 GET_FILM_BUCKLING_CASES = [
-    (None, 0.0),  # top-hcp: atop carbon 3 and hcp carbon 4 sit at the same height -> no buckling
-    (GR_NI_111_BOTTOM_ANALYZER, None),  # fcc/hcp against the substrate's bottom surface: no atom is atop
+    (GR_NI_111_INTERFACE, None, 0.0),  # top-hcp: atop carbon 3 and hcp carbon 4 sit at the same height
+    (GR_NI_111_INTERFACE, GR_NI_111_BOTTOM_ANALYZER, None),  # against the bottom surface: no atom is atop
+    (GR_NI_111_RAISED_ATOP_INTERFACE, None, GR_NI_111_RAISED_ATOP_SHIFT),  # atop carbon raised: positive
 ]
 
 
-@pytest.mark.parametrize("analyzer, expected_buckling", GET_FILM_BUCKLING_CASES)
-def test_get_film_buckling(analyzer, expected_buckling):
-    buckling = get_film_buckling(GR_NI_111_INTERFACE, analyzer)
+@pytest.mark.parametrize("interface, analyzer, expected_buckling", GET_FILM_BUCKLING_CASES)
+def test_get_film_buckling(interface, analyzer, expected_buckling):
+    buckling = get_film_buckling(interface, analyzer)
     if expected_buckling is None:
         assert buckling is None
     else:
