@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.crystal_site.helpers import get_film_site_occupation
+from mat3ra.made.tools.analyze.crystal_site.helpers import get_film_buckling, get_film_site_occupation
 from mat3ra.made.tools.analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from mat3ra.made.tools.build.processed_structures.two_dimensional.passivation.enums import SurfaceTypesEnum
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
@@ -103,6 +103,25 @@ GR_NI_111_INTERFACE = Material.create(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)
 
 def test_get_film_site_occupation():
     assert get_film_site_occupation(GR_NI_111_INTERFACE) == {3: "atop", 4: "hcp"}
+
+
+GR_NI_111_SUBSTRATE = GR_NI_111_INTERFACE.clone()
+GR_NI_111_SUBSTRATE.basis.filter_atoms_by_labels([InterfacePartsEnum.SUBSTRATE.value])
+GR_NI_111_BOTTOM_ANALYZER = SurfaceSiteAnalyzer(material=GR_NI_111_SUBSTRATE, surface=SurfaceTypesEnum.BOTTOM)
+
+GET_FILM_BUCKLING_CASES = [
+    (None, 0.0),  # top-hcp: atop carbon 3 and hcp carbon 4 sit at the same height -> no buckling
+    (GR_NI_111_BOTTOM_ANALYZER, None),  # fcc/hcp against the substrate's bottom surface: no atom is atop
+]
+
+
+@pytest.mark.parametrize("analyzer, expected_buckling", GET_FILM_BUCKLING_CASES)
+def test_get_film_buckling(analyzer, expected_buckling):
+    buckling = get_film_buckling(GR_NI_111_INTERFACE, analyzer)
+    if expected_buckling is None:
+        assert buckling is None
+    else:
+        assert np.isclose(buckling, expected_buckling, atol=1e-6)
 
 
 def test_get_film_site_occupation_no_film_invalid():
