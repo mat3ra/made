@@ -9,6 +9,7 @@ from mat3ra.made.tools.analyze.crystal_site.crystal_site_analyzer import Crystal
 from mat3ra.made.tools.analyze.crystal_site.voronoi_crystal_site_analyzer import VoronoiCrystalSiteAnalyzer
 from mat3ra.made.tools.analyze.other import (
     SurfaceTypesEnum,
+    get_atom_indices_by_layer,
     get_average_interlayer_distance,
     get_surface_area,
     get_surface_atom_indices,
@@ -25,7 +26,7 @@ from unit.utils import OSPlatform, get_platform_specific_value
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
 from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
-from .fixtures.slab import SI_CONVENTIONAL_SLAB_001
+from .fixtures.slab import CU001_SLAB, NI111_SLAB, SI_CONVENTIONAL_SLAB_001
 
 COMPARISON_PRECISION = 1e-4
 
@@ -217,3 +218,14 @@ def test_calculate_von_mises_strain(strain_matrix, expected_strain):
     """Test von Mises strain calculation used in ZSL interface analysis."""
     strain_percentage = calculate_von_mises_strain(np.array(strain_matrix))
     assert np.isclose(strain_percentage, expected_strain, atol=0.01)
+
+
+GET_ATOM_INDICES_BY_LAYER_CASES = [
+    (NI111_SLAB, [[0], [1], [2]]),
+    (CU001_SLAB, [[1, 2], [0, 3]]),
+]
+
+
+@pytest.mark.parametrize("material, expected_layers", GET_ATOM_INDICES_BY_LAYER_CASES)
+def test_get_atom_indices_by_layer(material, expected_layers):
+    assert get_atom_indices_by_layer(material) == expected_layers

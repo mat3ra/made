@@ -432,3 +432,26 @@ def get_local_extremum_atom_index(
         extremum_z_atom = min(z_values, key=lambda item: item[1])
 
     return extremum_z_atom[0]
+
+
+def get_atom_indices_by_layer(material: Material, tolerance: float = 0.5) -> List[List[int]]:
+    """
+    Atom indices grouped into layers along z, bottom layer first.
+
+    Consecutive heights closer than `tolerance` Angstrom belong to one layer.
+
+    Args:
+        material: Material object.
+        tolerance: Height gap, in Angstrom, that separates two layers.
+    """
+    cartesian = material.clone()
+    cartesian.to_cartesian()
+    heights = np.array(cartesian.coordinates_array)[:, 2]
+    layers: List[List[int]] = []
+    previous_height: Optional[float] = None
+    for index in np.argsort(heights, kind="stable"):
+        if previous_height is None or heights[index] - previous_height > tolerance:
+            layers.append([])
+        layers[-1].append(int(index))
+        previous_height = float(heights[index])
+    return layers

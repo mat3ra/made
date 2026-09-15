@@ -1,5 +1,9 @@
 # Analyzers
+from .analyze.crystal_site.enums import SurfaceSiteTypesEnum
+from .analyze.crystal_site.helpers import get_film_buckling, get_film_site_occupation
+from .analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from .analyze.lattice import get_material_with_conventional_lattice, get_material_with_primitive_lattice
+from .analyze.other import get_atom_indices_by_layer
 
 # Defective Structures
 from .build.compound_pristine_structures.two_dimensional.heterostructure import create_heterostructure
@@ -23,6 +27,7 @@ from .build.compound_pristine_structures.two_dimensional.interface.zsl.helpers i
 
 # Defective Structures
 from .build.defective_structures.one_dimensional.grain_boundary_linear.helpers import create_grain_boundary_linear
+from .build.defective_structures.three_dimensional.solid_solution.helpers import create_solid_solution
 from .build.defective_structures.two_dimensional.adatom.helpers import (
     create_defect_adatom,
     create_multiple_adatom_defects,
@@ -42,7 +47,6 @@ from .build.defective_structures.zero_dimensional.point_defect.substitutional.he
 )
 from .build.defective_structures.zero_dimensional.point_defect.types import PointDefectDict
 from .build.defective_structures.zero_dimensional.point_defect.vacancy.helpers import create_defect_point_vacancy
-from .build.defective_structures.three_dimensional.solid_solution.helpers import create_solid_solution
 
 # Pristine Structures
 from .build.pristine_structures.three_dimensional.ideal_crystal.helpers import create_monolayer
@@ -94,6 +98,7 @@ __all__ = [
     # Crystal and related analyzer functions
     "get_material_with_primitive_lattice",
     "get_material_with_conventional_lattice",
+    "SurfaceSiteAnalyzer",
     # Slab and related Functions
     "create_slab",
     "create_slab_if_not",
@@ -148,6 +153,9 @@ __all__ = [
     "get_coordination_numbers_distribution",
     # Utility Functions
     "get_optimal_film_displacement",
+    "get_film_site_occupation",
+    "get_film_buckling",
+    "get_atom_indices_by_layer",
     # Type Definitions
     "AdatomDefectDict",
     "PointDefectDict",
@@ -157,6 +165,7 @@ __all__ = [
     # Enums
     "EdgeTypesEnum",
     "SurfaceTypesEnum",
+    "SurfaceSiteTypesEnum",
 ]
 
 # Aliases
