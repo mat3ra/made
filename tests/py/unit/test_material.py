@@ -150,6 +150,14 @@ def test_calculate_hash_feo_standata():
     assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
+@pytest.mark.parametrize("coordinate", [[0.0, 0.999998, 6.1e-07], [-1e-06, 0.9995, 1.0004]])
+def test_calculate_hash_coordinate_near_lattice_point(coordinate):
+    material = Material.create_default()
+    expected_hash = material.hash
+    material.basis.coordinates.values[0] = coordinate
+    assert material.hash == expected_hash
+
+
 def test_model_dump_includes_hashes():
     material = Material.create_default()
     serialized_material = material.model_dump()

@@ -12,6 +12,18 @@ from pydantic import Field
 from scipy.spatial import cKDTree
 
 
+# Mirrors JS @mat3ra/code math.mod: a crystal coordinate within this distance of a lattice point is on it.
+COORDINATE_MOD_TOLERANCE = 0.001
+
+
+def mod_with_tolerance(value: float, tolerance: float = COORDINATE_MOD_TOLERANCE) -> float:
+    """
+    Brings a crystal coordinate into [0, 1) and sets it to 0 within `tolerance` of 0 or 1, as JS math.mod does.
+    """
+    remainder = value % 1
+    return 0.0 if min(remainder, 1 - remainder) <= tolerance else remainder
+
+
 def get_overlapping_coordinates(
     coordinate: List[float],
     coordinates: List[List[float]],
@@ -92,7 +104,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def hash_string(self) -> str:
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
-        Converts to crystal, applies mod 1 to bring coords into [0,1), builds sorted atom strings.
+        Converts to crystal, brings coords into [0,1) as JS math.mod does, builds sorted atom strings.
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
@@ -100,7 +112,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [f"{round(v % 1, HASH_TOLERANCE):g}" for v in coord["value"]]
+            rounded = [f"{round(mod_with_tolerance(v), HASH_TOLERANCE):g}" for v in coord["value"]]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()
