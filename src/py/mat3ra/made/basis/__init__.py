@@ -9,6 +9,7 @@ from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
 from mat3ra.esse.models.material import BasisSchema, BasisUnitsEnum
 from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.cell import Cell
+from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
@@ -26,15 +27,6 @@ def mod_with_tolerance(value: float, tolerance: float = COORDINATE_MOD_TOLERANCE
     distance = min(remainder, 1 - remainder)
     is_on_lattice_point = distance <= tolerance or math.isclose(distance, tolerance, rel_tol=MATHJS_RELATIVE_EPSILON)
     return 0.0 if is_on_lattice_point else remainder
-
-
-def round_half_away_from_zero(value: float, decimals: int) -> float:
-    """
-    Rounds as JS @mat3ra/code math.roundCustom does by default; Python's round() rounds halves to even.
-    """
-    factor = 10**decimals
-    sign = -1 if value < 0 else 1
-    return sign * math.floor(abs(value) * factor + 0.5) / factor
 
 
 def get_overlapping_coordinates(
@@ -125,7 +117,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [f"{round_half_away_from_zero(mod_with_tolerance(v), HASH_TOLERANCE):g}" for v in coord["value"]]
+            rounded = [f"{round_custom(mod_with_tolerance(v), HASH_TOLERANCE):g}" for v in coord["value"]]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()

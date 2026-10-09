@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from mat3ra.made.basis import Basis, Coordinates, mod_with_tolerance, round_half_away_from_zero
+from mat3ra.made.basis import Basis, Coordinates, mod_with_tolerance
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.utils import assertion as assertion_utils
@@ -165,9 +165,19 @@ def test_mod_with_tolerance(value, expected):
     assert mod_with_tolerance(value) == pytest.approx(expected)
 
 
-@pytest.mark.parametrize("value, expected", [(0.0625, 0.063), (0.3125, 0.313), (0.5005, 0.5), (-0.0625, -0.063)])
-def test_round_half_away_from_zero(value, expected):
-    assert round_half_away_from_zero(value, 3) == expected
+# JS @mat3ra/utils roundCustom rounds the decimal value half to even: 0.0625 -> 0.062, 0.1235 -> 0.124
+@pytest.mark.parametrize("coordinate, same_hash_as", [(0.0625, 0.062), (0.1235, 0.124)])
+def test_calculate_hash_rounds_coordinates_as_js(coordinate, same_hash_as):
+    material, reference = Material.create_default(), Material.create_default()
+    material.basis.coordinates.values[1] = [coordinate, 0.25, 0.25]
+    reference.basis.coordinates.values[1] = [same_hash_as, 0.25, 0.25]
+    assert material.hash == reference.hash
+
+
+def test_calculate_hash_rounds_lattice_as_js():
+    lattice = Lattice(a=3.1235, b=3.0625, c=4.0)
+    reference = Lattice(a=3.124, b=3.062, c=4.0)
+    assert lattice.get_hash_string() == reference.get_hash_string()
 
 
 def test_model_dump_includes_hashes():
