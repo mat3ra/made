@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from mat3ra.made.basis import Basis, Coordinates
+from mat3ra.made.basis import Basis, Coordinates, mod_with_tolerance, round_half_away_from_zero
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.utils import assertion as assertion_utils
@@ -150,12 +150,24 @@ def test_calculate_hash_feo_standata():
     assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
-@pytest.mark.parametrize("coordinate", [[0.0, 0.999998, 6.1e-07], [-1e-06, 0.9995, 1.0004]])
+@pytest.mark.parametrize("coordinate", [[0.0, 0.999998, 6.1e-07], [-1e-06, 0.9995, 1.0004], [0.999, -0.001, 0.0]])
 def test_calculate_hash_coordinate_near_lattice_point(coordinate):
     material = Material.create_default()
     expected_hash = material.hash
     material.basis.coordinates.values[0] = coordinate
     assert material.hash == expected_hash
+
+
+@pytest.mark.parametrize(
+    "value, expected", [(0.999998, 0.0), (-1e-06, 0.0), (0.999, 0.0), (-0.001, 0.0), (0.0011, 0.0011), (-0.5, 0.5)]
+)
+def test_mod_with_tolerance(value, expected):
+    assert mod_with_tolerance(value) == pytest.approx(expected)
+
+
+@pytest.mark.parametrize("value, expected", [(0.0625, 0.063), (0.3125, 0.313), (0.5005, 0.5), (-0.0625, -0.063)])
+def test_round_half_away_from_zero(value, expected):
+    assert round_half_away_from_zero(value, 3) == expected
 
 
 def test_model_dump_includes_hashes():

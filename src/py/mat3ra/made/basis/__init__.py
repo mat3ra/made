@@ -1,3 +1,4 @@
+import math
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
@@ -11,9 +12,10 @@ from mat3ra.made.cell import Cell
 from pydantic import Field
 from scipy.spatial import cKDTree
 
-
 # Mirrors JS @mat3ra/code math.mod: a crystal coordinate within this distance of a lattice point is on it.
 COORDINATE_MOD_TOLERANCE = 0.001
+# mathjs smallerEq, used by math.mod, counts values within this relative epsilon as equal.
+MATHJS_RELATIVE_EPSILON = 1e-12
 
 
 def mod_with_tolerance(value: float, tolerance: float = COORDINATE_MOD_TOLERANCE) -> float:
@@ -21,7 +23,18 @@ def mod_with_tolerance(value: float, tolerance: float = COORDINATE_MOD_TOLERANCE
     Brings a crystal coordinate into [0, 1) and sets it to 0 within `tolerance` of 0 or 1, as JS math.mod does.
     """
     remainder = value % 1
-    return 0.0 if min(remainder, 1 - remainder) <= tolerance else remainder
+    distance = min(remainder, 1 - remainder)
+    is_on_lattice_point = distance <= tolerance or math.isclose(distance, tolerance, rel_tol=MATHJS_RELATIVE_EPSILON)
+    return 0.0 if is_on_lattice_point else remainder
+
+
+def round_half_away_from_zero(value: float, decimals: int) -> float:
+    """
+    Rounds as JS @mat3ra/code math.roundCustom does by default; Python's round() rounds halves to even.
+    """
+    factor = 10**decimals
+    sign = -1 if value < 0 else 1
+    return sign * math.floor(abs(value) * factor + 0.5) / factor
 
 
 def get_overlapping_coordinates(
@@ -112,7 +125,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [f"{round(mod_with_tolerance(v), HASH_TOLERANCE):g}" for v in coord["value"]]
+            rounded = [f"{round_half_away_from_zero(mod_with_tolerance(v), HASH_TOLERANCE):g}" for v in coord["value"]]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()

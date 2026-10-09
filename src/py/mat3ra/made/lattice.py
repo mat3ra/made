@@ -12,6 +12,7 @@ from mat3ra.esse.models.properties_directory.structural.lattice import (
 from mat3ra.utils.mixins import RoundNumericValuesMixin
 from pydantic import BaseModel
 
+from .basis import round_half_away_from_zero
 from .cell import Cell
 
 COORDINATE_TOLERANCE = 6
@@ -180,7 +181,7 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
         """Mirrors JS Lattice.getHashString(isScaled). Rounds to HASH_TOLERANCE decimal places."""
         scale = self.a if is_scaled else 1
         values = [self.a / scale, self.b / scale, self.c / scale, self.alpha, self.beta, self.gamma]
-        return ";".join(f"{round(v, HASH_TOLERANCE):g}" for v in values) + ";"
+        return ";".join(f"{round_half_away_from_zero(v, HASH_TOLERANCE):g}" for v in values) + ";"
 
     def get_scaled_by_matrix(self, matrix: List[List[float]]):
         """
