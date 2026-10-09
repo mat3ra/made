@@ -165,7 +165,8 @@ def test_mod_with_tolerance(value, expected):
     assert mod_with_tolerance(value) == pytest.approx(expected)
 
 
-# JS @mat3ra/utils roundCustom rounds the decimal value half to even: 0.0625 -> 0.062, 0.1235 -> 0.124
+# JS @mat3ra/utils roundCustom rounds the decimal value half to even: 0.0625 -> 0.062, 0.1235 -> 0.124.
+# 0.0625 is exact in binary and catches half away from zero; 0.1235 is stored as 0.12349... and catches round().
 @pytest.mark.parametrize("coordinate, same_hash_as", [(0.0625, 0.062), (0.1235, 0.124)])
 def test_calculate_hash_rounds_coordinates_as_js(coordinate, same_hash_as):
     material, reference = Material.create_default(), Material.create_default()

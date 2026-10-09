@@ -13,9 +13,9 @@ from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
-# Mirrors JS @mat3ra/code math.mod: a crystal coordinate within this distance of a lattice point is on it.
+# Mirrors JS @mat3ra/utils Utils.math.mod: a crystal coordinate within this distance of a lattice point is on it.
 COORDINATE_MOD_TOLERANCE = 0.001
-# mathjs smallerEq, used by math.mod, counts values within this relative epsilon as equal.
+# mathjs smallerEq, used by math.mod, counts values within config.epsilon (default 1e-12) as equal.
 MATHJS_RELATIVE_EPSILON = 1e-12
 
 
