@@ -1,4 +1,3 @@
-import math
 from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
@@ -9,24 +8,10 @@ from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
 from mat3ra.esse.models.material import BasisSchema, BasisUnitsEnum
 from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.cell import Cell
+from mat3ra.utils.math import mod
 from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
-
-# Mirrors JS @mat3ra/utils Utils.math.mod: a crystal coordinate within this distance of a lattice point is on it.
-CRYSTAL_COORDINATE_WRAP_TOLERANCE = 0.001
-# mathjs smallerEq, used by math.mod, counts values within config.epsilon (default 1e-12) as equal.
-MATHJS_RELATIVE_EPSILON = 1e-12
-
-
-def wrap_crystal_coordinate(value: float, tolerance: float = CRYSTAL_COORDINATE_WRAP_TOLERANCE) -> float:
-    """
-    Brings a crystal coordinate into [0, 1) and sets it to 0 within `tolerance` of 0 or 1, as JS math.mod does.
-    """
-    remainder = value % 1
-    distance = min(remainder, 1 - remainder)
-    is_on_lattice_point = distance <= tolerance or math.isclose(distance, tolerance, rel_tol=MATHJS_RELATIVE_EPSILON)
-    return 0.0 if is_on_lattice_point else remainder
 
 
 def get_overlapping_coordinates(
@@ -109,7 +94,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def hash_string(self) -> str:
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
-        Converts to crystal, wraps coordinates into [0,1) as JS Utils.math.mod does, builds sorted atom strings.
+        Converts to crystal, applies mod 1 to bring coords into [0,1), builds sorted atom strings.
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
@@ -117,7 +102,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [f"{round_custom(wrap_crystal_coordinate(value), HASH_TOLERANCE):g}" for value in coord["value"]]
+            rounded = [f"{round_custom(mod(value), HASH_TOLERANCE):g}" for value in coord["value"]]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()

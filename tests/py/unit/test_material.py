@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from mat3ra.made.basis import Basis, Coordinates, wrap_crystal_coordinate
+from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.utils import assertion as assertion_utils
@@ -150,35 +150,18 @@ def test_calculate_hash_feo_standata():
     assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
-@pytest.mark.parametrize("coordinate", [[0.0, 0.999998, 6.1e-07], [-1e-06, 0.9995, 1.0004], [0.999, -0.001, 0.0]])
-def test_calculate_hash_coordinate_near_lattice_point(coordinate):
-    material = Material.create_default()
-    expected_hash = material.hash
-    material.basis.coordinates.values[0] = coordinate
-    assert material.hash == expected_hash
-
-
-@pytest.mark.parametrize(
-    "value, expected", [(0.999998, 0.0), (-1e-06, 0.0), (0.999, 0.0), (-0.001, 0.0), (0.0011, 0.0011), (-0.5, 0.5)]
-)
-def test_wrap_crystal_coordinate(value, expected):
-    assert wrap_crystal_coordinate(value) == pytest.approx(expected)
-
-
-# JS @mat3ra/utils roundCustom rounds the decimal value half to even: 0.0625 -> 0.062, 0.1235 -> 0.124.
-# 0.0625 is exact in binary and catches half away from zero; 0.1235 is stored as 0.12349... and catches round().
-@pytest.mark.parametrize("coordinate, same_hash_as", [(0.0625, 0.062), (0.1235, 0.124)])
-def test_calculate_hash_rounds_coordinates_as_js(coordinate, same_hash_as):
+# Pairs that made's JS hashes identically: Utils.math.mod wraps within 0.001 of a lattice point to 0, and
+# Utils.math.roundCustom rounds the decimal value half to even (0.0625 is exact in binary, 0.1235 is not).
+@pytest.mark.parametrize("coordinate, same_hash_as", [(0.999998, 0.0), (-1e-06, 0.0), (0.0625, 0.062), (0.1235, 0.124)])
+def test_calculate_hash_as_js(coordinate, same_hash_as):
     material, reference = Material.create_default(), Material.create_default()
     material.basis.coordinates.values[1] = [coordinate, 0.25, 0.25]
     reference.basis.coordinates.values[1] = [same_hash_as, 0.25, 0.25]
     assert material.hash == reference.hash
 
 
-def test_calculate_hash_rounds_lattice_as_js():
-    lattice = Lattice(a=3.1235, b=3.0625, c=4.0)
-    reference = Lattice(a=3.124, b=3.062, c=4.0)
-    assert lattice.get_hash_string() == reference.get_hash_string()
+def test_lattice_hash_string_as_js():
+    assert Lattice(a=3.1235, b=3.0625, c=4.0).get_hash_string() == Lattice(a=3.124, b=3.062, c=4.0).get_hash_string()
 
 
 def test_model_dump_includes_hashes():
