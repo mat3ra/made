@@ -17,8 +17,7 @@ classifiers = [
 dependencies = [
     "mat3ra-code",
     "mat3ra-esse",
-    # TEMPORARY: until mat3ra-utils with math.mod is released
-    "mat3ra-utils @ git+https://github.com/mat3ra/utils.git@195b5bf23756e0b1e13179e2294986abcf61f3f0",
+    "mat3ra-utils>=2026.7.8.post0",
     "numpy",
     # basis/__init__.py imports scipy.spatial at load time, and material.py
     # imports basis, so a core install without scipy cannot import Material.
