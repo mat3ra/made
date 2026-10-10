@@ -8,7 +8,6 @@ from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
 from mat3ra.esse.models.material import BasisSchema, BasisUnitsEnum
 from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.cell import Cell
-from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
@@ -101,10 +100,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            wrapped = np.mod(coord["value"], 1)
-            # as JS Utils.math.mod: within 0.001 of a lattice point is 0 (mathjs adds a 1e-12 relative margin)
-            wrapped[np.minimum(wrapped, 1 - wrapped) <= 0.001 * (1 + 1e-12)] = 0
-            rounded = [f"{round_custom(value, HASH_TOLERANCE):g}" for value in wrapped]
+            rounded = [f"{round(v, HASH_TOLERANCE) % 1:g}" for v in coord["value"]]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()

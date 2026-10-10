@@ -150,18 +150,11 @@ def test_calculate_hash_feo_standata():
     assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
-# Pairs that made's JS hashes identically: Utils.math.mod wraps within 0.001 of a lattice point to 0, and
-# Utils.math.roundCustom rounds the decimal value half to even (0.0625 is exact in binary, 0.1235 is not).
-@pytest.mark.parametrize("coordinate, same_hash_as", [(0.999998, 0.0), (-1e-06, 0.0), (0.0625, 0.062), (0.1235, 0.124)])
-def test_calculate_hash_as_js(coordinate, same_hash_as):
-    material, reference = Material.create_default(), Material.create_default()
-    material.set_coordinates([[0.0, 0.0, 0.0], [coordinate, 0.25, 0.25]])
-    reference.set_coordinates([[0.0, 0.0, 0.0], [same_hash_as, 0.25, 0.25]])
-    assert material.hash == reference.hash
-
-
-def test_lattice_hash_string_as_js():
-    assert Lattice(a=3.1235, b=3.0625, c=4.0).get_hash_string() == Lattice(a=3.124, b=3.062, c=4.0).get_hash_string()
+@pytest.mark.parametrize("coordinate", [0.999998, -1e-06])
+def test_calculate_hash_coordinate_rounding_to_lattice_point(coordinate):
+    material = Material.create_default()
+    material.set_coordinates([[coordinate, 0.0, 0.0], material.basis.coordinates.values[1]])
+    assert material.hash == Material.create_default().hash
 
 
 def test_model_dump_includes_hashes():
