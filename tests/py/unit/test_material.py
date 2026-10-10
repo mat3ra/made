@@ -3,7 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from mat3ra.made.basis import Basis, Coordinates, mod_with_tolerance
+from mat3ra.made.basis import Basis, Coordinates, wrap_crystal_coordinate
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.utils import assertion as assertion_utils
@@ -161,8 +161,8 @@ def test_calculate_hash_coordinate_near_lattice_point(coordinate):
 @pytest.mark.parametrize(
     "value, expected", [(0.999998, 0.0), (-1e-06, 0.0), (0.999, 0.0), (-0.001, 0.0), (0.0011, 0.0011), (-0.5, 0.5)]
 )
-def test_mod_with_tolerance(value, expected):
-    assert mod_with_tolerance(value) == pytest.approx(expected)
+def test_wrap_crystal_coordinate(value, expected):
+    assert wrap_crystal_coordinate(value) == pytest.approx(expected)
 
 
 # JS @mat3ra/utils roundCustom rounds the decimal value half to even: 0.0625 -> 0.062, 0.1235 -> 0.124.
