@@ -55,9 +55,11 @@ def create_grain_boundary_linear(
         vacuum (float): Size of the vacuum layer in Angstroms.
         boundary_vectors (Optional[Tuple[Tuple[int, int], Tuple[int, int]]]): Lattice vectors of the two grains along
             the boundary, equal in length, in units of the lattice vectors; each grain is then the rectangular
-            supercell [shortest perpendicular vector, boundary vector] (GrainBoundaryLinearAnalyzer).
+            supercell [shortest perpendicular vector, boundary vector] of the conventional cell, stacked along x
+            (GrainBoundaryLinearAnalyzer); the commensurate-search arguments do not apply.
         core (Optional[GrainBoundaryCoreEnum]): Ring pair ("5|7", "4|8") rebuilt along both lines of a honeycomb
-            lattice; needs gap=None. Without boundary vectors, they are found from the target angle.
+            lattice, the grains at their natural spacing (no gap). Without boundary vectors, they are found from the
+            target angle.
         number_of_periods_across (int): Repetitions of the perpendicular vector in each grain.
 
     Returns:
@@ -67,11 +69,9 @@ def create_grain_boundary_linear(
         ValueError: If no commensurate lattice matches are found.
     """
     if boundary_vectors is not None or core is not None:
-        slab_configuration = SlabConfiguration.from_parameters(
-            material, miller_indices, number_of_layers, vacuum=vacuum, use_conventional_cell=use_conventional_cell
-        )
+        slab = SlabConfiguration.from_parameters(material, miller_indices, number_of_layers, vacuum=vacuum)
         return create_grain_boundary_linear_on_line(
-            slab_configuration, boundary_vectors, target_angle, angle_tolerance, number_of_periods_across, core, gap
+            slab, boundary_vectors, target_angle, angle_tolerance, number_of_periods_across, core, direction, gap
         )
     strained_configs, actual_angle = get_commensurate_strained_configurations(
         material=material,
@@ -85,33 +85,33 @@ def create_grain_boundary_linear(
         vacuum=vacuum,
         use_conventional_cell=use_conventional_cell,
     )
-
     grain_boundary_config = GrainBoundaryLinearConfiguration(
         stack_components=strained_configs,
         direction=direction,
         gaps=ArrayWithIds.from_values([gap, gap]),
         actual_angle=actual_angle,
     )
-
     return GrainBoundaryLinearBuilder().get_material(grain_boundary_config)
 
 
 def create_grain_boundary_linear_on_line(
-    slab_configuration: SlabConfiguration,
+    slab: SlabConfiguration,
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]],
     target_angle: float,
     angle_tolerance: float,
     number_of_periods_across: int,
     core: Optional[GrainBoundaryCoreEnum],
+    direction: AxisEnum,
     gap: Optional[float],
 ) -> MaterialWithBuildMetadata:
     """
-    The grain boundary of two rectangular grains along x (GrainBoundaryLinearAnalyzer); with a core, grain 2 slid along
-    the line as the analyzer chooses and the sites near both lines rebuilt.
+    The grain boundary of two rectangular grains stacked along x (GrainBoundaryLinearAnalyzer); with a core, at their
+    natural spacing, the second grain slid along the line as the analyzer chooses and the sites near both lines rebuilt.
     """
+    if direction != AxisEnum.x:
+        raise ValueError(f"Grains matched on a boundary line are stacked along x, not {direction.value}")
     analyzer = GrainBoundaryLinearAnalyzer(
-        substrate_slab_configuration=slab_configuration,
-        film_slab_configuration=slab_configuration,
+        substrate_slab_configuration=slab,
         boundary_vectors=boundary_vectors,
         target_angle=target_angle,
         angle_tolerance=angle_tolerance,
@@ -120,7 +120,7 @@ def create_grain_boundary_linear_on_line(
     )
     configuration = GrainBoundaryLinearConfiguration(
         stack_components=analyzer.grain_configurations,
-        gaps=ArrayWithIds.from_values([] if gap is None else [gap, gap]),
+        gaps=ArrayWithIds.from_values([] if core is not None or gap is None else [gap, gap]),
         actual_angle=analyzer.actual_angle,
     )
     builder = GrainBoundaryLinearBuilder()

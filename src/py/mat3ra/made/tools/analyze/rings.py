@@ -23,6 +23,11 @@ CENTRAL_IMAGE_INDEX = 4
 Bonds = Tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
+def get_periodic_images(positions: np.ndarray, lattice_vectors: np.ndarray) -> np.ndarray:
+    """Positions repeated over the 3 x 3 cells around the central one, central copy at CENTRAL_IMAGE_INDEX."""
+    return (positions[None] + (IMAGE_SHIFTS @ lattice_vectors)[:, None]).reshape(-1, 2)
+
+
 def sort_bonds(first: np.ndarray, second: np.ndarray, vectors: np.ndarray) -> Bonds:
     order = np.lexsort((np.arctan2(vectors[:, 1], vectors[:, 0]), first))
     return first[order], second[order], vectors[order]
@@ -65,12 +70,9 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
         material.to_crystal()
         return (np.array(material.basis.coordinates.values)[:, :2]) @ self.lattice_vectors
 
-    def get_images(self, positions: np.ndarray) -> np.ndarray:
-        return (positions[None] + (IMAGE_SHIFTS @ self.lattice_vectors)[:, None]).reshape(-1, 2)
-
     def get_pairs(self, positions: np.ndarray, cutoff: float) -> Bonds:
         """Pairs (i, j, vector from i to an image of j) closer than the cutoff, periodic in the plane of the cell."""
-        images = self.get_images(positions)
+        images = get_periodic_images(positions, self.lattice_vectors)
         neighbors = cKDTree(images).query_ball_point(positions, cutoff)
         first = np.repeat(np.arange(len(positions)), [len(indices) for indices in neighbors])
         image_indices = np.concatenate(neighbors).astype(int)
@@ -100,7 +102,8 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     @cached_property
     def bonds(self) -> Bonds:
         """Directed bonds (site, neighbor site, vector), grouped by site in counterclockwise order."""
-        nearest_distances = cKDTree(self.get_images(self.site_positions)).query(self.site_positions, k=2)[0][:, 1]
+        images = get_periodic_images(self.site_positions, self.lattice_vectors)
+        nearest_distances = cKDTree(images).query(self.site_positions, k=2)[0][:, 1]
         return sort_bonds(*self.get_pairs(self.site_positions, self.bond_cutoff_factor * np.median(nearest_distances)))
 
     @cached_property
@@ -148,6 +151,7 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
 
     @cached_property
     def ring_centers(self) -> np.ndarray:
+        """Mean of each ring's corners, followed around the ring from its first site (unwrapped across the cell)."""
         first, _, vectors = self.bonds
         starts = self.site_positions[[first[ring[0]] for ring in self.rings]]
         return starts + np.array(
@@ -155,6 +159,7 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
         )
 
     def get_nearest_lines(self, x_values: np.ndarray, line_positions: List[float]) -> np.ndarray:
+        """Index of the nearest line x = const to each x, periodic in the cell width."""
         width = self.lattice_vectors[0, 0]
         return np.argmin(np.abs((np.subtract.outer(x_values, line_positions) + width / 2) % width - width / 2), axis=1)
 
@@ -170,6 +175,7 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
         ]
 
     def get_arrangement(self, rings: np.ndarray, line_bonds: np.ndarray) -> RingsArrangement:
+        """Arrangement of the given rings, each with its neighbors among them (one entry per shared edge)."""
         neighbors: Dict[int, List[int]] = {ring: [] for ring in rings}
         rings_without_core_partner = 0
         for ring in rings:
@@ -194,6 +200,7 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
         return [[ring for ring, label in zip(rings, labels) if label == cluster] for cluster in np.unique(labels)]
 
     def get_cluster_sequence(self, cluster: List[int], neighbors: Dict[int, List[int]]) -> str:
+        """Ring sizes walked from an end of the cluster; a chain shares as many edges as it has rings."""
         distinct_neighbors = [len(set(neighbors[ring])) for ring in cluster]
         path = [cluster[int(np.argmin(distinct_neighbors))]]
         while following := [ring for ring in neighbors[path[-1]] if ring not in path]:

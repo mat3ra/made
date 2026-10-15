@@ -1,5 +1,6 @@
 from collections import Counter
 from functools import cached_property
+from math import gcd
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -13,18 +14,25 @@ from mat3ra.esse.models.materials_category_components.entities.auxiliary.two_dim
 )
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
-from pydantic import model_validator
-
-from ...build.defective_structures.one_dimensional.grain_boundary_linear.reconstruction import (
-    GrainBoundaryCoreReconstruction,
-)
-from ...build.pristine_structures.two_dimensional.slab_strained_supercell.configuration import (
+from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab_strained_supercell.configuration import (
     SlabStrainedSupercellConfiguration,
 )
+from pydantic import model_validator
+
+from ..grain_boundary_network import GrainBoundaryRingNetworkAnalyzer
 from ..rings import RingsArrangement, RingsMaterialAnalyzer
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 from .zsl import ZSLInterfaceAnalyzer
+
+CORE_RING_SIZES = {GrainBoundaryCoreEnum.field_5_7: [5, 7], GrainBoundaryCoreEnum.field_4_8: [4, 8]}
+EQUAL_LENGTH_TOLERANCE = 1e-3  # relative
+HONEYCOMB_LENGTH_TOLERANCE = 1e-3  # relative
+HONEYCOMB_ANGLE_TOLERANCE = 0.5  # degrees
+INTEGER_TOLERANCE = 1e-3
+LENGTH_GROUPING_DECIMALS = 3  # angstrom
+# 90-degree rotation of lattice coordinates: J @ G @ v is perpendicular to v in the metric G
+ROTATION_90 = np.array([[0, -1], [1, 0]])
 
 
 class GrainBoundaryPlanarMatchHolder(InMemoryEntityPydantic):
@@ -101,9 +109,10 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     `number_of_periods_across` times. The boundary vectors, in the lattice vectors of the slab, are given or found as
     the shortest pair of equal length rotated by `target_angle` from the first to the second.
 
-    With a `core` (honeycomb lattices only), `get_slide` chooses the slide of grain 2 along the line.
+    With a `core` (honeycomb lattices only), `get_slide` chooses the slide of the second grain along the line.
     """
 
+    film_slab_configuration: Optional[SlabConfiguration] = None
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
     target_angle: float = 0.0
     angle_tolerance: float = 0.1
@@ -114,7 +123,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     @model_validator(mode="after")
     def _validate_core_lattice(self):
-        if self.core is not None and not self.honeycomb:
+        if self.core is not None and not self.is_honeycomb:
             raise ValueError(
                 f"Core {self.core.value} needs a honeycomb lattice: |a| = |b|, gamma 60 or 120 degrees, "
                 "two sites in top view"
@@ -122,13 +131,14 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return self
 
     @cached_property
-    def honeycomb(self) -> bool:
+    def is_honeycomb(self) -> bool:
+        """From the geometry of the slab, not its lattice type."""
         lattice = self.substrate_material.lattice
-        sites = RingsMaterialAnalyzer(material=self.substrate_material)
+        rings_analyzer = RingsMaterialAnalyzer(material=self.substrate_material)
         return bool(
-            np.isclose(lattice.a, lattice.b, rtol=1e-3)
-            and min(abs(lattice.gamma - 60), abs(lattice.gamma - 120)) < 0.5
-            and len(sites.site_positions) == 2
+            np.isclose(lattice.a, lattice.b, rtol=HONEYCOMB_LENGTH_TOLERANCE)
+            and min(abs(lattice.gamma - 60), abs(lattice.gamma - 120)) < HONEYCOMB_ANGLE_TOLERANCE
+            and len(rings_analyzer.site_positions) == 2
         )
 
     @cached_property
@@ -137,14 +147,18 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     @cached_property
     def integer_vectors(self) -> np.ndarray:
+        """Integer vectors up to `maximum_vector_component`, by length, then by direction from the lattice vector a."""
         values = np.arange(-self.maximum_vector_component, self.maximum_vector_component + 1)
         vectors = np.stack(np.meshgrid(values, values, indexing="ij"), axis=-1).reshape(-1, 2)
         cartesian = vectors @ self.lattice_vectors
         directions = np.arctan2(cartesian[:, 1], cartesian[:, 0]) % (2 * np.pi)
-        vectors = vectors[np.lexsort((directions, np.round(np.linalg.norm(cartesian, axis=1), 6)))]
+        vectors = vectors[
+            np.lexsort((directions, np.round(np.linalg.norm(cartesian, axis=1), LENGTH_GROUPING_DECIMALS)))
+        ]
         return vectors[np.any(vectors != 0, axis=1)]
 
     def get_rotation_angles(self, vector: np.ndarray, others: np.ndarray) -> np.ndarray:
+        """Counterclockwise angle, in degrees, from the lattice vector to each of the others."""
         start, ends = vector @ self.lattice_vectors, others @ self.lattice_vectors
         return np.degrees(np.arctan2(start[0] * ends[:, 1] - start[1] * ends[:, 0], ends @ start))
 
@@ -154,11 +168,12 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
             return np.array(self.boundary_vectors)
         lengths = np.linalg.norm(self.integer_vectors @ self.lattice_vectors, axis=1)
         for vector, length in zip(self.integer_vectors, lengths):
-            candidates = self.integer_vectors[np.isclose(lengths, length, rtol=1e-3)]
+            same_length = np.isclose(lengths, length, rtol=EQUAL_LENGTH_TOLERANCE)
+            candidates = self.integer_vectors[same_length & np.any(self.integer_vectors != vector, axis=1)]
             deviations = np.abs((self.get_rotation_angles(vector, candidates) - self.target_angle + 180) % 360 - 180)
-            if deviations.min() < self.angle_tolerance:
+            if len(candidates) and deviations.min() < self.angle_tolerance:
                 return np.array([vector, candidates[np.argmin(deviations)]])
-        raise ValueError(f"No boundary vectors of equal length rotated by {self.target_angle} degrees")
+        raise ValueError(f"No two different lattice vectors of equal length are rotated by {self.target_angle} degrees")
 
     @cached_property
     def actual_angle(self) -> float:
@@ -166,12 +181,17 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return float(self.get_rotation_angles(first, second[None])[0] % 360)
 
     def get_across_vector(self, boundary_vector: np.ndarray) -> np.ndarray:
-        """Shortest lattice vector perpendicular to the boundary vector, the pair right-handed."""
-        cartesian = self.integer_vectors @ self.lattice_vectors
-        boundary = boundary_vector @ self.lattice_vectors
-        cosines = cartesian @ boundary / np.linalg.norm(cartesian, axis=1) / np.linalg.norm(boundary)
-        determinants = self.integer_vectors[:, 0] * boundary_vector[1] - self.integer_vectors[:, 1] * boundary_vector[0]
-        return self.integer_vectors[(np.abs(cosines) < 1e-5) & (determinants > 0)][0]
+        """
+        Shortest lattice vector u perpendicular to the boundary vector v with det([u, v]) > 0: J @ G @ v in units of
+        G[0, 0] / 2 (integer for the 60, 90 and 120 degree lattices) divided by the gcd of its components.
+        """
+        metric = self.lattice_vectors @ self.lattice_vectors.T
+        perpendicular = 2 * ROTATION_90 @ metric @ boundary_vector / metric[0, 0]
+        across = np.round(perpendicular).astype(int)
+        if np.any(np.abs(perpendicular - across) > INTEGER_TOLERANCE) or not np.any(across):
+            raise ValueError(f"No lattice vector is perpendicular to the boundary vector {tuple(boundary_vector)}")
+        across //= gcd(*np.abs(across).tolist())
+        return across if across[0] * boundary_vector[1] - across[1] * boundary_vector[0] > 0 else -across
 
     @cached_property
     def supercell_matrices(self) -> List[List[List[int]]]:
@@ -184,29 +204,32 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     def grain_configurations(self) -> List[SlabStrainedSupercellConfiguration]:
         return [
             self.get_component_strained_configuration(
-                self.substrate_slab_configuration, self._no_strain_matrix, SupercellMatrix2DSchema(root=matrix)
+                configuration=self.substrate_slab_configuration,
+                strain_matrix=self._no_strain_matrix,
+                xy_supercell_matrix=SupercellMatrix2DSchema(root=matrix),
             )
             for matrix in self.supercell_matrices
         ]
 
     def get_slide(self, material: Material) -> float:
         """
-        Slide of grain 2 along the line, for the two grains stacked without a gap or slide: of `number_of_slides`
-        slides across the period, the one whose unrelaxed ring network has `core` at both lines and as many sites of
-        each species, with the fewest rings other than hexagons, then the fewest homo bonds.
+        Slide of the second grain along the line, for the two grains stacked without a gap or slide: of
+        `number_of_slides` slides across the period, the one whose unrelaxed ring network has `core` at both lines and
+        as many sites of each species, with the fewest rings other than hexagons, then the fewest homo bonds.
         """
-        reconstruction = GrainBoundaryCoreReconstruction(material=material, supercell_matrices=self.supercell_matrices)
-        slides = (np.arange(self.number_of_slides) + 0.5) * reconstruction.cell[1] / self.number_of_slides
-        analyzers = [reconstruction.get_rings_analyzer(slide) for slide in slides]
-        arrangements = [analyzer.get_line_arrangements(reconstruction.line_positions) for analyzer in analyzers]
-        balanced_slides = [len(set(Counter(analyzer.site_species.tolist()).values())) == 1 for analyzer in analyzers]
+        network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=self.supercell_matrices)
+        # half steps: at the symmetric slides several ring centres lie on one circle and the network is not unique
+        slides = (np.arange(self.number_of_slides) + 0.5) * network.cell[1] / self.number_of_slides
+        rings_analyzers = [network.get_rings_analyzer(slide) for slide in slides]
+        arrangements = [analyzer.get_line_arrangements(network.line_positions) for analyzer in rings_analyzers]
+        balanced = [len(set(Counter(analyzer.site_species.tolist()).values())) == 1 for analyzer in rings_analyzers]
         ranked_slides = [(self.get_rank(pair, self.core), slide) for pair, slide in zip(arrangements, slides)]
         valid_slides = [
-            (rank, slide) for (rank, slide), balanced in zip(ranked_slides, balanced_slides) if rank and balanced
+            (rank, slide) for (rank, slide), is_balanced in zip(ranked_slides, balanced) if rank and is_balanced
         ]
         if not valid_slides:
             achievable = [
-                core.value for core in GrainBoundaryCoreEnum if any(self.get_rank(pair, core) for pair in arrangements)
+                core.value for core in CORE_RING_SIZES if any(self.get_rank(pair, core) for pair in arrangements)
             ]
             raise ValueError(f"No slide gives the requested core at both boundaries; achievable: {achievable}")
         return float(min(valid_slides)[1])
@@ -217,10 +240,9 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         (rings other than hexagons, homo bonds) if both lines hold only the rings of `core`, each beside its partner,
         in one arrangement; None otherwise.
         """
-        core_ring_sizes = [int(size) for size in core.value.split("|")]
         first, second = arrangements
         if first.sequence != second.sequence or any(
-            sorted(arrangement.ring_sizes) != core_ring_sizes or arrangement.rings_without_core_partner
+            sorted(arrangement.ring_sizes) != CORE_RING_SIZES[core] or arrangement.rings_without_core_partner
             for arrangement in arrangements
         ):
             return None
