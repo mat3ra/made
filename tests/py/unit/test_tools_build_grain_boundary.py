@@ -1,6 +1,17 @@
+import time
+from collections import Counter
+
+import numpy as np
 import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.interface.grain_boundary import GrainBoundaryPlanarAnalyzer
+from mat3ra.made.tools.analyze.rings import RingsMaterialAnalyzer
+from mat3ra.made.tools.build.defective_structures.one_dimensional.grain_boundary_linear.builder import (
+    GrainBoundaryLinearBuilder,
+)
+from mat3ra.made.tools.build.defective_structures.one_dimensional.grain_boundary_linear.configuration import (
+    GrainBoundaryLinearConfiguration,
+)
 from mat3ra.made.tools.build.defective_structures.one_dimensional.grain_boundary_linear.helpers import (
     create_grain_boundary_linear,
 )
@@ -13,11 +24,24 @@ from mat3ra.made.tools.build.defective_structures.two_dimensional.grain_boundary
 from mat3ra.made.tools.build.defective_structures.two_dimensional.grain_boundary_planar.helpers import (
     create_grain_boundary_planar,
 )
+from mat3ra.standata.materials import Materials
+from scipy.spatial import cKDTree
 
-from .fixtures.bulk import BULK_Si_CONVENTIONAL
-from .fixtures.grain_boundary import GRAIN_BOUNDARY_LINEAR_SI, GRAIN_BOUNDARY_SI_001_011, GRAIN_BOUNDARY_SI_001_011_GH
+from .fixtures.bulk import BULK_GRAPHITE, BULK_Si_CONVENTIONAL
+from .fixtures.grain_boundary import (
+    GRAIN_BOUNDARY_LINEAR_BORON_NITRIDE_5_7,
+    GRAIN_BOUNDARY_LINEAR_SI,
+    GRAIN_BOUNDARY_SI_001_011,
+    GRAIN_BOUNDARY_SI_001_011_GH,
+)
 from .fixtures.monolayer import GRAPHENE
 from .utils import OSPlatform, assert_two_entities_deep_almost_equal, get_platform_specific_value
+
+GRAPHENE_2D = Materials.get_by_name_and_categories("Graphene", "2D")
+BORON_NITRIDE_2D = Materials.get_by_name_and_categories("Boron_Nitride", "2D")
+MOLYBDENUM_DISULFIDE_2D = Materials.get_by_name_and_categories("Molybdenum_Disulfide", "2D")
+CORE_BUILD_TIME_LIMIT = 5.0  # seconds
+REBUILT_BAND_WIDTH = 2.0  # lattice constants from each line
 
 
 @pytest.mark.parametrize(
@@ -131,3 +155,107 @@ def test_create_grain_boundary_linear(config_params, builder_params_dict, expect
     )
 
     assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
+
+
+def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) -> float:
+    """Largest distance from a stacked atom outside the rebuilt bands to the nearest atom of the grain boundary."""
+    configuration = GrainBoundaryLinearConfiguration(**grain_boundary.metadata.build[-1].configuration)
+    stacked = GrainBoundaryLinearBuilder().get_material(configuration.model_copy(update={"core": None}))
+    stacked.to_cartesian()
+    grain_boundary.to_cartesian()
+    coordinates, quarter_width = np.array(stacked.basis.coordinates.values), stacked.lattice.a / 4
+    line_distances = np.abs((coordinates[:, 0] + quarter_width) % (2 * quarter_width) - quarter_width)
+    kept_coordinates = coordinates[line_distances >= REBUILT_BAND_WIDTH * lattice_constant]
+    return float(cKDTree(grain_boundary.basis.coordinates.values).query(kept_coordinates)[0].max())
+
+
+@pytest.mark.parametrize(
+    "material_config, boundary_vectors, expected_elements, expected_sequence, expected_homo_bonds",
+    [
+        (GRAPHENE_2D, ((3, 1), (3, 2)), {"C": 56}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((5, 2), (5, 3)), {"C": 152}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((9, 4), (9, 5)), {"C": 488}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((4, 1), (4, 3)), {"C": 104}, "(5-7-5-7)", [{}] * 2),
+        (BORON_NITRIDE_2D, ((3, 1), (3, 2)), {"B": 28, "N": 28}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((5, 2), (5, 3)), {"B": 76, "N": 76}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
+        (
+            BORON_NITRIDE_2D,
+            ((9, 4), (9, 5)),
+            {"B": 244, "N": 244},
+            "[5-7]",
+            [{"B-B": 1, "N-N": 3}, {"B-B": 3, "N-N": 1}],
+        ),
+        (BORON_NITRIDE_2D, ((4, 1), (4, 3)), {"B": 52, "N": 52}, "(5-7-5-7)", [{"N-N": 4}, {"B-B": 4}]),
+        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), {"B": 52, "N": 52}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
+        (BORON_NITRIDE_2D, ((9, 4), (-9, -5)), {"B": 244, "N": 244}, "[5-7]", [{"B-B": 4, "N-N": 4}] * 2),
+        (MOLYBDENUM_DISULFIDE_2D, ((3, 1), (3, 2)), {"Mo": 28, "S": 56}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
+        (MOLYBDENUM_DISULFIDE_2D, ((5, 2), (5, 3)), {"Mo": 76, "S": 152}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
+        (MOLYBDENUM_DISULFIDE_2D, ((9, 4), (9, 5)), {"Mo": 244, "S": 488}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
+        (MOLYBDENUM_DISULFIDE_2D, ((4, 1), (4, 3)), {"Mo": 52, "S": 104}, "(5-7-5-7)", [{"Mo-Mo": 4}, {"S-S": 4}]),
+        (MOLYBDENUM_DISULFIDE_2D, ((4, 1), (-4, -3)), {"Mo": 52, "S": 104}, "(5-7-5-7)", [{"Mo-Mo": 1, "S-S": 1}] * 2),
+        (MOLYBDENUM_DISULFIDE_2D, ((9, 4), (-9, -5)), {"Mo": 244, "S": 488}, "[5-7]", [{"Mo-Mo": 5, "S-S": 5}] * 2),
+        (GRAPHENE_2D, ((15, 7), (15, 8)), {"C": 1352}, "[5-7]", [{}] * 2),
+    ],
+)
+def test_create_grain_boundary_linear_core(
+    material_config, boundary_vectors, expected_elements, expected_sequence, expected_homo_bonds
+):
+    material = Material.create(material_config)
+    start = time.perf_counter()
+    grain_boundary = create_grain_boundary_linear(material, boundary_vectors=boundary_vectors, core="5|7", gap=None)
+    build_time = time.perf_counter() - start
+    rings_analyzer = RingsMaterialAnalyzer(material=grain_boundary)
+    arrangements = rings_analyzer.get_line_arrangements([0.0, grain_boundary.lattice.a / 2])
+    lattice_vectors = np.array(material.lattice.vector_arrays)[:2, :2]
+    site_distance = material.lattice.a / np.sqrt(3)
+
+    assert build_time < CORE_BUILD_TIME_LIMIT
+    assert dict(Counter(grain_boundary.basis.elements.values)) == expected_elements
+    assert grain_boundary.lattice.b == pytest.approx(np.linalg.norm(np.array(boundary_vectors[0]) @ lattice_vectors))
+    assert [arrangement.sequence for arrangement in arrangements] == [[expected_sequence]] * 2
+    assert [arrangement.homo_bonds for arrangement in arrangements] == expected_homo_bonds
+    assert [arrangement.rings_without_core_partner for arrangement in arrangements] == [0, 0]
+    assert np.all(np.abs(np.linalg.norm(rings_analyzer.bonds[2], axis=1) / site_distance - 1) < 0.1)
+    assert get_kept_atoms_deviation(grain_boundary, material.lattice.a) < 1e-6
+
+
+@pytest.mark.parametrize(
+    "material_config, boundary_vectors, target_angle, expected_material_config",
+    [
+        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 0.0, GRAIN_BOUNDARY_LINEAR_BORON_NITRIDE_5_7),
+        (BORON_NITRIDE_2D, None, 212.204, GRAIN_BOUNDARY_LINEAR_BORON_NITRIDE_5_7),
+    ],
+)
+def test_create_grain_boundary_linear_core_structure(
+    material_config, boundary_vectors, target_angle, expected_material_config
+):
+    grain_boundary = create_grain_boundary_linear(
+        Material.create(material_config),
+        target_angle=target_angle,
+        boundary_vectors=boundary_vectors,
+        core="5|7",
+        gap=None,
+    )
+    assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
+
+
+@pytest.mark.parametrize(
+    "material_config, boundary_vectors, core, number_of_periods_across, message",
+    [
+        (BULK_Si_CONVENTIONAL, ((1, 0), (0, 1)), "5|7", 1, "honeycomb"),
+        (BULK_GRAPHITE, ((2, 1), (1, 2)), "5|7", 1, "honeycomb"),
+        (BORON_NITRIDE_2D, ((2, 1), (-2, -1)), "4|8", 6, r"achievable: \['5\|7'\]"),
+        (MOLYBDENUM_DISULFIDE_2D, ((2, 1), (-2, -1)), "4|8", 5, r"achievable: \['5\|7'\]"),
+    ],
+)
+def test_create_grain_boundary_linear_invalid(
+    material_config, boundary_vectors, core, number_of_periods_across, message
+):
+    with pytest.raises(ValueError, match=message):
+        create_grain_boundary_linear(
+            Material.create(material_config),
+            boundary_vectors=boundary_vectors,
+            core=core,
+            gap=None,
+            number_of_periods_across=number_of_periods_across,
+        )
