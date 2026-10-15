@@ -12,6 +12,17 @@ from .....analyze.grain_boundary_network import GrainBoundaryRingNetworkAnalyzer
 from .....build_components import MaterialWithBuildMetadata
 from .....utils import unwrap
 
+# coordinates closer than this count as equal when ordering atoms, so the order does not follow their last digits
+ATOM_ORDER_TOLERANCE = 1e-3  # angstrom
+
+
+def get_tolerant_ranks(values: np.ndarray) -> np.ndarray:
+    """Rank of each value, values within ATOM_ORDER_TOLERANCE of their sorted neighbor sharing one rank."""
+    order = np.argsort(values, kind="stable")
+    ranks = np.empty(len(values), int)
+    ranks[order] = np.cumsum(np.diff(values[order], prepend=values[order][0]) > ATOM_ORDER_TOLERANCE)
+    return ranks
+
 
 class GrainBoundaryLinearBuilder(InterfaceBuilder):
     """
@@ -47,7 +58,7 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
         column_sites: np.ndarray,
         grains: np.ndarray,
     ) -> MaterialWithBuildMetadata:
-        """The kept atoms as stacked, then the atoms of each column site at each rebuilt position."""
+        """The kept atoms and the column atoms at each rebuilt position, ordered by grain, then y, then x, then z."""
         material = network.material.clone()
         material.to_cartesian()
         coordinates = np.array(material.basis.coordinates.values)
@@ -56,12 +67,16 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
         columns = [np.where(network.atom_site_indices == site)[0] for site in column_sites]
         column_atoms, repeats = np.concatenate(columns), [len(column) for column in columns]
         added_coordinates = np.column_stack([np.repeat(positions, repeats, axis=0), coordinates[column_atoms, 2]])
+        all_coordinates = np.vstack([coordinates[kept_atoms], added_coordinates])
+        all_labels = np.concatenate([labels[kept_atoms], np.repeat(grains, repeats)])
+        ranks = [get_tolerant_ranks(all_coordinates[:, axis]) for axis in (2, 0, 1)]
+        order = np.lexsort([*ranks, all_labels])
         material.basis = Basis(
-            elements=ArrayWithIds.from_values(elements[np.concatenate([kept_atoms, column_atoms])].tolist()),
-            coordinates=Coordinates.from_values(np.vstack([coordinates[kept_atoms], added_coordinates]).tolist()),
+            elements=ArrayWithIds.from_values(elements[np.concatenate([kept_atoms, column_atoms])][order].tolist()),
+            coordinates=Coordinates.from_values(all_coordinates[order].tolist()),
             units=BasisUnitsEnum.cartesian,
             cell=material.basis.cell,
-            labels=ArrayWithIds.from_values(np.concatenate([labels[kept_atoms], np.repeat(grains, repeats)]).tolist()),
+            labels=ArrayWithIds.from_values(all_labels[order].tolist()),
         )
         material.to_crystal()
         return material

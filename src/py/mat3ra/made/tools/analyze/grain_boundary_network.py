@@ -9,6 +9,11 @@ from .rings import IMAGE_SHIFTS, Bonds, RingsMaterialAnalyzer, RingsNetworkAnaly
 
 # a Voronoi vertex is the circumcentre of one Delaunay triangle, so every site of the network has three bonds
 BONDS_PER_SITE = 3
+# four or more ring centres on one circle (at 60-degree boundaries) have no unique Voronoi network, and which one the
+# triangulation picks would follow the order and last digits of the input; a displacement that is a fixed periodic
+# function of position, far above that noise, picks the same one on every platform and for any atom order
+TIE_BREAKING_DISPLACEMENT = 1e-5  # angstrom
+TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
 
 
 def wrap_to_cell(points: np.ndarray, cell: np.ndarray) -> np.ndarray:
@@ -139,6 +144,7 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         """
         centers, grains = self.grain_hexagon_centers
         centers = wrap_to_cell(centers + np.outer(grains, [0.0, slide]), self.cell)
+        centers = centers + TIE_BREAKING_DISPLACEMENT * np.sin(2 * np.pi * (centers / self.cell) @ TIE_BREAKING_WAVES.T)
         images = get_periodic_images(centers, self.lattice_vectors)
         triangulation = Delaunay(images)
         keys, central = get_triangle_keys(triangulation.simplices, len(centers))
