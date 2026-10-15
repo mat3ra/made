@@ -1,8 +1,3 @@
-"""
-Rings of the top-view bond network of a 2D material: the faces of that periodic planar network, their sizes, and how
-the rings other than hexagons are arranged along lines of the cell (grain boundaries).
-"""
-
 from collections import Counter
 from functools import cached_property
 from typing import Dict, List, Tuple
@@ -34,6 +29,7 @@ def sort_bonds(first: np.ndarray, second: np.ndarray, vectors: np.ndarray) -> Bo
 
 
 def get_canonical_sequence(ring_sizes: List[int], is_closed: bool) -> str:
+    """Smallest of the rotations (of a chain) and reversals, so the same arrangement reads the same at both lines."""
     rotations = [ring_sizes[index:] + ring_sizes[:index] for index in range(len(ring_sizes) if is_closed else 1)]
     text = "-".join(str(size) for size in min(rotations + [sequence[::-1] for sequence in rotations]))
     return f"({text})" if is_closed else f"[{text}]"
@@ -53,8 +49,10 @@ class RingsArrangement(BaseModel):
 
 class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     """
-    A site is the set of atoms sharing one top-view position (MoS2: Mo, and the two S above each other); sites closer
-    than `bond_cutoff_factor` times the median nearest-site distance are bonded.
+    Rings of the top-view bond network of a 2D material: the faces of that periodic planar network, their sizes, and
+    how the rings other than hexagons are arranged along lines of the cell (grain boundaries). A site is the set of
+    atoms sharing one top-view position (MoS2: Mo, and the two S above each other); sites closer than
+    `bond_cutoff_factor` times the median nearest-site distance are bonded.
     """
 
     site_tolerance: float = 0.05

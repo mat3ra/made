@@ -233,6 +233,23 @@ def test_create_grain_boundary_linear_core(
 
 
 @pytest.mark.parametrize(
+    "material_config, boundary_vectors, gap, elements, lattice_lengths",
+    [
+        (GRAPHENE_2D, ((3, 1), (3, 2)), None, {"C": 56}, (22.592, 6.522)),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), 3.0, {"C": 56}, (28.054, 6.522)),
+    ],
+)
+def test_create_grain_boundary_linear_boundary_vectors(
+    material_config, boundary_vectors, gap, elements, lattice_lengths
+):
+    grain_boundary = create_grain_boundary_linear(
+        Material.create(material_config), boundary_vectors=boundary_vectors, gap=gap
+    )
+    assert dict(Counter(grain_boundary.basis.elements.values)) == elements
+    assert (grain_boundary.lattice.a, grain_boundary.lattice.b) == pytest.approx(lattice_lengths, abs=1e-3)
+
+
+@pytest.mark.parametrize(
     "material_config, boundary_vectors, target_angle, expected_material_config",
     [
         (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 0.0, GRAIN_BOUNDARY_LINEAR_BORON_NITRIDE_5_7),

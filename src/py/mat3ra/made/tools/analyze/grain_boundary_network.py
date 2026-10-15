@@ -1,9 +1,3 @@
-"""
-Ring network of a honeycomb grain boundary (graphene, h-BN, MoS2): grains labelled 0 and 1 stacked along x without a
-gap, the boundary lines at x = 0 and x = the width of grain 0. The hexagon centres of both grains are the ring centres;
-the sites are the vertices of their periodic Voronoi network, for any slide of grain 1 along the lines.
-"""
-
 from functools import cached_property
 from typing import List, Tuple
 
@@ -71,8 +65,10 @@ class HoneycombGrainLattice(InMemoryEntityPydantic):
 
 class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
     """
-    The sites within `band_width` lattice constants of either line are the ones the network rebuilds; every other
-    site keeps its stacked position, as a vertex of ring centres that are all bulk.
+    Ring network of a honeycomb grain boundary (graphene, h-BN, MoS2): grains labelled 0 and 1 stacked along x without
+    a gap, the lines at x = 0 and x = the width of grain 0. The hexagon centres of both grains are the ring centres and
+    the sites are the vertices of their periodic Voronoi network, for any slide of the second grain along the lines.
+    Sites within `band_width` lattice constants of either line are rebuilt; every other site keeps its stacked position.
     """
 
     supercell_matrices: List[List[List[int]]]
@@ -124,7 +120,7 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         return np.where(distances >= self.band_width * np.sqrt(3) * self.site_distance)[0]
 
     @cached_property
-    def ring_centers(self) -> Tuple[np.ndarray, np.ndarray]:
+    def grain_hexagon_centers(self) -> Tuple[np.ndarray, np.ndarray]:
         """Hexagon centres of each grain inside its own supercell, one per site of sublattice 0, and their grains."""
         centers = []
         for grain, lattice in enumerate(self.grain_lattices):
@@ -141,7 +137,7 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         bonds grouped by vertex (BONDS_PER_SITE each), the grain holding most of each vertex's ring centres and its
         sublattice there.
         """
-        centers, grains = self.ring_centers
+        centers, grains = self.grain_hexagon_centers
         centers = wrap_to_cell(centers + np.outer(grains, [0.0, slide]), self.cell)
         images = get_periodic_images(centers, self.lattice_vectors)
         triangulation = Delaunay(images)
@@ -154,20 +150,11 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         second = np.searchsorted(keys[vertices], keys[neighbors])
         edge_vectors = circumcenters[len(vertices) :] - positions[first]
         vertex_grains = (grains[triangulation.simplices[vertices] % len(centers)].sum(axis=1) >= 2).astype(int)
-        return (
-            positions,
-            (first, second, edge_vectors),
-            vertex_grains,
-            self.get_sublattices(positions, vertex_grains, slide),
-        )
-
-    def get_sublattices(self, positions: np.ndarray, grains: np.ndarray, slide: float) -> np.ndarray:
-        """Sublattice of each vertex in the lattice of its grain, the second grain slid by `slide`."""
-        unslid_positions = positions - np.outer(grains, [0.0, slide])
-        return np.choose(grains, [lattice.get_sublattices(unslid_positions) for lattice in self.grain_lattices])
+        unslid_positions = positions - np.outer(vertex_grains, [0.0, slide])
+        sublattices = [lattice.get_sublattices(unslid_positions) for lattice in self.grain_lattices]
+        return positions, (first, second, edge_vectors), vertex_grains, np.choose(vertex_grains, sublattices)
 
     def get_kept_vertices(self, positions: np.ndarray) -> np.ndarray:
-        """The network vertex at each kept site."""
         kept_positions = wrap_to_cell(self.site_positions[self.kept_sites], self.cell)
         return cKDTree(wrap_to_cell(positions, self.cell), boxsize=self.cell).query(kept_positions)[1]
 

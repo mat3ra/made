@@ -26,12 +26,10 @@ from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 from .zsl import ZSLInterfaceAnalyzer
 
 CORE_RING_SIZES = {GrainBoundaryCoreEnum.field_5_7: [5, 7], GrainBoundaryCoreEnum.field_4_8: [4, 8]}
-EQUAL_LENGTH_TOLERANCE = 1e-3  # relative
-HONEYCOMB_LENGTH_TOLERANCE = 1e-3  # relative
+LENGTH_TOLERANCE = 1e-3  # relative
 HONEYCOMB_ANGLE_TOLERANCE = 0.5  # degrees
 INTEGER_TOLERANCE = 1e-3
 LENGTH_GROUPING_DECIMALS = 3  # angstrom
-# 90-degree rotation of lattice coordinates: J @ G @ v is perpendicular to v in the metric G
 ROTATION_90 = np.array([[0, -1], [1, 0]])
 
 
@@ -112,7 +110,6 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     With a `core` (honeycomb lattices only), `get_slide` chooses the slide of the second grain along the line.
     """
 
-    film_slab_configuration: Optional[SlabConfiguration] = None
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
     target_angle: float = 0.0
     angle_tolerance: float = 0.1
@@ -136,7 +133,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         lattice = self.substrate_material.lattice
         rings_analyzer = RingsMaterialAnalyzer(material=self.substrate_material)
         return bool(
-            np.isclose(lattice.a, lattice.b, rtol=HONEYCOMB_LENGTH_TOLERANCE)
+            np.isclose(lattice.a, lattice.b, rtol=LENGTH_TOLERANCE)
             and min(abs(lattice.gamma - 60), abs(lattice.gamma - 120)) < HONEYCOMB_ANGLE_TOLERANCE
             and len(rings_analyzer.site_positions) == 2
         )
@@ -168,7 +165,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
             return np.array(self.boundary_vectors)
         lengths = np.linalg.norm(self.integer_vectors @ self.lattice_vectors, axis=1)
         for vector, length in zip(self.integer_vectors, lengths):
-            same_length = np.isclose(lengths, length, rtol=EQUAL_LENGTH_TOLERANCE)
+            same_length = np.isclose(lengths, length, rtol=LENGTH_TOLERANCE)
             candidates = self.integer_vectors[same_length & np.any(self.integer_vectors != vector, axis=1)]
             deviations = np.abs((self.get_rotation_angles(vector, candidates) - self.target_angle + 180) % 360 - 180)
             if len(candidates) and deviations.min() < self.angle_tolerance:

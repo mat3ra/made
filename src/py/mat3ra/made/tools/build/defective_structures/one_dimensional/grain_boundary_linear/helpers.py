@@ -66,7 +66,10 @@ def create_grain_boundary_linear(
         Material: The grain boundary material.
 
     Raises:
-        ValueError: If no commensurate lattice matches are found.
+        ValueError: If no commensurate lattice matches are found; with boundary vectors or a core, if the direction is
+            not x, no two different vectors of equal length are rotated by the target angle, no lattice vector is
+            perpendicular to a boundary vector, the core is asked of a lattice that is not a honeycomb, or no slide
+            gives the core at both boundaries.
     """
     if boundary_vectors is not None or core is not None:
         slab = SlabConfiguration.from_parameters(material, miller_indices, number_of_layers, vacuum=vacuum)
@@ -104,14 +107,12 @@ def create_grain_boundary_linear_on_line(
     direction: AxisEnum,
     gap: Optional[float],
 ) -> MaterialWithBuildMetadata:
-    """
-    The grain boundary of two rectangular grains stacked along x (GrainBoundaryLinearAnalyzer); with a core, at their
-    natural spacing, the second grain slid along the line as the analyzer chooses and the sites near both lines rebuilt.
-    """
+    """Grain boundary of two rectangular grains along x; with a core, slid as the analyzer chooses and rebuilt."""
     if direction != AxisEnum.x:
         raise ValueError(f"Grains matched on a boundary line are stacked along x, not {direction.value}")
     analyzer = GrainBoundaryLinearAnalyzer(
         substrate_slab_configuration=slab,
+        film_slab_configuration=slab,
         boundary_vectors=boundary_vectors,
         target_angle=target_angle,
         angle_tolerance=angle_tolerance,
