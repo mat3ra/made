@@ -20,9 +20,9 @@ TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
 # centres this close to one circle lie on it: far above the tie-breaking displacement, far below the distance between
 # distinct circles of a lattice
 COCIRCULAR_TOLERANCE = 1e-3  # angstrom
-# positions compared when two triangulations of a group are equally good: rounded far below the tie-breaking
-# displacement and far above the rounding of the coordinates
-POSITION_KEY_DECIMALS = 7
+# positions closer than this are equal when two triangulations of a group are equally good: above the ~1e-7 angstrom
+# by which the centres of the selection and of the build differ, below the tie-breaking displacement it must not merge
+TIE_KEY_TOLERANCE = 1e-6  # angstrom
 # sites on the edge of the rebuilt band (lattice sites can sit exactly there) stay, whatever the rounding
 BAND_EDGE_TOLERANCE = 1e-3  # angstrom
 REBUILT_BAND_WIDTH = 2.0  # lattice constants
@@ -38,6 +38,14 @@ def wrap_to_cell(points: np.ndarray, cell: np.ndarray) -> np.ndarray:
     """Points modulo a rectangular cell, values within rounding of the cell edge mapped to 0 (one owner per edge)."""
     wrapped = points % cell
     return np.where(np.isclose(wrapped, cell), 0.0, wrapped)
+
+
+def get_tolerant_ranks(values: np.ndarray, tolerance: float) -> np.ndarray:
+    """Rank of each value, values within `tolerance` of their sorted neighbor sharing one rank."""
+    order = np.argsort(values, kind="stable")
+    ranks = np.empty(len(values), int)
+    ranks[order] = np.cumsum(np.diff(values[order], prepend=values[order][0]) > tolerance)
+    return ranks
 
 
 def get_circumcenters(triangles: np.ndarray) -> np.ndarray:
@@ -193,10 +201,11 @@ class CocircularTriangulation(InMemoryEntityPydantic):
         corners = self.group_points[group][triangles] % self.number_of_centers
         return np.bincount(corners.ravel(), minlength=self.number_of_centers)
 
-    def get_diagonal_key(self, group: int, triangulation: int) -> List[List[Tuple[float, ...]]]:
-        """The diagonals of one triangulation of a group, each as its two centres' (y, x) in the cell, sorted."""
+    def get_diagonal_key(self, group: int, triangulation: int) -> List[List[Tuple[int, ...]]]:
+        """The diagonals of one triangulation of a group, each as its two centres' ranks by (y, x) in the cell."""
         points = self.group_points[group]
-        corners = np.round(wrap_to_cell(self.images[points], self.cell)[:, ::-1], POSITION_KEY_DECIMALS)
+        positions = wrap_to_cell(self.images[points], self.cell)
+        corners = np.column_stack([get_tolerant_ranks(positions[:, axis], TIE_KEY_TOLERANCE) for axis in (1, 0)])
         triangles = self.group_triangulations[group][triangulation]
         edges = {tuple(sorted(edge)) for triangle in triangles for edge in combinations(triangle, 2)}
         diagonals = [(first, second) for first, second in edges if second - first not in (1, len(points) - 1)]

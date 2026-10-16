@@ -8,20 +8,12 @@ from .build_parameters import GrainBoundaryLinearBuilderParameters
 from .configuration import GrainBoundaryLinearConfiguration
 from .settling import NetworkSettling
 from ....compound_pristine_structures.two_dimensional.interface import InterfaceBuilder
-from .....analyze.grain_boundary_network import GrainBoundaryRingNetworkAnalyzer, wrap_to_cell
+from .....analyze.grain_boundary_network import GrainBoundaryRingNetworkAnalyzer, get_tolerant_ranks, wrap_to_cell
 from .....build_components import MaterialWithBuildMetadata
 from .....utils import unwrap
 
 # coordinates closer than this count as equal when ordering atoms, so the order does not follow their last digits
 ATOM_ORDER_TOLERANCE = 1e-3  # angstrom
-
-
-def get_tolerant_ranks(values: np.ndarray) -> np.ndarray:
-    """Rank of each value, values within ATOM_ORDER_TOLERANCE of their sorted neighbor sharing one rank."""
-    order = np.argsort(values, kind="stable")
-    ranks = np.empty(len(values), int)
-    ranks[order] = np.cumsum(np.diff(values[order], prepend=values[order][0]) > ATOM_ORDER_TOLERANCE)
-    return ranks
 
 
 class GrainBoundaryLinearBuilder(InterfaceBuilder):
@@ -72,7 +64,7 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
         added_coordinates = np.column_stack([np.repeat(positions, repeats, axis=0), coordinates[column_atoms, 2]])
         all_coordinates = np.vstack([coordinates[kept_atoms], added_coordinates])
         all_labels = np.concatenate([labels[kept_atoms], np.repeat(grains, repeats)])
-        ranks = [get_tolerant_ranks(all_coordinates[:, axis]) for axis in (2, 0, 1)]
+        ranks = [get_tolerant_ranks(all_coordinates[:, axis], ATOM_ORDER_TOLERANCE) for axis in (2, 0, 1)]
         order = np.lexsort([*ranks, all_labels])
         material.basis = Basis(
             elements=ArrayWithIds.from_values(elements[np.concatenate([kept_atoms, column_atoms])][order].tolist()),
