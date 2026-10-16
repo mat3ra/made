@@ -182,19 +182,27 @@ def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) 
 @pytest.mark.parametrize(
     "material_config, boundary_vectors, number_of_periods_across, core, elements, sequence, homo_bonds",
     [
-        (GRAPHENE_2D, ((3, 1), (3, 2)), 1, "5|7", {"C": 56}, "[5-7]", [{}] * 2),
-        (GRAPHENE_2D, ((6, 2), (6, 4)), 1, "5|7", {"C": 112}, ["[5-7]", "[5-7]"], [{}] * 2),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), 1, "5|7", {"C": 112}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((6, 2), (6, 4)), 1, "5|7", {"C": 224}, ["[5-7]", "[5-7]"], [{}] * 2),
         (GRAPHENE_2D, ((5, 2), (5, 3)), 1, "5|7", {"C": 152}, "[5-7]", [{}] * 2),
         (GRAPHENE_2D, ((9, 4), (9, 5)), 1, "5|7", {"C": 488}, "[5-7]", [{}] * 2),
         (GRAPHENE_2D, ((4, 1), (4, 3)), 1, "5|7", {"C": 104}, "(5-7-5-7)", [{}] * 2),
-        (BORON_NITRIDE_2D, ((3, 1), (3, 2)), 1, "5|7", {"B": 28, "N": 28}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((3, 1), (3, 2)), 1, "5|7", {"B": 56, "N": 56}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
         (BORON_NITRIDE_2D, ((5, 2), (5, 3)), 1, "5|7", {"B": 76, "N": 76}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
         (BORON_NITRIDE_2D, ((9, 4), (9, 5)), 1, "5|7", {"B": 244, "N": 244}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
         (BORON_NITRIDE_2D, ((4, 1), (4, 3)), 1, "5|7", {"B": 52, "N": 52}, "(5-7-5-7)", [{"N-N": 4}, {"B-B": 4}]),
         (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 1, "5|7", {"B": 52, "N": 52}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
         (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 2, "5|7", {"B": 104, "N": 104}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
         (BORON_NITRIDE_2D, ((9, 4), (-9, -5)), 1, "5|7", {"B": 244, "N": 244}, "[5-7]", [{"B-B": 4, "N-N": 4}] * 2),
-        (MOLYBDENUM_DISULFIDE_2D, ((3, 1), (3, 2)), 1, "5|7", {"Mo": 28, "S": 56}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
+        (
+            MOLYBDENUM_DISULFIDE_2D,
+            ((3, 1), (3, 2)),
+            1,
+            "5|7",
+            {"Mo": 56, "S": 112},
+            "[5-7]",
+            [{"Mo-Mo": 2}, {"S-S": 2}],
+        ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((5, 2), (5, 3)),
@@ -318,6 +326,7 @@ def test_create_grain_boundary_linear_core_structure(
         (GRAPHENE_2D, None, "5|7", 1, AxisEnum.x, "rotated by 0"),
         (GRAPHENE_2D, ((3, 1), (3, 2)), "5|7", 1, AxisEnum.y, "stacked along x"),
         (GRAPHENE_2D, ((3, 1), (3, 2)), "4|8", 1, AxisEnum.x, r"achievable: \['5\|7'\]"),
+        (BORON_NITRIDE_2D, ((1, 1), (1, 0)), "5|7", 1, AxisEnum.x, "too short along the boundary"),
     ],
 )
 def test_create_grain_boundary_linear_invalid(

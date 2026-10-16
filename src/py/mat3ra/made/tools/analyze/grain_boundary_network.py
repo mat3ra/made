@@ -19,6 +19,7 @@ TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
 COCIRCULAR_TOLERANCE = 1e-3  # angstrom
 # sites on the edge of the rebuilt band (lattice sites can sit exactly there) stay, whatever the rounding
 BAND_EDGE_TOLERANCE = 1e-3  # angstrom
+REBUILT_BAND_WIDTH = 2.0  # lattice constants
 CORE_RING_SIZES = {GrainBoundaryCoreEnum.field_5_7: [5, 7], GrainBoundaryCoreEnum.field_4_8: [4, 8]}
 
 
@@ -244,7 +245,7 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
     """
 
     supercell_matrices: List[List[List[int]]]
-    band_width: float = 2.0
+    band_width: float = REBUILT_BAND_WIDTH
 
     @cached_property
     def cell(self) -> np.ndarray:
@@ -333,6 +334,11 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         anchors = np.where(from_group[:, None], images[simplices].mean(axis=1), get_circumcenters(images[simplices]))
         first = np.repeat(np.arange(len(vertices)), BONDS_PER_SITE)
         second = np.searchsorted(keys[vertices], keys[neighbors])
+        if not np.array_equal(keys[vertices][second % len(vertices)], keys[neighbors]):
+            raise ValueError(
+                f"The cell is too short along the boundary ({self.cell[1]:.3f} angstrom) for its periodic ring network; "
+                "use a multiple of the boundary vectors"
+            )
         grains = (self.grain_hexagon_centers[1][simplices[vertices] % len(centers)].sum(axis=1) >= 2).astype(int)
         return RingNetwork(
             positions=anchors[vertices],

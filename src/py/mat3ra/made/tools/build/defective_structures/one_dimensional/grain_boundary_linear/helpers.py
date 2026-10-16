@@ -61,7 +61,8 @@ def create_grain_boundary_linear(
         core (Optional[GrainBoundaryCoreEnum]): Ring pair ("5|7", "4|8") rebuilt along both lines of a honeycomb
             lattice, the grains at their natural spacing (no gap). Without boundary vectors, they are found from the
             target angle.
-        number_of_periods_across (int): Repetitions of the perpendicular vector in each grain.
+        number_of_periods_across (int): Repetitions of the perpendicular vector in each grain; with a core, raised to
+            the fewest that hold the rebuilt bands at both lines.
 
     Returns:
         Material: The grain boundary material.
@@ -69,8 +70,8 @@ def create_grain_boundary_linear(
     Raises:
         ValueError: If no commensurate lattice matches are found; with boundary vectors or a core, if the direction is
             not x, no two different vectors of equal length are rotated by the target angle, no lattice vector is
-            perpendicular to a boundary vector, the core is asked of a lattice that is not a honeycomb, or no slide
-            gives the core at both boundaries.
+            perpendicular to a boundary vector, the core is asked of a lattice that is not a honeycomb, the cell is too
+            short along the boundary for its ring network, or no slide gives the core at both boundaries.
     """
     if boundary_vectors is not None or core is not None:
         slab = SlabConfiguration.from_parameters(material, miller_indices, number_of_layers, vacuum=vacuum)

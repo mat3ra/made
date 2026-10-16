@@ -1,6 +1,6 @@
 from collections import Counter
 from functools import cached_property
-from math import gcd
+from math import ceil, gcd
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -19,7 +19,7 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab_strained_s
 )
 from pydantic import model_validator
 
-from ..grain_boundary_network import CORE_RING_SIZES, GrainBoundaryRingNetworkAnalyzer
+from ..grain_boundary_network import CORE_RING_SIZES, REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer
 from ..rings import RingsArrangement, RingsMaterialAnalyzer
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
@@ -190,9 +190,21 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return across if across[0] * boundary_vector[1] - across[1] * boundary_vector[0] > 0 else -across
 
     @cached_property
+    def periods_across(self) -> int:
+        """
+        `number_of_periods_across`, with a core raised so that each grain holds the rebuilt bands at both of its lines
+        and one ring row (a lattice constant) between them.
+        """
+        if self.core is None:
+            return self.number_of_periods_across
+        lattice_constant = np.linalg.norm(self.lattice_vectors[0])
+        across = np.linalg.norm(self.get_across_vector(self.matched_boundary_vectors[0]) @ self.lattice_vectors)
+        return max(self.number_of_periods_across, ceil((2 * REBUILT_BAND_WIDTH + 1) * lattice_constant / across))
+
+    @cached_property
     def supercell_matrices(self) -> List[List[List[int]]]:
         return [
-            [(self.number_of_periods_across * self.get_across_vector(vector)).tolist(), vector.tolist()]
+            [(self.periods_across * self.get_across_vector(vector)).tolist(), vector.tolist()]
             for vector in self.matched_boundary_vectors
         ]
 
