@@ -118,7 +118,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     number_of_periods_across: Optional[int] = None
     core: Optional[GrainBoundaryCoreEnum] = None
     # the slides tried are part of the rule: a multiple of 6, so that P/2 and P/6 are candidates (h-BN (2,1)|(-2,-1) 4|8
-    # is found only at P/6); one slide per lattice offset (2 |v|^2 / a^2 per period) takes 30 s for graphene at 4.4 deg
+    # is found only at P/6); a slide per lattice offset and midpoint (4 |v|^2 / a^2) takes 30 s for graphene at 4.4 deg
     number_of_slides: int = 48
     maximum_vector_component: int = 30
 

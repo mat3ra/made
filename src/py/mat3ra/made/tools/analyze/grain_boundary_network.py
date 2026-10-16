@@ -22,7 +22,7 @@ TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
 COCIRCULAR_TOLERANCE = 1e-3  # angstrom
 # positions compared when two triangulations of a group are equally good: rounded far below the tie-breaking
 # displacement and far above the rounding of the coordinates
-POSITION_KEY_DECIMALS = 7  # angstrom
+POSITION_KEY_DECIMALS = 7
 # sites on the edge of the rebuilt band (lattice sites can sit exactly there) stay, whatever the rounding
 BAND_EDGE_TOLERANCE = 1e-3  # angstrom
 REBUILT_BAND_WIDTH = 2.0  # lattice constants
@@ -168,12 +168,10 @@ class CocircularTriangulation(InMemoryEntityPydantic):
         Each group that has a copy whose lowest centre lies in the central cell, matched by its corners relative to that
         centre, with that copy. A group with no such copy (a sliver at the border of the tiling) is not in it.
         """
-        corners = [
-            tuple(get_periodic_corners(points[None], self.number_of_centers)[0][0]) for points in self.group_points
-        ]
-        central = [get_periodic_corners(points[None], self.number_of_centers)[1][0] for points in self.group_points]
-        representatives = {key: group for group, key in enumerate(corners) if central[group]}
-        return {group: representatives[key] for group, key in enumerate(corners) if key in representatives}
+        periodic_corners = [get_periodic_corners(points[None], self.number_of_centers) for points in self.group_points]
+        keys = [tuple(corners[0]) for corners, _ in periodic_corners]
+        representatives = {keys[group]: group for group, (_, central) in enumerate(periodic_corners) if central[0]}
+        return {group: representatives[key] for group, key in enumerate(keys) if key in representatives}
 
     @cached_property
     def group_triangulations(self) -> Dict[int, List[List[Tuple[int, int, int]]]]:
@@ -405,8 +403,13 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         )
 
     def get_sublattices(self, positions: np.ndarray, grains: np.ndarray, slide: float) -> np.ndarray:
-        """Sublattice of each site in the lattice of its grain, the second grain slid by `slide`."""
-        unslid_positions = positions - np.outer(grains, [0.0, slide])
+        """
+        Sublattice of each site in the lattice of its grain, the second grain slid by `slide`, read at the site's image
+        inside that grain: the stacked cell's width is a lattice vector of neither grain.
+        """
+        middles = np.array(self.line_positions) + self.grain_widths / 2
+        images_across = np.round((positions[:, 0] - middles[grains]) / self.cell[0])
+        unslid_positions = positions - np.outer(images_across, [self.cell[0], 0.0]) - np.outer(grains, [0.0, slide])
         return np.choose(grains, [lattice.get_sublattices(unslid_positions) for lattice in self.grain_lattices])
 
     def get_kept_vertices(self, positions: np.ndarray) -> np.ndarray:
