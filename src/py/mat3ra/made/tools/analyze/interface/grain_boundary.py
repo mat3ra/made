@@ -17,11 +17,11 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.configurat
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab_strained_supercell.configuration import (
     SlabStrainedSupercellConfiguration,
 )
+from mat3ra.made.utils import get_tolerant_ranks
 from pydantic import model_validator
 
-from ..grain_boundary_network import REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer
-from ..ring_network import get_tolerant_ranks
-from ..rings import HEXAGON_SIZE, RingsArrangement, RingsMaterialAnalyzer, RingsNetworkAnalyzer, get_core_ring_sizes
+from ..grain_boundary_network import REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer, get_core_ring_sizes
+from ..rings import HEXAGON_SIZE, RingsArrangement, RingsMaterialAnalyzer, RingsNetworkAnalyzer
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 from .zsl import ZSLInterfaceAnalyzer
@@ -126,19 +126,17 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     @model_validator(mode="after")
     def _validate_core_lattice(self):
-        if self.core is not None and not self.is_honeycomb:
+        """A core needs two sites in top view on a hexagonal lattice: |a|, |b| and |a + b| or |a - b| equal."""
+        if self.core is None:
+            return self
+        lengths = np.sort(np.linalg.norm([[1, 0], [0, 1], [1, 1], [1, -1]] @ self.lattice_vectors, axis=1))
+        sites = RingsMaterialAnalyzer(material=self.substrate_material).site_positions
+        if lengths[2] - lengths[0] >= LENGTH_TOLERANCE or len(sites) != 2:
             raise ValueError(
                 f"Core {self.core.value} needs a honeycomb lattice: |a| = |b|, gamma 60 or 120 degrees, "
                 "two sites in top view"
             )
         return self
-
-    @cached_property
-    def is_honeycomb(self) -> bool:
-        """Two sites in top view on a hexagonal lattice: |a|, |b| and |a + b| or |a - b| equal (not lattice.type)."""
-        lengths = np.sort(np.linalg.norm([[1, 0], [0, 1], [1, 1], [1, -1]] @ self.lattice_vectors, axis=1))
-        rings_analyzer = RingsMaterialAnalyzer(material=self.substrate_material)
-        return bool(lengths[2] - lengths[0] < LENGTH_TOLERANCE and len(rings_analyzer.site_positions) == 2)
 
     @cached_property
     def lattice_vectors(self) -> np.ndarray:

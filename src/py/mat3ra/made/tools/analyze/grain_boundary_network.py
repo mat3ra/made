@@ -4,8 +4,8 @@ from typing import List, Tuple
 import numpy as np
 from mat3ra.code.entity import InMemoryEntityPydantic
 
-from .ring_network import BONDS_PER_SITE, POSITION_TOLERANCE, RingNetworkAnalyzer, wrap_to_cell
-from .rings import HEXAGON_SIZE, RingNetwork, get_core_ring_sizes
+from .ring_network import BONDS_PER_SITE, POSITION_TOLERANCE, CocircularTriangulation, wrap_to_cell
+from .rings import HEXAGON_SIZE, RingNetwork, RingsMaterialAnalyzer
 
 # a displacement that is a fixed periodic function of position, far above the platform noise of the coordinates, so
 # the triangulation, and the co-circular groups found in it, are the same on every platform and for any atom order
@@ -13,8 +13,14 @@ TIE_BREAKING_DISPLACEMENT = 1e-5  # angstrom
 # integer wave numbers keep the displacement periodic in the cell; unequal per axis and component, otherwise arbitrary
 # (other values give other, equally valid structures, so they stay fixed)
 TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
-# a core ring's centre lies in the first row of centres beside its line (< a), its sites a / sqrt(3) further (< 1.6 a)
+# a core ring's centre lies in the first row of centres beside its line (< a), its sites a / sqrt(3) further (< 1.6 a);
+# 2 adds a margin, and another value rebuilds another band (other, equally valid structures), so it stays fixed
 REBUILT_BAND_WIDTH = 2.0  # lattice constants
+
+
+def get_core_ring_sizes(core: str) -> List[int]:
+    """The ring sizes a core label names: "5|7" -> [5, 7], "6" -> [6]."""
+    return [int(size) for size in core.split("|")]
 
 
 class HoneycombLattice(InMemoryEntityPydantic):
@@ -39,7 +45,7 @@ class HoneycombLattice(InMemoryEntityPydantic):
         return np.argmin(distances, axis=0)
 
 
-class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
+class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
     """
     Ring network of a honeycomb grain boundary (graphene, h-BN, MoS2): grains labelled 0 and 1 stacked along x without
     a gap, the lines at x = 0 and x = the width of grain 0. The ring centres are the hexagon centres of both grains, for
@@ -114,13 +120,13 @@ class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
         centers, grains = self.grain_hexagon_centers
         centers = wrap_to_cell(centers + np.outer(grains, [0.0, slide]), self.cell)
         centers = centers + TIE_BREAKING_DISPLACEMENT * np.sin(2 * np.pi * (centers / self.cell) @ TIE_BREAKING_WAVES.T)
-        return self.get_network(centers, [HEXAGON_SIZE, *get_core_ring_sizes(core)])
-
-    def get_small_cell_error(self) -> ValueError:
-        return ValueError(
-            f"The cell is too short along the boundary ({self.cell[1]:.3f} angstrom) for its periodic ring "
-            "network; use a multiple of the boundary vectors"
-        )
+        return CocircularTriangulation(
+            centers=centers,
+            lattice_vectors=self.lattice_vectors,
+            allowed_ring_sizes=[HEXAGON_SIZE, *get_core_ring_sizes(core)],
+            small_cell_message=f"The cell is too short along the boundary ({self.cell[1]:.3f} angstrom) for its "
+            "periodic ring network; use a multiple of the boundary vectors",
+        ).network
 
     def get_grains(self, network: RingNetwork) -> np.ndarray:
         """The grain holding most of the ring centres around each site."""
@@ -138,3 +144,28 @@ class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
         positions = network.positions - np.outer(images_across, [self.cell[0], 0.0]) - np.outer(grains, [0.0, slide])
         sublattices = np.choose(grains, [lattice.get_sublattices(positions) for lattice in self.grain_lattices])
         return np.array([lattice.sublattice_sites for lattice in self.grain_lattices])[grains, sublattices]
+
+    @cached_property
+    def center_ranks(self) -> np.ndarray:
+        """
+        Rank of each hexagon centre by its grain, then its coordinates in that grain's lattice, whole thirds of a
+        lattice vector: the rank follows neither the order nor the last digits of the stacked atoms.
+        """
+        centers, grains = self.grain_hexagon_centers
+        fractional = [(centers - lattice.origin) @ np.linalg.inv(lattice.vectors) for lattice in self.grain_lattices]
+        thirds = np.round(3 * np.choose(grains[:, None], fractional)).astype(int)
+        ranks = np.empty(len(centers), int)
+        ranks[np.lexsort((thirds[:, 1], thirds[:, 0], grains))] = np.arange(len(centers))
+        return ranks
+
+    def get_site_keys(self, network: RingNetwork) -> np.ndarray:
+        """
+        Integer key of each site of the network: the ranks of its three ring centres, smallest first, and the cell of
+        each relative to the cell of the first.
+        """
+        corners = network.bond_rings.reshape(-1, BONDS_PER_SITE)
+        order = np.argsort(self.center_ranks[corners], axis=1)
+        cells = np.round((network.positions[:, None] - network.ring_centers[corners]) / self.cell).astype(int)
+        cells = np.take_along_axis(cells, order[..., None], axis=1)
+        ranks = np.take_along_axis(self.center_ranks[corners], order, axis=1)
+        return np.column_stack([ranks, (cells - cells[:, :1]).reshape(len(corners), -1)])

@@ -1,17 +1,19 @@
 from functools import cached_property, partial
 from itertools import combinations
-from typing import Dict, List, NamedTuple, Sequence, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 from mat3ra.code.entity import InMemoryEntityPydantic
 from scipy.spatial import Delaunay, cKDTree
 
-from .rings import IMAGE_SHIFTS, RingNetwork, RingsMaterialAnalyzer, get_periodic_images
+from ...utils import get_tolerant_ranks
+from .rings import IMAGE_SHIFTS, RingNetwork, get_periodic_images
 
 # a Voronoi vertex is the circumcentre of one Delaunay triangle, so every site of the network has three bonds
 BONDS_PER_SITE = 3
-# positions this close are one: above the tie-breaking displacement (1e-5) and the rounding of stored coordinates,
-# below any distance that tells two sites, rows of sites or circles of a lattice apart (> 0.1)
+# positions this close are one: above the tie-breaking displacement (1e-5) and the rounding of stored coordinates; the
+# measured margins (spectrum rows) are 1.5e-3 from a co-circular circle to the nearest other centre and 3.9e-3 from the
+# rebuilt band's edge to the nearest site off it
 POSITION_TOLERANCE = 1e-3  # angstrom
 # positions closer than this are equal when two triangulations of a group are equally good: above the ~1e-7 angstrom
 # by which centres from coordinates stored to 9 decimals differ, below the tie-breaking displacement (1e-5), which it
@@ -23,14 +25,6 @@ def wrap_to_cell(values: np.ndarray, periods) -> np.ndarray:
     """Values modulo their periods, values within rounding of a period mapped to 0 (one owner per cell edge)."""
     wrapped = values % periods
     return np.where(np.isclose(wrapped, periods), 0.0, wrapped)
-
-
-def get_tolerant_ranks(values: np.ndarray, tolerance: float) -> np.ndarray:
-    """Rank of each value, values within `tolerance` of their sorted neighbor sharing one rank."""
-    order = np.argsort(values, kind="stable")
-    ranks = np.empty(len(values), int)
-    ranks[order] = np.cumsum(np.diff(values[order], prepend=values[order][0]) > tolerance)
-    return ranks
 
 
 def get_circumcenters(triangles: np.ndarray) -> np.ndarray:
@@ -78,8 +72,10 @@ def get_triangulations(first: int, last: int) -> List[List[Tuple[int, int, int]]
     ]
 
 
-class CocircularGroup(NamedTuple):
+class CocircularGroup(InMemoryEntityPydantic):
     """Centres on one empty circle, in order around it, and the Delaunay triangles between them."""
+
+    model_config = {"arbitrary_types_allowed": True}
 
     points: np.ndarray
     members: List[int]
@@ -99,6 +95,7 @@ class CocircularTriangulation(InMemoryEntityPydantic):
     centers: np.ndarray
     lattice_vectors: np.ndarray
     allowed_ring_sizes: List[int]
+    small_cell_message: str = "The cell is too small for its periodic ring network; use a larger supercell"
 
     @cached_property
     def images(self) -> np.ndarray:
@@ -133,7 +130,7 @@ class CocircularTriangulation(InMemoryEntityPydantic):
             order = np.argsort(np.arctan2(*offsets[on_circle].T[::-1]))
             groups.setdefault(tuple(points[on_circle][order]), []).append(simplex)
         return [
-            CocircularGroup(np.array(points), members)
+            CocircularGroup(points=np.array(points), members=members)
             for points, members in groups.items()
             if len(members) == len(points) - 2
         ]
@@ -224,37 +221,28 @@ class CocircularTriangulation(InMemoryEntityPydantic):
         simplices[clockwise] = simplices[clockwise][:, [0, 2, 1]]
         return simplices, np.arange(len(simplices)) >= (~self.is_group_triangle).sum()
 
-
-class RingNetworkAnalyzer(RingsMaterialAnalyzer):
-    """
-    Ring network of ring centres in the cell of the material: the centres are triangulated periodically
-    (CocircularTriangulation), and each triangle becomes a site, at its circumcentre (at its centroid if it came from a
-    co-circular group, whose triangles share one circumcentre), bonded to the sites of the three triangles beside it.
-    """
-
-    def get_network(self, centers: np.ndarray, allowed_ring_sizes: Sequence[int]) -> RingNetwork:
-        """Network of ring centres in the cell, co-circular centres given rings of `allowed_ring_sizes`."""
-        triangulation = CocircularTriangulation(
-            centers=centers, lattice_vectors=self.lattice_vectors, allowed_ring_sizes=list(allowed_ring_sizes)
-        )
-        simplices, centroid_triangles = triangulation.resolved_simplices
-        corners, central = get_periodic_corners(simplices, len(centers))
-        base = 9 * len(centers)
+    @cached_property
+    def network(self) -> RingNetwork:
+        """
+        One site per triangle, at its circumcentre (its centroid if it came from a co-circular group, whose triangles
+        share one circumcentre), bonded to the sites of the three triangles beside it. Raises `small_cell_message` when
+        a triangle's neighbor has no copy among the central triangles.
+        """
+        simplices, centroid_triangles = self.resolved_simplices
+        corners, central = get_periodic_corners(simplices, len(self.centers))
+        base = 9 * len(self.centers)
         keys = (corners[:, 0] * base + corners[:, 1]) * base + corners[:, 2]
         vertices = np.where(central)[0][np.argsort(keys[central])]
         neighbors = get_triangle_neighbors(simplices)[vertices].ravel()
-        triangles = triangulation.images[simplices]
+        triangles = self.images[simplices]
         anchors = np.where(centroid_triangles[:, None], triangles.mean(axis=1), get_circumcenters(triangles))
         first = np.repeat(np.arange(len(vertices)), BONDS_PER_SITE)
         second = np.searchsorted(keys[vertices], keys[neighbors])
         if not np.array_equal(keys[vertices][second % len(vertices)], keys[neighbors]):
-            raise self.get_small_cell_error()
+            raise ValueError(self.small_cell_message)
         return RingNetwork(
             positions=anchors[vertices],
             bonds=(first, second, anchors[neighbors] - anchors[vertices][first]),
-            bond_rings=simplices[vertices][:, [2, 0, 1]].ravel() % len(centers),
-            ring_centers=centers,
+            bond_rings=simplices[vertices][:, [2, 0, 1]].ravel() % len(self.centers),
+            ring_centers=self.centers,
         )
-
-    def get_small_cell_error(self) -> ValueError:
-        return ValueError("The cell is too small for its periodic ring network; use a larger supercell")

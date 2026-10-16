@@ -23,11 +23,6 @@ def get_periodic_images(positions: np.ndarray, lattice_vectors: np.ndarray) -> n
     return (positions[None] + (IMAGE_SHIFTS @ lattice_vectors)[:, None]).reshape(-1, 2)
 
 
-def get_core_ring_sizes(core: str) -> List[int]:
-    """The ring sizes a core label names: "5|7" -> [5, 7], "6" -> [6]."""
-    return [int(size) for size in core.split("|")]
-
-
 class RingNetwork(InMemoryEntityPydantic):
     """
     Sites of a network in a cell: positions, bonds grouped by site (three each, in order around it) with the ring on the

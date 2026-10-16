@@ -4,6 +4,7 @@ import numpy as np
 from mat3ra.made.material import Material
 from scipy.spatial import cKDTree
 
+from ...utils import get_tolerant_ranks
 from ..build.processed_structures.two_dimensional.passivation.enums import SurfaceTypesEnum
 from ..convert import decorator_convert_material_args_kwargs_to_atoms, to_pymatgen
 from ..third_party import ASEAtoms, PymatgenIStructure
@@ -447,11 +448,6 @@ def get_atom_indices_by_layer(material: Material, tolerance: float = 0.5) -> Lis
     cartesian = material.clone()
     cartesian.to_cartesian()
     heights = np.array(cartesian.coordinates_array)[:, 2]
-    layers: List[List[int]] = []
-    previous_height: Optional[float] = None
-    for index in np.argsort(heights, kind="stable"):
-        if previous_height is None or heights[index] - previous_height > tolerance:
-            layers.append([])
-        layers[-1].append(int(index))
-        previous_height = float(heights[index])
-    return layers
+    order = np.argsort(heights, kind="stable")
+    layers = np.split(order, np.flatnonzero(np.diff(get_tolerant_ranks(heights, tolerance)[order])) + 1)
+    return [layer.tolist() for layer in layers]

@@ -33,6 +33,7 @@ from mat3ra.made.tools.build.defective_structures.two_dimensional.grain_boundary
 from mat3ra.made.tools.build.defective_structures.two_dimensional.grain_boundary_planar.helpers import (
     create_grain_boundary_planar,
 )
+from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
 from mat3ra.standata.materials import Materials
 from scipy.spatial import cKDTree
 
@@ -354,6 +355,20 @@ def test_create_grain_boundary_linear_core(
     assert np.all(np.abs(np.linalg.norm(rings_analyzer.bonds[2], axis=1) / site_distance - 1) < 0.1)
     assert_two_entities_deep_almost_equal(get_rebuilt_grain_boundary(grain_boundary, {}), grain_boundary)
     assert get_kept_atoms_deviation(grain_boundary, material.lattice.a) < 1e-6
+
+
+@pytest.mark.parametrize(
+    "material_config, target_angle, expected_boundary_vectors",
+    [(GRAPHENE_2D, 2.0, [[-16, 17], [-17, 16]])],
+)
+def test_grain_boundary_linear_analyzer_matched_boundary_vectors(
+    material_config, target_angle, expected_boundary_vectors
+):
+    slab = SlabConfiguration.from_parameters(Material.create(material_config), (0, 0, 1), 1, vacuum=0.0)
+    analyzer = GrainBoundaryLinearAnalyzer(
+        substrate_slab_configuration=slab, film_slab_configuration=slab, target_angle=target_angle
+    )
+    assert analyzer.matched_boundary_vectors.tolist() == expected_boundary_vectors
 
 
 @pytest.mark.parametrize(

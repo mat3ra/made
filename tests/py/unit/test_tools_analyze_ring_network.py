@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.ring_network import RingNetworkAnalyzer, wrap_to_cell
-from mat3ra.made.tools.analyze.rings import HEXAGON_SIZE, get_periodic_images
+from mat3ra.made.tools.analyze.ring_network import CocircularTriangulation, wrap_to_cell
+from mat3ra.made.tools.analyze.rings import HEXAGON_SIZE, RingsMaterialAnalyzer, get_periodic_images
 from mat3ra.made.tools.helpers import create_supercell
 from mat3ra.standata.materials import Materials
 from scipy.spatial import cKDTree
@@ -16,11 +16,13 @@ SITE_TOLERANCE = 1e-5  # angstrom
     "material_config, supercell_matrix, expected_ring_sizes",
     [(MOLYBDENUM_DISULFIDE_2D, [[3, 0, 0], [0, 3, 0], [0, 0, 1]], [6] * 9)],
 )
-def test_ring_network_analyzer(material_config, supercell_matrix, expected_ring_sizes):
-    analyzer = RingNetworkAnalyzer(material=create_supercell(Material.create(material_config), supercell_matrix))
+def test_cocircular_triangulation_network(material_config, supercell_matrix, expected_ring_sizes):
+    analyzer = RingsMaterialAnalyzer(material=create_supercell(Material.create(material_config), supercell_matrix))
     lattice_vectors = analyzer.lattice_vectors
     centers = wrap_to_cell(analyzer.ring_centers @ np.linalg.inv(lattice_vectors), 1.0) @ lattice_vectors
-    network = analyzer.get_network(centers, [HEXAGON_SIZE])
+    network = CocircularTriangulation(
+        centers=centers, lattice_vectors=lattice_vectors, allowed_ring_sizes=[HEXAGON_SIZE]
+    ).network
     site_images = get_periodic_images(analyzer.site_positions, lattice_vectors)
     distances, images = cKDTree(site_images).query(network.positions)
 
