@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import Dict, List, Tuple
 
 import numpy as np
+from mat3ra.code.entity import InMemoryEntityPydantic
 from pydantic import BaseModel
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import connected_components
@@ -10,11 +11,10 @@ from scipy.spatial import cKDTree
 
 from . import BaseMaterialAnalyzer
 
+# the ring of a perfect honeycomb; every other ring is a defect ring
 HEXAGON_SIZE = 6
-# the sizes of the rings that meet at each ring core, by its notation
-RING_CORE_SIZES: Dict[str, Tuple[int, ...]] = {"5|7": (5, 7), "4|8": (4, 8), "6": (HEXAGON_SIZE,)}
 IMAGE_SHIFTS = np.array([[i, j] for i in (-1, 0, 1) for j in (-1, 0, 1)])
-CENTRAL_IMAGE_INDEX = 4
+CENTRAL_IMAGE_INDEX = len(IMAGE_SHIFTS) // 2
 Bonds = Tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
@@ -23,33 +23,30 @@ def get_periodic_images(positions: np.ndarray, lattice_vectors: np.ndarray) -> n
     return (positions[None] + (IMAGE_SHIFTS @ lattice_vectors)[:, None]).reshape(-1, 2)
 
 
-def sort_bonds(first: np.ndarray, second: np.ndarray, vectors: np.ndarray) -> Bonds:
-    order = np.lexsort((np.arctan2(vectors[:, 1], vectors[:, 0]), first))
-    return first[order], second[order], vectors[order]
+def get_core_ring_sizes(core: str) -> List[int]:
+    """The ring sizes a core label names: "5|7" -> [5, 7], "6" -> [6]."""
+    return [int(size) for size in core.split("|")]
 
 
-def get_core_partner_sizes(ring_size: int) -> List[int]:
-    """Sizes of the rings that form a ring core (RING_CORE_SIZES) with a ring of `ring_size`."""
-    return [size for sizes in RING_CORE_SIZES.values() if ring_size in sizes for size in sizes if size != ring_size]
-
-
-def get_canonical_sequence(ring_sizes: List[int], is_closed: bool, is_branched: bool) -> str:
+class RingNetwork(InMemoryEntityPydantic):
     """
-    "[5-7]" for a chain, "(5-7-5-7)" for a chain closing through the cell: the smallest of its rotations (if closed)
-    and reversals, so the same arrangement reads the same at both lines. "{5-5-7-7}", the sizes in order, for a
-    branched cluster, which has no single walk.
+    Sites of a network in a cell: positions, bonds grouped by site (three each, in order around it) with the ring on the
+    left of each bond, and the ring centres.
     """
-    if is_branched:
-        return "{" + "-".join(str(size) for size in sorted(ring_sizes)) + "}"
-    rotations = [ring_sizes[index:] + ring_sizes[:index] for index in range(len(ring_sizes) if is_closed else 1)]
-    text = "-".join(str(size) for size in min(rotations + [sequence[::-1] for sequence in rotations]))
-    return f"({text})" if is_closed else f"[{text}]"
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    positions: np.ndarray
+    bonds: Bonds
+    bond_rings: np.ndarray
+    ring_centers: np.ndarray
 
 
 class RingsArrangement(BaseModel):
     """
-    Rings other than hexagons nearest one line, and the bonds between sites of one species there. `sequence` reads
-    each cluster of edge-sharing rings (get_canonical_sequence); `branching_rings` border more than two others.
+    Defect rings nearest one line, and the bonds between sites of one species there. `sequence` reads each cluster of
+    edge-sharing rings (get_cluster_sequence); a ring's core partner is an edge-sharing defect ring of another size;
+    `branching_rings` border more than two others.
     """
 
     ring_sizes: Dict[int, int]
@@ -62,12 +59,13 @@ class RingsArrangement(BaseModel):
 class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     """
     Rings of the top-view bond network of a 2D material: the faces of that periodic planar network, their sizes, and
-    how the rings other than hexagons are arranged, among given rings or nearest each of given lines of the cell. A
-    site is the set of atoms sharing one top-view position (MoS2: Mo, and the two S above each other); sites closer
-    than `bond_cutoff_factor` times the median nearest-site distance are bonded.
+    how the defect rings are arranged nearest given lines of the cell. A site is the set of atoms sharing one top-view
+    position (MoS2: Mo, and the two S above each other).
     """
 
+    # atoms of one site share x, y up to the rounding of stored coordinates; distinct sites are a bond (> 1 A) apart
     site_tolerance: float = 0.05
+    # bonded sites are closer than this times the nearest-site distance: between first (1) and second (1.73) neighbors
     bond_cutoff_factor: float = 1.3
 
     @cached_property
@@ -93,8 +91,7 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     @cached_property
     def atom_site_indices(self) -> np.ndarray:
         first, second, _ = self.get_pairs(self.atom_positions, self.site_tolerance)
-        number_of_atoms = len(self.atom_positions)
-        graph = coo_matrix((np.ones(len(first)), (first, second)), shape=(number_of_atoms, number_of_atoms))
+        graph = coo_matrix((np.ones(len(first)), (first, second)), shape=(len(self.atom_positions),) * 2)
         return connected_components(graph, directed=False)[1]
 
     @cached_property
@@ -113,8 +110,10 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     def bonds(self) -> Bonds:
         """Directed bonds (site, neighbor site, vector), grouped by site in counterclockwise order."""
         images = get_periodic_images(self.site_positions, self.lattice_vectors)
-        nearest_distances = cKDTree(images).query(self.site_positions, k=2)[0][:, 1]
-        return sort_bonds(*self.get_pairs(self.site_positions, self.bond_cutoff_factor * np.median(nearest_distances)))
+        cutoff = self.bond_cutoff_factor * np.median(cKDTree(images).query(self.site_positions, k=2)[0][:, 1])
+        first, second, vectors = self.get_pairs(self.site_positions, cutoff)
+        order = np.lexsort((np.arctan2(vectors[:, 1], vectors[:, 0]), first))
+        return first[order], second[order], vectors[order]
 
     @cached_property
     def reverse_bonds(self) -> np.ndarray:
@@ -192,12 +191,15 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
             adjacent = self.ring_of_bond[self.reverse_bonds[self.rings[ring]]]
             neighbors[ring] = [neighbor for neighbor in adjacent if neighbor in neighbors]
             branching_rings += len(set(neighbors[ring])) > 2
-            partner_sizes = get_core_partner_sizes(self.ring_sizes[ring])
-            rings_without_core_partner += not np.any(np.isin(self.ring_sizes[adjacent], partner_sizes))
+            sizes = self.ring_sizes[adjacent]
+            rings_without_core_partner += not np.any((sizes != HEXAGON_SIZE) & (sizes != self.ring_sizes[ring]))
+        first, second, _ = self.bonds
+        species = self.site_species
+        homo = line_bonds & (species[first] == species[second]) & (len(set(species)) > 1)
         return RingsArrangement(
             ring_sizes=dict(Counter(self.ring_sizes[rings].tolist())),
             sequence=sorted(self.get_cluster_sequence(cluster, neighbors) for cluster in self.get_clusters(neighbors)),
-            homo_bonds=self.get_homo_bonds(line_bonds),
+            homo_bonds={f"{element}-{element}": count // 2 for element, count in Counter(species[first[homo]]).items()},
             rings_without_core_partner=rings_without_core_partner,
             branching_rings=branching_rings,
         )
@@ -213,42 +215,37 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
 
     def get_cluster_sequence(self, cluster: List[int], neighbors: Dict[int, List[int]]) -> str:
         """
-        Ring sizes walked from an end of the cluster; a closed chain shares as many edges as it has rings, a branched
-        cluster has a ring beside more than two others.
+        "{5-5-7-7}", the sizes in order, for a branched cluster (a ring beside more than two others); otherwise the
+        sizes walked from an end, "(5-7-5-7)" if the chain closes through the cell (as many shared edges as rings),
+        "[5-7]" if not, the smallest of its rotations and reversals, so one arrangement reads the same at both lines.
         """
         distinct_neighbors = [len(set(neighbors[ring])) for ring in cluster]
-        is_closed = sum(len(neighbors[ring]) for ring in cluster) // 2 >= len(cluster)
         if max(distinct_neighbors) > 2:
-            return get_canonical_sequence([int(self.ring_sizes[ring]) for ring in cluster], is_closed, is_branched=True)
+            return "{" + "-".join(str(size) for size in sorted(self.ring_sizes[cluster])) + "}"
+        is_closed = sum(len(neighbors[ring]) for ring in cluster) // 2 >= len(cluster)
         path = [cluster[int(np.argmin(distinct_neighbors))]]
         while following := [ring for ring in neighbors[path[-1]] if ring not in path]:
             path.append(following[0])
-        return get_canonical_sequence([int(self.ring_sizes[ring]) for ring in path], is_closed, is_branched=False)
-
-    def get_homo_bonds(self, line_bonds: np.ndarray) -> Dict[str, int]:
-        first, second, _ = self.bonds
-        species = self.site_species
-        homo = line_bonds & (species[first] == species[second]) & (len(set(species)) > 1)
-        return {f"{element}-{element}": count // 2 for element, count in Counter(species[first[homo]]).items()}
+        sizes = [int(self.ring_sizes[ring]) for ring in path]
+        rotations = [sizes[index:] + sizes[:index] for index in range(len(sizes) if is_closed else 1)]
+        text = "-".join(str(size) for size in min(rotations + [rotation[::-1] for rotation in rotations]))
+        return f"({text})" if is_closed else f"[{text}]"
 
 
 class RingsNetworkAnalyzer(RingsMaterialAnalyzer):
     """
-    The same analysis for a given network of sites in the cell of the material: positions, species, bonds, the ring on
-    the left of each bond and the ring centres, so the rings come from the network itself, not from its geometry.
+    The same analysis of a ring network in the cell of the material, its sites of `network_species`: the rings come
+    from the network itself, not from its geometry.
     """
 
     model_config = {"arbitrary_types_allowed": True}
 
-    network_positions: np.ndarray
+    network: RingNetwork
     network_species: np.ndarray
-    network_bonds: Bonds
-    network_bond_rings: np.ndarray
-    network_ring_centers: np.ndarray
 
     @cached_property
     def site_positions(self) -> np.ndarray:
-        return self.network_positions
+        return self.network.positions
 
     @cached_property
     def site_species(self) -> np.ndarray:
@@ -256,17 +253,17 @@ class RingsNetworkAnalyzer(RingsMaterialAnalyzer):
 
     @cached_property
     def bonds(self) -> Bonds:
-        return self.network_bonds
+        return self.network.bonds
 
     @cached_property
     def ring_of_bond(self) -> np.ndarray:
-        return self.network_bond_rings
+        return self.network.bond_rings
 
     @cached_property
     def rings(self) -> List[np.ndarray]:
-        ring_sizes = np.bincount(self.network_bond_rings, minlength=len(self.network_ring_centers))
-        return np.split(np.argsort(self.network_bond_rings, kind="stable"), np.cumsum(ring_sizes)[:-1])
+        ring_sizes = np.bincount(self.network.bond_rings, minlength=len(self.network.ring_centers))
+        return np.split(np.argsort(self.network.bond_rings, kind="stable"), np.cumsum(ring_sizes)[:-1])
 
     @cached_property
     def ring_centers(self) -> np.ndarray:
-        return self.network_ring_centers
+        return self.network.ring_centers

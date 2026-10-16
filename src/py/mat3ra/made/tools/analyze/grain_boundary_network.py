@@ -2,21 +2,41 @@ from functools import cached_property
 from typing import List, Tuple
 
 import numpy as np
-from mat3ra.esse.models.materials_category.defective_structures.one_dimensional.grain_boundary_linear.configuration import (  # noqa: E501
-    GrainBoundaryCoreEnum,
-)
-from scipy.spatial import cKDTree
+from mat3ra.code.entity import InMemoryEntityPydantic
 
-from .ring_network import BONDS_PER_SITE, HoneycombLattice, RingNetwork, RingNetworkAnalyzer, wrap_to_cell
-from .rings import HEXAGON_SIZE, RING_CORE_SIZES
+from .ring_network import BONDS_PER_SITE, POSITION_TOLERANCE, RingNetworkAnalyzer, wrap_to_cell
+from .rings import HEXAGON_SIZE, RingNetwork, get_core_ring_sizes
 
 # a displacement that is a fixed periodic function of position, far above the platform noise of the coordinates, so
 # the triangulation, and the co-circular groups found in it, are the same on every platform and for any atom order
 TIE_BREAKING_DISPLACEMENT = 1e-5  # angstrom
+# integer wave numbers keep the displacement periodic in the cell; unequal per axis and component, otherwise arbitrary
+# (other values give other, equally valid structures, so they stay fixed)
 TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
-# sites on the edge of the rebuilt band (lattice sites can sit exactly there) stay, whatever the rounding
-BAND_EDGE_TOLERANCE = 1e-3  # angstrom
+# a core ring's centre lies in the first row of centres beside its line (< a), its sites a / sqrt(3) further (< 1.6 a)
 REBUILT_BAND_WIDTH = 2.0  # lattice constants
+
+
+class HoneycombLattice(InMemoryEntityPydantic):
+    """
+    A honeycomb lattice: vectors (rows), a site of sublattice 0, the offset to sublattice 1, and the two stacked sites
+    whose atoms are the columns of the sublattices.
+    """
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    vectors: np.ndarray
+    origin: np.ndarray
+    sublattice_offset: np.ndarray
+    sublattice_sites: Tuple[int, int]
+
+    def get_sublattices(self, points: np.ndarray) -> np.ndarray:
+        """Sublattice (0 or 1) whose nearest lattice point is closest to each point."""
+        distances = []
+        for offset in (0.0, self.sublattice_offset):
+            fractional = (points - self.origin - offset) @ np.linalg.inv(self.vectors)
+            distances.append(np.linalg.norm((fractional - np.round(fractional)) @ self.vectors, axis=1))
+        return np.argmin(distances, axis=0)
 
 
 class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
@@ -49,20 +69,22 @@ class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
 
     @cached_property
     def grain_lattices(self) -> List[HoneycombLattice]:
-        return [self.get_grain_lattice(grain) for grain in (0, 1)]
-
-    def get_grain_lattice(self, grain: int) -> HoneycombLattice:
-        """Vectors from the grain's supercell matrix; sublattice 1 is the nearest other site of the same grain."""
-        sites = np.where(self.site_grains == grain)[0]
-        offsets = self.site_positions[sites] - self.site_positions[sites[0]]
-        offsets -= np.round(offsets / self.cell) * self.cell
-        nearest = 1 + np.argmin(np.linalg.norm(offsets[1:], axis=1))
-        return HoneycombLattice(
-            vectors=np.linalg.inv(self.supercell_matrices[grain]) @ np.diag([self.grain_widths[grain], self.cell[1]]),
-            origin=self.site_positions[sites[0]],
-            sublattice_offset=offsets[nearest],
-            sublattice_sites=(sites[0], sites[nearest]),
-        )
+        """Each grain's lattice: vectors from its supercell matrix, sublattice 1 the nearest other site of the grain."""
+        lattices = []
+        for grain, matrix in enumerate(self.supercell_matrices):
+            sites = np.where(self.site_grains == grain)[0]
+            offsets = self.site_positions[sites] - self.site_positions[sites[0]]
+            offsets -= np.round(offsets / self.cell) * self.cell
+            nearest = 1 + np.argmin(np.linalg.norm(offsets[1:], axis=1))
+            lattices.append(
+                HoneycombLattice(
+                    vectors=np.linalg.inv(matrix) @ np.diag([self.grain_widths[grain], self.cell[1]]),
+                    origin=self.site_positions[sites[0]],
+                    sublattice_offset=offsets[nearest],
+                    sublattice_sites=(sites[0], sites[nearest]),
+                )
+            )
+        return lattices
 
     @cached_property
     def site_distance(self) -> float:
@@ -73,7 +95,7 @@ class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
         """Sites at REBUILT_BAND_WIDTH lattice constants or more from both lines."""
         x_values = self.site_positions[:, 0]
         distances = np.min([np.abs(x_values - line) for line in self.line_positions + [self.cell[0]]], axis=0)
-        return np.where(distances >= REBUILT_BAND_WIDTH * np.sqrt(3) * self.site_distance - BAND_EDGE_TOLERANCE)[0]
+        return np.where(distances >= REBUILT_BAND_WIDTH * np.sqrt(3) * self.site_distance - POSITION_TOLERANCE)[0]
 
     @cached_property
     def grain_hexagon_centers(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -87,15 +109,12 @@ class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
             centers.append(wrap_to_cell(points, self.cell))
         return np.vstack(centers), np.repeat([0, 1], [len(points) for points in centers])
 
-    def get_ring_centers(self, slide: float) -> np.ndarray:
-        """Hexagon centres with the second grain slid by `slide` along y, moved by the tie-breaking displacement."""
+    def get_slid_network(self, slide: float, core: str) -> RingNetwork:
+        """Network for the rings of `core` of the hexagon centres, the second grain slid by `slide` along y."""
         centers, grains = self.grain_hexagon_centers
         centers = wrap_to_cell(centers + np.outer(grains, [0.0, slide]), self.cell)
-        return centers + TIE_BREAKING_DISPLACEMENT * np.sin(2 * np.pi * (centers / self.cell) @ TIE_BREAKING_WAVES.T)
-
-    def get_slid_network(self, slide: float, core: GrainBoundaryCoreEnum) -> RingNetwork:
-        """Network of the hexagon centres, the second grain slid by `slide` along y, for the rings of `core`."""
-        return self.get_network(self.get_ring_centers(slide), [HEXAGON_SIZE, *RING_CORE_SIZES[core.value]])
+        centers = centers + TIE_BREAKING_DISPLACEMENT * np.sin(2 * np.pi * (centers / self.cell) @ TIE_BREAKING_WAVES.T)
+        return self.get_network(centers, [HEXAGON_SIZE, *get_core_ring_sizes(core)])
 
     def get_small_cell_error(self) -> ValueError:
         return ValueError(
@@ -108,22 +127,14 @@ class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
         ring_grains = self.grain_hexagon_centers[1][network.bond_rings.reshape(-1, BONDS_PER_SITE)]
         return (ring_grains.sum(axis=1) >= 2).astype(int)
 
-    def get_column_sites(self, network: RingNetwork, slide: float = 0.0) -> np.ndarray:
-        """The stacked site whose atoms each site takes: its sublattice's in its grain, the second slid by `slide`."""
+    def get_column_sites(self, network: RingNetwork, slide: float) -> np.ndarray:
+        """
+        The stacked site whose atoms each site takes: that of its sublattice in its grain, the second grain slid by
+        `slide`, read at the site's image inside the grain (the stacked cell's width is a lattice vector of neither).
+        """
         grains = self.get_grains(network)
-        sublattices = self.get_sublattices(network.positions, grains, slide)
-        return np.array([lattice.sublattice_sites for lattice in self.grain_lattices])[grains, sublattices]
-
-    def get_sublattices(self, positions: np.ndarray, grains: np.ndarray, slide: float) -> np.ndarray:
-        """
-        Sublattice of each site in the lattice of its grain, the second grain slid by `slide`, read at the site's image
-        inside that grain: the stacked cell's width is a lattice vector of neither grain.
-        """
         middles = np.array(self.line_positions) + self.grain_widths / 2
-        images_across = np.round((positions[:, 0] - middles[grains]) / self.cell[0])
-        unslid_positions = positions - np.outer(images_across, [self.cell[0], 0.0]) - np.outer(grains, [0.0, slide])
-        return np.choose(grains, [lattice.get_sublattices(unslid_positions) for lattice in self.grain_lattices])
-
-    def get_kept_vertices(self, positions: np.ndarray) -> np.ndarray:
-        kept_positions = wrap_to_cell(self.site_positions[self.kept_sites], self.cell)
-        return cKDTree(wrap_to_cell(positions, self.cell), boxsize=self.cell).query(kept_positions)[1]
+        images_across = np.round((network.positions[:, 0] - middles[grains]) / self.cell[0])
+        positions = network.positions - np.outer(images_across, [self.cell[0], 0.0]) - np.outer(grains, [0.0, slide])
+        sublattices = np.choose(grains, [lattice.get_sublattices(positions) for lattice in self.grain_lattices])
+        return np.array([lattice.sublattice_sites for lattice in self.grain_lattices])[grains, sublattices]

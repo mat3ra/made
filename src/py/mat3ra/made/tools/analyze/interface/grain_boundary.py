@@ -20,17 +20,18 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab_strained_s
 from pydantic import model_validator
 
 from ..grain_boundary_network import REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer
-from ..rings import HEXAGON_SIZE, RING_CORE_SIZES, RingsArrangement, RingsMaterialAnalyzer
+from ..ring_network import get_tolerant_ranks
+from ..rings import HEXAGON_SIZE, RingsArrangement, RingsMaterialAnalyzer, RingsNetworkAnalyzer, get_core_ring_sizes
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 from .zsl import ZSLInterfaceAnalyzer
 
-LENGTH_TOLERANCE = 1e-3  # relative
-HONEYCOMB_ANGLE_TOLERANCE = 0.5  # degrees
+# equal lengths of vectors with components up to 30 (|v| < 52 a): above the float noise of a vs b (4e-7 relative,
+# < 1e-4 angstrom), below the gap between distinct lengths (|v|^2 / a^2 is an integer: > a / (2 * 52) > 0.02 angstrom)
+LENGTH_TOLERANCE = 1e-3  # angstrom
+# the perpendicular vector's components are integers up to the float noise of the metric times them (< 1e-4)
 INTEGER_TOLERANCE = 1e-3
-LENGTH_GROUPING_DECIMALS = 3  # angstrom
-ROTATION_90 = np.array([[0, -1], [1, 0]])
-# a grain with a core keeps one row of hexagons between the rebuilt bands at its two lines
+# a grain with a core keeps one row of hexagons, one lattice constant wide, between the rebuilt bands at its two lines
 KEPT_RING_ROW_WIDTH = 1.0  # lattice constants
 
 
@@ -120,6 +121,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     # the slides tried are part of the rule: a multiple of 6, so that P/2 and P/6 are candidates (h-BN (2,1)|(-2,-1) 4|8
     # is found only at P/6); a slide per lattice offset and midpoint (4 |v|^2 / a^2) takes 30 s for graphene at 4.4 deg
     number_of_slides: int = 48
+    # search bound for a target angle (the 4.4 degree stress case needs (15, 8))
     maximum_vector_component: int = 30
 
     @model_validator(mode="after")
@@ -133,14 +135,10 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     @cached_property
     def is_honeycomb(self) -> bool:
-        """From the geometry of the slab, not its lattice type."""
-        lattice = self.substrate_material.lattice
+        """Two sites in top view on a hexagonal lattice: |a|, |b| and |a + b| or |a - b| equal (not lattice.type)."""
+        lengths = np.sort(np.linalg.norm([[1, 0], [0, 1], [1, 1], [1, -1]] @ self.lattice_vectors, axis=1))
         rings_analyzer = RingsMaterialAnalyzer(material=self.substrate_material)
-        return bool(
-            np.isclose(lattice.a, lattice.b, rtol=LENGTH_TOLERANCE)
-            and min(abs(lattice.gamma - 60), abs(lattice.gamma - 120)) < HONEYCOMB_ANGLE_TOLERANCE
-            and len(rings_analyzer.site_positions) == 2
-        )
+        return bool(lengths[2] - lengths[0] < LENGTH_TOLERANCE and len(rings_analyzer.site_positions) == 2)
 
     @cached_property
     def lattice_vectors(self) -> np.ndarray:
@@ -152,10 +150,8 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         values = np.arange(-self.maximum_vector_component, self.maximum_vector_component + 1)
         vectors = np.stack(np.meshgrid(values, values, indexing="ij"), axis=-1).reshape(-1, 2)
         cartesian = vectors @ self.lattice_vectors
-        directions = np.arctan2(cartesian[:, 1], cartesian[:, 0]) % (2 * np.pi)
-        vectors = vectors[
-            np.lexsort((directions, np.round(np.linalg.norm(cartesian, axis=1), LENGTH_GROUPING_DECIMALS)))
-        ]
+        lengths = get_tolerant_ranks(np.linalg.norm(cartesian, axis=1), LENGTH_TOLERANCE)
+        vectors = vectors[np.lexsort((np.arctan2(cartesian[:, 1], cartesian[:, 0]) % (2 * np.pi), lengths))]
         return vectors[np.any(vectors != 0, axis=1)]
 
     def get_rotation_angles(self, vector: np.ndarray, others: np.ndarray) -> np.ndarray:
@@ -169,7 +165,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
             return np.array(self.boundary_vectors)
         lengths = np.linalg.norm(self.integer_vectors @ self.lattice_vectors, axis=1)
         for vector, length in zip(self.integer_vectors, lengths):
-            same_length = np.isclose(lengths, length, rtol=LENGTH_TOLERANCE)
+            same_length = np.abs(lengths - length) < LENGTH_TOLERANCE
             candidates = self.integer_vectors[same_length & np.any(self.integer_vectors != vector, axis=1)]
             deviations = np.abs((self.get_rotation_angles(vector, candidates) - self.target_angle + 180) % 360 - 180)
             if len(candidates) and deviations.min() < self.angle_tolerance:
@@ -183,11 +179,12 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     def get_across_vector(self, boundary_vector: np.ndarray) -> np.ndarray:
         """
-        Shortest lattice vector u perpendicular to the boundary vector v with det([u, v]) > 0: J @ G @ v in units of
-        G[0, 0] / 2 (integer for the 60, 90 and 120 degree lattices) divided by the gcd of its components.
+        Shortest lattice vector u perpendicular to the boundary vector v with det([u, v]) > 0: G v turned by 90 degrees
+        (G the metric), in units of G[0, 0] / 2 (integer for the 60, 90 and 120 degree lattices), over its gcd.
         """
         metric = self.lattice_vectors @ self.lattice_vectors.T
-        perpendicular = 2 * ROTATION_90 @ metric @ boundary_vector / metric[0, 0]
+        image = metric @ boundary_vector
+        perpendicular = 2 * np.array([-image[1], image[0]]) / metric[0, 0]
         across = np.round(perpendicular).astype(int)
         if np.any(np.abs(perpendicular - across) > INTEGER_TOLERANCE) or not np.any(across):
             raise ValueError(f"No lattice vector is perpendicular to the boundary vector {tuple(boundary_vector)}")
@@ -195,21 +192,21 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return across if across[0] * boundary_vector[1] - across[1] * boundary_vector[0] > 0 else -across
 
     @cached_property
-    def minimum_periods_across(self) -> int:
-        """1; with a core, enough for each grain to hold the rebuilt bands at both its lines and a ring row between."""
-        if self.core is None:
-            return 1
-        lattice_constant = np.linalg.norm(self.lattice_vectors[0])
-        across_vectors = np.array([self.get_across_vector(vector) for vector in self.matched_boundary_vectors])
-        shortest_across = np.linalg.norm(across_vectors @ self.lattice_vectors, axis=1).min()
-        return ceil((2 * REBUILT_BAND_WIDTH + KEPT_RING_ROW_WIDTH) * lattice_constant / shortest_across)
-
-    @cached_property
     def periods_across(self) -> int:
+        """
+        `number_of_periods_across`, or by default the fewest: 1; with a core, enough for each grain to hold the rebuilt
+        bands at both its lines and a ring row between them.
+        """
+        minimum = 1
+        if self.core is not None:
+            across_vectors = np.array([self.get_across_vector(vector) for vector in self.matched_boundary_vectors])
+            shortest_across = np.linalg.norm(across_vectors @ self.lattice_vectors, axis=1).min()
+            lattice_constant = np.linalg.norm(self.lattice_vectors[0])
+            minimum = ceil((2 * REBUILT_BAND_WIDTH + KEPT_RING_ROW_WIDTH) * lattice_constant / shortest_across)
         if self.number_of_periods_across is None:
-            return self.minimum_periods_across
-        if self.number_of_periods_across < self.minimum_periods_across:
-            raise ValueError(f"number_of_periods_across must be at least {self.minimum_periods_across}")
+            return minimum
+        if self.number_of_periods_across < minimum:
+            raise ValueError(f"number_of_periods_across must be at least {minimum}")
         return self.number_of_periods_across
 
     @cached_property
@@ -250,25 +247,26 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         """(rank, slide) of each slide whose network for `core` has it at both lines and balanced species."""
         ranked_slides = []
         for slide in slides:
-            ring_network = network.get_slid_network(slide, core)
-            rings_analyzer = network.get_rings_analyzer(ring_network, network.get_column_sites(ring_network, slide))
-            rank = self.get_rank(rings_analyzer.get_line_arrangements(network.line_positions), core)
-            if rank and len(set(Counter(rings_analyzer.site_species.tolist()).values())) == 1:
+            ring_network = network.get_slid_network(slide, core.value)
+            species = network.site_species[network.get_column_sites(ring_network, slide)]
+            rings = RingsNetworkAnalyzer(material=network.material, network=ring_network, network_species=species)
+            rank = self.get_rank(rings.get_line_arrangements(network.line_positions), core)
+            if rank and len(set(Counter(species.tolist()).values())) == 1:
                 ranked_slides.append((rank, float(slide)))
         return ranked_slides
 
     @staticmethod
     def get_rank(arrangements: List[RingsArrangement], core: GrainBoundaryCoreEnum) -> Optional[Tuple[int, int, int]]:
         """
-        (rings other than hexagons, branching rings, homo bonds), fewest first and then the smallest slide, if both
-        lines hold only the rings of `core`, each beside its partner, in one arrangement, with as many branching rings
-        and homo bonds of each kind up to the element swap; None otherwise.
+        (defect rings, branching rings, homo bonds), fewest first and then the smallest slide, if both lines hold only
+        the rings of `core`, each beside its partner, in one arrangement, with as many branching rings and homo bonds
+        of each kind up to the element swap; None otherwise.
         """
         first, second = [
             (arrangement.sequence, arrangement.branching_rings, sorted(arrangement.homo_bonds.values()))
             for arrangement in arrangements
         ]
-        core_ring_sizes = [size for size in RING_CORE_SIZES[core.value] if size != HEXAGON_SIZE]
+        core_ring_sizes = [size for size in get_core_ring_sizes(core.value) if size != HEXAGON_SIZE]
         if first != second or any(
             sorted(arrangement.ring_sizes) != core_ring_sizes or arrangement.rings_without_core_partner
             for arrangement in arrangements
