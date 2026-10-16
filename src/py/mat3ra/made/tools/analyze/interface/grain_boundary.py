@@ -249,8 +249,8 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     @staticmethod
     def get_rank(arrangements: List[RingsArrangement], core: GrainBoundaryCoreEnum) -> Optional[Tuple[int, int, int]]:
         """
-        (rings other than hexagons, branching rings, homo bonds) if both lines hold only the rings of `core`, each beside
-        its partner, in one arrangement; None otherwise.
+        (rings other than hexagons, branching rings, homo bonds) if both lines hold only the rings of `core`, each
+        beside its partner, in one arrangement; None otherwise.
         """
         first, second = arrangements
         if first.sequence != second.sequence or any(

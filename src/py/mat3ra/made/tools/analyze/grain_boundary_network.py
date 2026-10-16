@@ -336,8 +336,8 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         second = np.searchsorted(keys[vertices], keys[neighbors])
         if not np.array_equal(keys[vertices][second % len(vertices)], keys[neighbors]):
             raise ValueError(
-                f"The cell is too short along the boundary ({self.cell[1]:.3f} angstrom) for its periodic ring network; "
-                "use a multiple of the boundary vectors"
+                f"The cell is too short along the boundary ({self.cell[1]:.3f} angstrom) for its periodic ring "
+                "network; use a multiple of the boundary vectors"
             )
         grains = (self.grain_hexagon_centers[1][simplices[vertices] % len(centers)].sum(axis=1) >= 2).astype(int)
         return RingNetwork(
