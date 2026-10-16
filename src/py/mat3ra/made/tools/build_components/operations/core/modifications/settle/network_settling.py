@@ -17,8 +17,8 @@ class NetworkSettling(InMemoryEntityPydantic):
     """
     Settles the movable sites of a planar network of bonded sites by least squares, every other site fixed: each bond
     toward its length in `bond_lengths`, and the ends of each two bonds next to each other around a site toward their
-    distance at equal angles around it (sqrt(3) times the bond length for three equal bonds). Bonds are grouped by
-    site, in order around it.
+    distance at equal angles around it (sqrt(3) times the bond length for three equal bonds). Bonds are sorted by
+    site, the bonds of a site in order around it.
     """
 
     model_config = {"arbitrary_types_allowed": True}

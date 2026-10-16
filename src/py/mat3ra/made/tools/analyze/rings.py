@@ -62,9 +62,9 @@ class RingsArrangement(BaseModel):
 class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     """
     Rings of the top-view bond network of a 2D material: the faces of that periodic planar network, their sizes, and
-    how the rings other than hexagons are arranged along lines of the cell (grain boundaries). A site is the set of
-    atoms sharing one top-view position (MoS2: Mo, and the two S above each other); sites closer than
-    `bond_cutoff_factor` times the median nearest-site distance are bonded.
+    how the rings other than hexagons are arranged, among given rings or nearest each of given lines of the cell. A
+    site is the set of atoms sharing one top-view position (MoS2: Mo, and the two S above each other); sites closer
+    than `bond_cutoff_factor` times the median nearest-site distance are bonded.
     """
 
     site_tolerance: float = 0.05

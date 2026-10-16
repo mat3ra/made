@@ -6,7 +6,14 @@ import numpy as np
 from mat3ra.code.entity import InMemoryEntityPydantic
 from scipy.spatial import Delaunay, cKDTree
 
-from .rings import HEXAGON_SIZE, IMAGE_SHIFTS, Bonds, RingsMaterialAnalyzer, RingsNetworkAnalyzer, get_periodic_images
+from .rings import (
+    CENTRAL_IMAGE_INDEX,
+    IMAGE_SHIFTS,
+    Bonds,
+    RingsMaterialAnalyzer,
+    RingsNetworkAnalyzer,
+    get_periodic_images,
+)
 
 # a Voronoi vertex is the circumcentre of one Delaunay triangle, so every site of the network has three bonds
 BONDS_PER_SITE = 3
@@ -14,8 +21,8 @@ BONDS_PER_SITE = 3
 # distinct circles of a lattice
 COCIRCULAR_TOLERANCE = 1e-3  # angstrom
 # positions closer than this are equal when two triangulations of a group are equally good: above the ~1e-7 angstrom
-# by which centres from coordinates stored to 9 decimals differ, below TIE_BREAKING_DISPLACEMENT, which it must not
-# merge
+# by which centres from coordinates stored to 9 decimals differ, below the displacement that breaks ties
+# (grain_boundary_network.TIE_BREAKING_DISPLACEMENT), which it must not merge
 TIE_KEY_TOLERANCE = 1e-6  # angstrom
 
 
@@ -308,26 +315,36 @@ class RingNetworkAnalyzer(RingsMaterialAnalyzer):
         )
 
     def get_triangulation(
-        self, centers: np.ndarray, ring_sizes: Sequence[int]
+        self, centers: np.ndarray, allowed_ring_sizes: Sequence[int]
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Tiled ring centres and their triangles, co-circular groups triangulated for hexagons and `ring_sizes`."""
+        """Tiled ring centres and their triangles, co-circular groups triangulated for `allowed_ring_sizes`."""
         images = get_periodic_images(centers, self.lattice_vectors)
         triangulation = CocircularTriangulation(
             images=images,
             simplices=Delaunay(images).simplices,
             lattice_vectors=self.lattice_vectors,
-            allowed_ring_sizes=[HEXAGON_SIZE, *ring_sizes],
+            allowed_ring_sizes=list(allowed_ring_sizes),
         )
         return (images, *triangulation.resolved_simplices)
 
-    def get_network(self, centers: np.ndarray, ring_sizes: Sequence[int]) -> RingNetwork:
-        """Voronoi network of ring centres in the cell, co-circular centres given rings of hexagons and `ring_sizes`."""
-        images, simplices, from_group = self.get_triangulation(centers, ring_sizes)
-        keys, central = get_triangle_keys(simplices, len(centers))
+    def get_network(self, centers: np.ndarray, allowed_ring_sizes: Sequence[int]) -> RingNetwork:
+        """Voronoi network of ring centres in the cell, co-circular centres given rings of `allowed_ring_sizes`."""
+        return self.get_triangulation_network(*self.get_triangulation(centers, allowed_ring_sizes))
+
+    def get_triangulation_network(
+        self, images: np.ndarray, simplices: np.ndarray, centroid_triangles: np.ndarray
+    ) -> RingNetwork:
+        """
+        Network of a periodic triangulation (counterclockwise) of ring centres tiled 3 x 3: one site per triangle, at
+        its circumcentre, or at its centroid where `centroid_triangles` marks it (triangles sharing one circumcentre),
+        bonded to the sites of the three triangles beside it.
+        """
+        number_of_centers = len(images) // len(IMAGE_SHIFTS)
+        keys, central = get_triangle_keys(simplices, number_of_centers)
         vertices = np.where(central)[0][np.argsort(keys[central])]
         neighbors = get_triangle_neighbors(simplices)[vertices].ravel()
-        # the triangles of a group share one circumcentre; their centroids keep the sites apart
-        anchors = np.where(from_group[:, None], images[simplices].mean(axis=1), get_circumcenters(images[simplices]))
+        corners = images[simplices]
+        anchors = np.where(centroid_triangles[:, None], corners.mean(axis=1), get_circumcenters(corners))
         first = np.repeat(np.arange(len(vertices)), BONDS_PER_SITE)
         second = np.searchsorted(keys[vertices], keys[neighbors])
         if not np.array_equal(keys[vertices][second % len(vertices)], keys[neighbors]):
@@ -335,11 +352,12 @@ class RingNetworkAnalyzer(RingsMaterialAnalyzer):
         return RingNetwork(
             positions=anchors[vertices],
             bonds=(first, second, anchors[neighbors] - anchors[vertices][first]),
-            bond_rings=simplices[vertices][:, [2, 0, 1]].ravel() % len(centers),
-            ring_centers=centers,
+            bond_rings=simplices[vertices][:, [2, 0, 1]].ravel() % number_of_centers,
+            ring_centers=images.reshape(len(IMAGE_SHIFTS), -1, 2)[CENTRAL_IMAGE_INDEX],
         )
 
     def get_small_cell_error(self) -> ValueError:
+        """The error when a triangle's neighbor has no copy among the central triangles: the cell is too small."""
         return ValueError("The cell is too small for its periodic ring network; use a larger supercell")
 
     def get_column_sites(self, network: RingNetwork) -> np.ndarray:

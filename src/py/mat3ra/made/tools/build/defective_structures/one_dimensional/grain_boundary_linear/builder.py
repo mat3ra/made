@@ -41,10 +41,10 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
             positions=ring_network.positions,
             bonds=ring_network.bonds,
             movable=movable,
-            bond_lengths=np.full(len(ring_network.bond_rings), network.site_distance),
+            bond_lengths=np.full(len(ring_network.bonds[0]), network.site_distance),
         )
         rebuilt_positions = wrap_to_cell(settling.settled_positions[movable], network.cell)
-        column_sites = network.get_column_sites(ring_network)[movable]
+        column_sites = network.get_column_sites(ring_network, 0.0)[movable]
         grains = network.get_grains(ring_network)[movable]
         return self._get_assembled_material(network, rebuilt_positions, column_sites, grains)
 

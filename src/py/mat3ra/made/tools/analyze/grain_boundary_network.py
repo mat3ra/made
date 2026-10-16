@@ -8,7 +8,7 @@ from mat3ra.esse.models.materials_category.defective_structures.one_dimensional.
 from scipy.spatial import cKDTree
 
 from .ring_network import BONDS_PER_SITE, HoneycombLattice, RingNetwork, RingNetworkAnalyzer, wrap_to_cell
-from .rings import RING_CORE_SIZES
+from .rings import HEXAGON_SIZE, RING_CORE_SIZES
 
 # a displacement that is a fixed periodic function of position, far above the platform noise of the coordinates, so
 # the triangulation, and the co-circular groups found in it, are the same on every platform and for any atom order
@@ -95,7 +95,7 @@ class GrainBoundaryRingNetworkAnalyzer(RingNetworkAnalyzer):
 
     def get_slid_network(self, slide: float, core: GrainBoundaryCoreEnum) -> RingNetwork:
         """Network of the hexagon centres, the second grain slid by `slide` along y, for the rings of `core`."""
-        return self.get_network(self.get_ring_centers(slide), RING_CORE_SIZES[core.value])
+        return self.get_network(self.get_ring_centers(slide), [HEXAGON_SIZE, *RING_CORE_SIZES[core.value]])
 
     def get_small_cell_error(self) -> ValueError:
         return ValueError(
