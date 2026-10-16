@@ -31,7 +31,7 @@ def create_grain_boundary_linear(
     use_conventional_cell: bool = True,
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None,
     core: Optional[GrainBoundaryCoreEnum] = None,
-    number_of_periods_across: int = 1,
+    number_of_periods_across: Optional[int] = None,
 ) -> Material:
     """
     Create a linear grain boundary from a material with specified twist angle.
@@ -61,8 +61,8 @@ def create_grain_boundary_linear(
         core (Optional[GrainBoundaryCoreEnum]): Ring pair ("5|7", "4|8"), or "6" for hexagons only, rebuilt along both
             lines of a honeycomb lattice, the grains at their natural spacing (no gap). Without boundary vectors, they
             are found from the target angle.
-        number_of_periods_across (int): Repetitions of the perpendicular vector in each grain; with a core, raised to
-            the fewest that hold the rebuilt bands at both lines.
+        number_of_periods_across (Optional[int]): Repetitions of the perpendicular vector in each grain; by default
+            1, with a core the fewest that hold the rebuilt bands at both lines of each grain.
 
     Returns:
         Material: The grain boundary material.
@@ -71,7 +71,8 @@ def create_grain_boundary_linear(
         ValueError: If no commensurate lattice matches are found; with boundary vectors or a core, if the direction is
             not x, no two different vectors of equal length are rotated by the target angle, no lattice vector is
             perpendicular to a boundary vector, the core is asked of a lattice that is not a honeycomb, the cell is too
-            short along the boundary for its ring network, or no slide gives the core at both boundaries.
+            short along the boundary for its ring network, number_of_periods_across is below the fewest the core
+            needs, or no slide gives the core at both boundaries.
     """
     if boundary_vectors is not None or core is not None:
         slab = SlabConfiguration.from_parameters(material, miller_indices, number_of_layers, vacuum=vacuum)
@@ -104,7 +105,7 @@ def create_grain_boundary_linear_on_line(
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]],
     target_angle: float,
     angle_tolerance: float,
-    number_of_periods_across: int,
+    number_of_periods_across: Optional[int],
     core: Optional[GrainBoundaryCoreEnum],
     direction: AxisEnum,
     gap: Optional[float],

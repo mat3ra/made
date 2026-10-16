@@ -4,10 +4,13 @@ from collections import Counter
 import numpy as np
 import pytest
 from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.materials_category.defective_structures.one_dimensional.grain_boundary_linear.configuration import (  # noqa: E501
+    GrainBoundaryCoreEnum,
+)
 from mat3ra.made.material import Material
-from mat3ra.made.tools.analyze.grain_boundary_network import GrainBoundaryRingNetworkAnalyzer
-from mat3ra.made.tools.analyze.interface.grain_boundary import GrainBoundaryPlanarAnalyzer
-from mat3ra.made.tools.analyze.rings import RingsMaterialAnalyzer
+from mat3ra.made.tools.analyze.grain_boundary_network import REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer
+from mat3ra.made.tools.analyze.interface.grain_boundary import GrainBoundaryLinearAnalyzer, GrainBoundaryPlanarAnalyzer
+from mat3ra.made.tools.analyze.rings import RingsArrangement, RingsMaterialAnalyzer
 from mat3ra.made.tools.build.defective_structures.one_dimensional.grain_boundary_linear.build_parameters import (
     GrainBoundaryLinearBuilderParameters,
 )
@@ -46,7 +49,6 @@ GRAPHENE_2D = Materials.get_by_name_and_categories("Graphene", "2D")
 BORON_NITRIDE_2D = Materials.get_by_name_and_categories("Boron_Nitride", "2D")
 MOLYBDENUM_DISULFIDE_2D = Materials.get_by_name_and_categories("Molybdenum_Disulfide", "2D")
 CORE_BUILD_TIME_LIMIT = 20.0  # seconds
-REBUILT_BAND_WIDTH = GrainBoundaryRingNetworkAnalyzer.model_fields["band_width"].default
 
 
 @pytest.mark.parametrize(
@@ -162,109 +164,156 @@ def test_create_grain_boundary_linear(config_params, builder_params_dict, expect
     assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
 
 
-def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) -> float:
-    """Largest distance from a stacked atom outside the rebuilt bands to the nearest atom of the grain boundary."""
+def get_rebuilt_grain_boundary(grain_boundary: Material, configuration_update: dict) -> Material:
+    """The grain boundary built again from its build metadata, the configuration updated."""
     build = grain_boundary.metadata.build[-1]
     builder = GrainBoundaryLinearBuilder(
         build_parameters=GrainBoundaryLinearBuilderParameters(**build.build_parameters)
     )
-    stacked = builder.get_material(
-        GrainBoundaryLinearConfiguration(**build.configuration).model_copy(update={"core": None})
+    return builder.get_material(
+        GrainBoundaryLinearConfiguration(**build.configuration).model_copy(update=configuration_update)
     )
+
+
+def get_line_positions(grain_boundary: Material) -> list:
+    """x of the two lines, from the widths of the grains recorded in the build metadata."""
+    components = grain_boundary.metadata.build[-1].configuration["stack_components"]
+    matrices = [component["xy_supercell_matrix"] for component in components]
+    return GrainBoundaryRingNetworkAnalyzer(material=grain_boundary, supercell_matrices=matrices).line_positions
+
+
+def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) -> float:
+    """Largest distance from a stacked atom outside the rebuilt bands to the nearest atom of the grain boundary."""
+    stacked = get_rebuilt_grain_boundary(grain_boundary, {"core": None})
     stacked.to_cartesian()
     grain_boundary.to_cartesian()
-    coordinates, quarter_width = np.array(stacked.basis.coordinates.values), stacked.lattice.a / 4
-    line_distances = np.abs((coordinates[:, 0] + quarter_width) % (2 * quarter_width) - quarter_width)
+    coordinates = np.array(stacked.basis.coordinates.values)
+    lines = np.array(get_line_positions(grain_boundary) + [stacked.lattice.a])
+    line_distances = np.abs(coordinates[:, :1] - lines).min(axis=1)
     kept_coordinates = coordinates[line_distances >= REBUILT_BAND_WIDTH * lattice_constant]
     return float(cKDTree(grain_boundary.basis.coordinates.values).query(kept_coordinates)[0].max())
 
 
+# number_of_periods_across None: the fewest each grain needs to hold the rebuilt bands at both its lines
 @pytest.mark.parametrize(
     "material_config, boundary_vectors, number_of_periods_across, core, elements, sequence, homo_bonds",
     [
-        (GRAPHENE_2D, ((3, 1), (3, 2)), 1, "5|7", {"C": 112}, "[5-7]", [{}] * 2),
-        (GRAPHENE_2D, ((6, 2), (6, 4)), 1, "5|7", {"C": 224}, ["[5-7]", "[5-7]"], [{}] * 2),
-        (GRAPHENE_2D, ((5, 2), (5, 3)), 1, "5|7", {"C": 152}, "[5-7]", [{}] * 2),
-        (GRAPHENE_2D, ((9, 4), (9, 5)), 1, "5|7", {"C": 488}, "[5-7]", [{}] * 2),
-        (GRAPHENE_2D, ((4, 1), (4, 3)), 1, "5|7", {"C": 104}, "(5-7-5-7)", [{}] * 2),
-        (BORON_NITRIDE_2D, ((3, 1), (3, 2)), 1, "5|7", {"B": 56, "N": 56}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
-        (BORON_NITRIDE_2D, ((5, 2), (5, 3)), 1, "5|7", {"B": 76, "N": 76}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
-        (BORON_NITRIDE_2D, ((9, 4), (9, 5)), 1, "5|7", {"B": 244, "N": 244}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
-        (BORON_NITRIDE_2D, ((4, 1), (4, 3)), 1, "5|7", {"B": 52, "N": 52}, "(5-7-5-7)", [{"N-N": 4}, {"B-B": 4}]),
-        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 1, "5|7", {"B": 52, "N": 52}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
-        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 2, "5|7", {"B": 104, "N": 104}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
-        (BORON_NITRIDE_2D, ((9, 4), (-9, -5)), 1, "5|7", {"B": 244, "N": 244}, "[5-7]", [{"B-B": 4, "N-N": 4}] * 2),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), None, "5|7", {"C": 112}, ["[5-7]"], [{}] * 2),
+        (GRAPHENE_2D, ((6, 2), (6, 4)), None, "5|7", {"C": 224}, ["[5-7]", "[5-7]"], [{}] * 2),
+        (GRAPHENE_2D, ((5, 2), (5, 3)), None, "5|7", {"C": 152}, ["[5-7]"], [{}] * 2),
+        (GRAPHENE_2D, ((9, 4), (9, 5)), None, "5|7", {"C": 488}, ["[5-7]"], [{}] * 2),
+        (GRAPHENE_2D, ((4, 1), (4, 3)), None, "5|7", {"C": 104}, ["(5-7-5-7)"], [{}] * 2),
+        (BORON_NITRIDE_2D, ((3, 1), (3, 2)), None, "5|7", {"B": 56, "N": 56}, ["[5-7]"], [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((5, 2), (5, 3)), None, "5|7", {"B": 76, "N": 76}, ["[5-7]"], [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((9, 4), (9, 5)), None, "5|7", {"B": 244, "N": 244}, ["[5-7]"], [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((4, 1), (4, 3)), None, "5|7", {"B": 52, "N": 52}, ["(5-7-5-7)"], [{"N-N": 4}, {"B-B": 4}]),
+        (
+            BORON_NITRIDE_2D,
+            ((4, 1), (-4, -3)),
+            None,
+            "5|7",
+            {"B": 52, "N": 52},
+            ["(5-7-5-7)"],
+            [{"B-B": 1, "N-N": 1}] * 2,
+        ),
+        (
+            BORON_NITRIDE_2D,
+            ((4, 1), (-4, -3)),
+            2,
+            "5|7",
+            {"B": 104, "N": 104},
+            ["(5-7-5-7)"],
+            [{"B-B": 1, "N-N": 1}] * 2,
+        ),
+        (
+            BORON_NITRIDE_2D,
+            ((9, 4), (-9, -5)),
+            None,
+            "5|7",
+            {"B": 244, "N": 244},
+            ["[5-7]"],
+            [{"B-B": 4, "N-N": 4}] * 2,
+        ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((3, 1), (3, 2)),
-            1,
+            None,
             "5|7",
             {"Mo": 56, "S": 112},
-            "[5-7]",
+            ["[5-7]"],
             [{"Mo-Mo": 2}, {"S-S": 2}],
         ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((5, 2), (5, 3)),
-            1,
+            None,
             "5|7",
             {"Mo": 76, "S": 152},
-            "[5-7]",
+            ["[5-7]"],
             [{"Mo-Mo": 2}, {"S-S": 2}],
         ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((9, 4), (9, 5)),
-            1,
+            None,
             "5|7",
             {"Mo": 244, "S": 488},
-            "[5-7]",
+            ["[5-7]"],
             [{"Mo-Mo": 2}, {"S-S": 2}],
         ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((4, 1), (4, 3)),
-            1,
+            None,
             "5|7",
             {"Mo": 52, "S": 104},
-            "(5-7-5-7)",
+            ["(5-7-5-7)"],
             [{"Mo-Mo": 4}, {"S-S": 4}],
         ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((4, 1), (-4, -3)),
-            1,
+            None,
             "5|7",
             {"Mo": 52, "S": 104},
-            "(5-7-5-7)",
+            ["(5-7-5-7)"],
             [{"Mo-Mo": 1, "S-S": 1}] * 2,
         ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((9, 4), (-9, -5)),
-            1,
+            None,
             "5|7",
             {"Mo": 244, "S": 488},
-            "[5-7]",
+            ["[5-7]"],
             [{"Mo-Mo": 4, "S-S": 4}] * 2,
         ),
-        (BORON_NITRIDE_2D, ((2, 1), (-2, -1)), 6, "4|8", {"B": 24, "N": 24}, "(4-8)", [{}] * 2),
-        (MOLYBDENUM_DISULFIDE_2D, ((2, 1), (-2, -1)), 5, "4|8", {"Mo": 20, "S": 40}, "(4-8)", [{}] * 2),
+        (BORON_NITRIDE_2D, ((2, 1), (-2, -1)), None, "4|8", {"B": 20, "N": 20}, ["(4-8)"], [{}] * 2),
+        (MOLYBDENUM_DISULFIDE_2D, ((2, 1), (-2, -1)), None, "4|8", {"Mo": 20, "S": 40}, ["(4-8)"], [{}] * 2),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((2, 1), (-2, -1)),
-            1,
+            None,
             "5|7",
             {"Mo": 20, "S": 40},
-            "{5-5-7-7}",
+            ["{5-5-7-7}"],
             [{"Mo-Mo": 1, "S-S": 1}] * 2,
         ),
-        (GRAPHENE_2D, ((15, 7), (15, 8)), 1, "5|7", {"C": 1352}, "[5-7]", [{}] * 2),
-        (BORON_NITRIDE_2D, ((2, 2), (2, 0)), 1, "6", {"B": 24, "N": 24}, [], [{"B-B": 4}, {"N-N": 4}]),
+        (GRAPHENE_2D, ((15, 7), (15, 8)), None, "5|7", {"C": 1352}, ["[5-7]"], [{}] * 2),
+        (
+            BORON_NITRIDE_2D,
+            ((3, -5), (7, 0)),
+            None,
+            "5|7",
+            {"B": 336, "N": 336},
+            ["[5-7-5-7]", "[5-7]"],
+            [{"B-B": 9}, {"N-N": 9}],
+        ),
+        (BORON_NITRIDE_2D, ((2, 2), (2, 0)), None, "6", {"B": 24, "N": 24}, [], [{"B-B": 4}, {"N-N": 4}]),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((10, 9), (10, 1)),
-            1,
+            None,
             "5|7",
             {"Mo": 364, "S": 728},
             ["[5-7]", "[5-7]"],
@@ -282,20 +331,37 @@ def test_create_grain_boundary_linear_core(
     )
     build_time = time.perf_counter() - start
     rings_analyzer = RingsMaterialAnalyzer(material=grain_boundary)
-    arrangements = rings_analyzer.get_line_arrangements([0.0, grain_boundary.lattice.a / 2])
+    arrangements = rings_analyzer.get_line_arrangements(get_line_positions(grain_boundary))
     lattice_vectors = np.array(material.lattice.vector_arrays)[:2, :2]
     site_distance = material.lattice.a / np.sqrt(3)
 
     assert build_time < CORE_BUILD_TIME_LIMIT
     assert dict(Counter(grain_boundary.basis.elements.values)) == elements
     assert grain_boundary.lattice.b == pytest.approx(np.linalg.norm(np.array(boundary_vectors[0]) @ lattice_vectors))
-    assert [arrangement.sequence for arrangement in arrangements] == [
-        [sequence] if isinstance(sequence, str) else sequence
-    ] * 2
+    assert [arrangement.sequence for arrangement in arrangements] == [sequence] * 2
     assert [arrangement.homo_bonds for arrangement in arrangements] == homo_bonds
     assert [arrangement.rings_without_core_partner for arrangement in arrangements] == [0, 0]
     assert np.all(np.abs(np.linalg.norm(rings_analyzer.bonds[2], axis=1) / site_distance - 1) < 0.1)
+    assert_two_entities_deep_almost_equal(get_rebuilt_grain_boundary(grain_boundary, {}), grain_boundary)
     assert get_kept_atoms_deviation(grain_boundary, material.lattice.a) < 1e-6
+
+
+@pytest.mark.parametrize(
+    "branching_rings, expected_rank",
+    [((2, 2), (8, 4, 2)), ((2, 4), None)],
+)
+def test_grain_boundary_linear_analyzer_get_rank(branching_rings, expected_rank):
+    arrangements = [
+        RingsArrangement(
+            ring_sizes={5: 2, 7: 2},
+            sequence=["{5-5-7-7}"],
+            homo_bonds={"B-B": 1},
+            rings_without_core_partner=0,
+            branching_rings=count,
+        )
+        for count in branching_rings
+    ]
+    assert GrainBoundaryLinearAnalyzer.get_rank(arrangements, GrainBoundaryCoreEnum.field_5_7) == expected_rank
 
 
 @pytest.mark.parametrize(
@@ -328,24 +394,19 @@ def test_create_grain_boundary_linear_core_structure(
     grain_boundary = create_grain_boundary_linear(
         Material.create(material_config), target_angle=target_angle, boundary_vectors=boundary_vectors, core="5|7"
     )
-    build = grain_boundary.metadata.build[-1]
-    builder = GrainBoundaryLinearBuilder(
-        build_parameters=GrainBoundaryLinearBuilderParameters(**build.build_parameters)
-    )
-    rebuilt = builder.get_material(GrainBoundaryLinearConfiguration(**build.configuration))
     assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
-    assert_two_entities_deep_almost_equal(rebuilt, grain_boundary)
 
 
 @pytest.mark.parametrize(
     "material_config, boundary_vectors, core, number_of_periods_across, direction, message",
     [
-        (BULK_Si_CONVENTIONAL, ((1, 0), (0, 1)), "5|7", 1, AxisEnum.x, "honeycomb"),
-        (BULK_GRAPHITE, ((2, 1), (1, 2)), "5|7", 1, AxisEnum.x, "honeycomb"),
-        (GRAPHENE_2D, None, "5|7", 1, AxisEnum.x, "rotated by 0"),
-        (GRAPHENE_2D, ((3, 1), (3, 2)), "5|7", 1, AxisEnum.y, "stacked along x"),
-        (GRAPHENE_2D, ((3, 1), (3, 2)), "4|8", 1, AxisEnum.x, r"achievable: \['5\|7'\]"),
-        (BORON_NITRIDE_2D, ((1, 1), (1, 0)), "5|7", 1, AxisEnum.x, "too short along the boundary"),
+        (BULK_Si_CONVENTIONAL, ((1, 0), (0, 1)), "5|7", None, AxisEnum.x, "honeycomb"),
+        (BULK_GRAPHITE, ((2, 1), (1, 2)), "5|7", None, AxisEnum.x, "honeycomb"),
+        (GRAPHENE_2D, None, "5|7", None, AxisEnum.x, "rotated by 0"),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), "5|7", None, AxisEnum.y, "stacked along x"),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), "4|8", None, AxisEnum.x, r"achievable: \['5\|7'\]"),
+        (BORON_NITRIDE_2D, ((1, 1), (1, 0)), "5|7", None, AxisEnum.x, "too short along the boundary"),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), "5|7", 1, AxisEnum.x, "number_of_periods_across must be at least 2"),
     ],
 )
 def test_create_grain_boundary_linear_invalid(

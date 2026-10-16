@@ -30,6 +30,8 @@ HONEYCOMB_ANGLE_TOLERANCE = 0.5  # degrees
 INTEGER_TOLERANCE = 1e-3
 LENGTH_GROUPING_DECIMALS = 3  # angstrom
 ROTATION_90 = np.array([[0, -1], [1, 0]])
+# a grain with a core keeps one row of hexagons between the rebuilt bands at its two lines
+KEPT_RING_ROW_WIDTH = 1.0  # lattice constants
 
 
 class GrainBoundaryPlanarMatchHolder(InMemoryEntityPydantic):
@@ -103,8 +105,9 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     """
     Matches two grains of one 2D material along a boundary line. Each grain is the rectangular supercell
     [across, boundary vector], across being the shortest lattice vector perpendicular to the boundary vector, repeated
-    `number_of_periods_across` times. The boundary vectors, in the lattice vectors of the slab, are given or found as
-    the shortest pair of equal length rotated by `target_angle` from the first to the second.
+    `number_of_periods_across` times, by default the fewest the core needs. The boundary vectors, in the lattice
+    vectors of the slab, are given or found as the shortest pair of equal length rotated by `target_angle` from the
+    first to the second.
 
     With a `core` (honeycomb lattices only), `get_slide` chooses the slide of the second grain along the line.
     """
@@ -112,8 +115,10 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
     target_angle: float = 0.0
     angle_tolerance: float = 0.1
-    number_of_periods_across: int = 1
+    number_of_periods_across: Optional[int] = None
     core: Optional[GrainBoundaryCoreEnum] = None
+    # the slides tried are part of the rule: an even number, so that the half-period slide is a candidate; one slide per
+    # lattice offset (about 2 |v|^2 / a^2 per period) would take 30 s for graphene at 4.4 degrees
     number_of_slides: int = 48
     maximum_vector_component: int = 30
 
@@ -190,16 +195,25 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return across if across[0] * boundary_vector[1] - across[1] * boundary_vector[0] > 0 else -across
 
     @cached_property
-    def periods_across(self) -> int:
-        """
-        `number_of_periods_across`, with a core raised so that each grain holds the rebuilt bands at both of its lines
-        and one ring row (a lattice constant) between them.
-        """
+    def minimum_periods_across(self) -> int:
+        """1; with a core, enough for each grain to hold the rebuilt bands at both its lines and a ring row between."""
         if self.core is None:
-            return self.number_of_periods_across
+            return 1
         lattice_constant = np.linalg.norm(self.lattice_vectors[0])
-        across = np.linalg.norm(self.get_across_vector(self.matched_boundary_vectors[0]) @ self.lattice_vectors)
-        return max(self.number_of_periods_across, ceil((2 * REBUILT_BAND_WIDTH + 1) * lattice_constant / across))
+        across_vectors = np.array([self.get_across_vector(vector) for vector in self.matched_boundary_vectors])
+        shortest_across = np.linalg.norm(across_vectors @ self.lattice_vectors, axis=1).min()
+        return ceil((2 * REBUILT_BAND_WIDTH + KEPT_RING_ROW_WIDTH) * lattice_constant / shortest_across)
+
+    @cached_property
+    def periods_across(self) -> int:
+        if self.number_of_periods_across is None:
+            return self.minimum_periods_across
+        if self.number_of_periods_across < self.minimum_periods_across:
+            raise ValueError(
+                f"number_of_periods_across must be at least {self.minimum_periods_across}, for each grain to hold the "
+                "rebuilt bands of the core"
+            )
+        return self.number_of_periods_across
 
     @cached_property
     def supercell_matrices(self) -> List[List[List[int]]]:
@@ -222,9 +236,8 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     def get_slide(self, material: Material) -> float:
         """
         Slide of the second grain along the line, for the two grains stacked without a gap or slide: of
-        `number_of_slides` slides across the period, the one whose unrelaxed ring network has `core` at both lines, the
-        same homo bonds there up to the element swap, and as many sites of each species, with the fewest rings other
-        than hexagons, then the fewest branching rings, then the fewest homo bonds.
+        `number_of_slides` slides across the period, the one of best rank (get_rank) whose unrelaxed ring network has as
+        many sites of each species.
         """
         network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=self.supercell_matrices)
         slides = np.arange(self.number_of_slides) * network.cell[1] / self.number_of_slides
@@ -249,12 +262,13 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     @staticmethod
     def get_rank(arrangements: List[RingsArrangement], core: GrainBoundaryCoreEnum) -> Optional[Tuple[int, int, int]]:
         """
-        (rings other than hexagons, branching rings, homo bonds) if both lines hold only the rings of `core`, each
-        beside its partner, in one arrangement, with as many homo bonds of each kind up to the element swap; None
-        otherwise.
+        (rings other than hexagons, branching rings, homo bonds), fewest first and then the smallest slide, if both
+        lines hold only the rings of `core`, each beside its partner, in one arrangement, with as many branching rings
+        and homo bonds of each kind up to the element swap; None otherwise.
         """
         first, second = [
-            (arrangement.sequence, sorted(arrangement.homo_bonds.values())) for arrangement in arrangements
+            (arrangement.sequence, arrangement.branching_rings, sorted(arrangement.homo_bonds.values()))
+            for arrangement in arrangements
         ]
         if first != second or any(
             sorted(arrangement.ring_sizes) != CORE_RING_SIZES[core] or arrangement.rings_without_core_partner

@@ -16,10 +16,13 @@ BONDS_PER_SITE = 3
 # the triangulation, and the co-circular groups found in it, are the same on every platform and for any atom order
 TIE_BREAKING_DISPLACEMENT = 1e-5  # angstrom
 TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
+# centres this close to one circle lie on it: far above the tie-breaking displacement, far below the distance between
+# distinct circles of a lattice
 COCIRCULAR_TOLERANCE = 1e-3  # angstrom
 # sites on the edge of the rebuilt band (lattice sites can sit exactly there) stay, whatever the rounding
 BAND_EDGE_TOLERANCE = 1e-3  # angstrom
 REBUILT_BAND_WIDTH = 2.0  # lattice constants
+# ring sizes other than hexagons at a line for each core, sorted as the rank compares them
 CORE_RING_SIZES: Dict[GrainBoundaryCoreEnum, List[int]] = {
     GrainBoundaryCoreEnum.field_5_7: [5, 7],
     GrainBoundaryCoreEnum.field_4_8: [4, 8],
@@ -42,19 +45,24 @@ def get_circumcenters(triangles: np.ndarray) -> np.ndarray:
     return triangles[:, 0] + np.stack([x, y], axis=1)
 
 
-def get_triangle_keys(simplices: np.ndarray, number_of_points: int) -> Tuple[np.ndarray, np.ndarray]:
+def get_periodic_corners(polygons: np.ndarray, number_of_points: int) -> Tuple[np.ndarray, np.ndarray]:
     """
-    For triangles of points tiled 3 x 3 (point index = tile * number_of_points + point): one integer key per periodic
-    triangle, the same for all its copies, and whether a triangle is the copy whose lowest point lies in the central
-    tile. The key encodes the three points as tile index relative to that lowest point times number_of_points plus
-    point, sorted, in base 9 * number_of_points.
+    For polygons (rows of point indices) of points tiled 3 x 3 (point index = tile * number_of_points + point): the
+    corners of each, the same for all its copies, and whether a polygon is the copy whose lowest point lies in the
+    central tile. A corner is its tile relative to that lowest point's times number_of_points plus its point, sorted.
     """
-    points, tiles = simplices % number_of_points, simplices // number_of_points
+    points, tiles = polygons % number_of_points, polygons // number_of_points
     anchors = IMAGE_SHIFTS[tiles[np.arange(len(tiles)), np.argmin(points, axis=1)]]
     relative = IMAGE_SHIFTS[tiles] - anchors[:, None]
     corners = np.sort(((relative[..., 0] + 1) * 3 + relative[..., 1] + 1) * number_of_points + points, axis=1)
+    return corners, np.all(anchors == 0, axis=1)
+
+
+def get_triangle_keys(simplices: np.ndarray, number_of_points: int) -> Tuple[np.ndarray, np.ndarray]:
+    """One integer key per periodic triangle, its corners in base 9 * number_of_points; and whether it is central."""
+    corners, central = get_periodic_corners(simplices, number_of_points)
     base = 9 * number_of_points
-    return (corners[:, 0] * base + corners[:, 1]) * base + corners[:, 2], np.all(anchors == 0, axis=1)
+    return (corners[:, 0] * base + corners[:, 1]) * base + corners[:, 2], central
 
 
 def get_triangle_neighbors(simplices: np.ndarray) -> np.ndarray:
@@ -80,12 +88,13 @@ def get_triangulations(first: int, last: int) -> List[List[Tuple[int, int, int]]
     ]
 
 
-class CocircularGroups(InMemoryEntityPydantic):
+class CocircularTriangulation(InMemoryEntityPydantic):
     """
     Delaunay triangles of ring centres tiled 3 x 3. Where four or more centres lie on one empty circle the
     triangulation is not unique: each such group is triangulated so that its centres get rings of the allowed sizes,
-    one group after another along the lines, every copy of a group in another cell alike; among equally good
-    triangulations the Delaunay one stays.
+    one group after another by the position of its circle (y, then x), given the groups before it; among equally good
+    triangulations the Delaunay one stays. The group whose lowest centre lies in the central cell is resolved, and its
+    copies in other cells follow it.
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -104,9 +113,13 @@ class CocircularGroups(InMemoryEntityPydantic):
         return cKDTree(self.images)
 
     @cached_property
-    def circles(self) -> Tuple[np.ndarray, np.ndarray]:
-        centers = get_circumcenters(self.images[self.simplices])
-        return centers, np.linalg.norm(self.images[self.simplices[:, 0]] - centers, axis=1)
+    def circle_centers(self) -> np.ndarray:
+        """Centre of the circumcircle of each triangle."""
+        return get_circumcenters(self.images[self.simplices])
+
+    @cached_property
+    def circle_radii(self) -> np.ndarray:
+        return np.linalg.norm(self.images[self.simplices[:, 0]] - self.circle_centers, axis=1)
 
     @cached_property
     def candidates(self) -> np.ndarray:
@@ -114,92 +127,114 @@ class CocircularGroups(InMemoryEntityPydantic):
         Triangles whose empty circumcircle holds four or more centres; circles wider than half the cell (slivers at
         the border of the tiling) are left out, so a group never holds two copies of one centre.
         """
-        centers, radii = self.circles
+        centers, radii = self.circle_centers, self.circle_radii
         outer = self.tree.query_ball_point(centers, radii + COCIRCULAR_TOLERANCE, return_length=True)
         inner = self.tree.query_ball_point(centers, radii - COCIRCULAR_TOLERANCE, return_length=True)
         return np.flatnonzero((outer - inner > 3) & (radii < self.cell.min() / 2))
 
     def get_circle_points(self, simplex: int) -> Tuple[int, ...]:
         """Centres on the circumcircle of a triangle, ordered around it."""
-        center, radius = self.circles[0][simplex], self.circles[1][simplex]
+        center, radius = self.circle_centers[simplex], self.circle_radii[simplex]
         points = np.array(self.tree.query_ball_point(center, radius + COCIRCULAR_TOLERANCE))
         points = points[np.linalg.norm(self.images[points] - center, axis=1) > radius - COCIRCULAR_TOLERANCE]
         return tuple(points[np.argsort(np.arctan2(*(self.images[points] - center).T[::-1]))])
 
     @cached_property
-    def groups(self) -> Dict[Tuple[int, ...], Tuple[np.ndarray, List[int]]]:
+    def groups(self) -> Dict[Tuple[int, ...], List[int]]:
         """
-        Centres of each group, ordered around the circle, with the centre of the circle and the Delaunay triangles of
-        the group; only groups whose Delaunay triangles fill the polygon (none shared with an overlapping group).
+        Centres of each group, ordered around the circle, with the Delaunay triangles of the group; only groups whose
+        Delaunay triangles fill the polygon (none shared with an overlapping group).
         """
-        groups: Dict[Tuple[int, ...], Tuple[np.ndarray, List[int]]] = {}
+        groups: Dict[Tuple[int, ...], List[int]] = {}
         for simplex in self.candidates:
-            groups.setdefault(self.get_circle_points(simplex), (self.circles[0][simplex], []))[1].append(simplex)
-        return {points: group for points, group in groups.items() if len(group[1]) == len(points) - 2}
-
-    @cached_property
-    def in_group(self) -> np.ndarray:
-        in_group = np.zeros(len(self.simplices), bool)
-        in_group[[simplex for _, members in self.groups.values() for simplex in members]] = True
-        return in_group
+            groups.setdefault(self.get_circle_points(simplex), []).append(simplex)
+        return {points: members for points, members in groups.items() if len(members) == len(points) - 2}
 
     @cached_property
     def group_points(self) -> List[np.ndarray]:
         return [np.array(points) for points in self.groups]
 
     @cached_property
-    def group_classes(self) -> List[int]:
-        """For each group, the first group that is a copy of it, by the position of its circle in the cell."""
-        wrapped = wrap_to_cell(np.array([center for center, _ in self.groups.values()]).reshape(-1, 2), self.cell)
-        copies = cKDTree(wrapped, boxsize=self.cell).query_ball_point(wrapped, COCIRCULAR_TOLERANCE)
-        return [min(found) for found in copies]
+    def group_members(self) -> List[List[int]]:
+        return list(self.groups.values())
 
     @cached_property
-    def options(self) -> Dict[int, List[List[Tuple[int, int, int]]]]:
-        return {group: get_triangulations(0, len(self.group_points[group]) - 1) for group in set(self.group_classes)}
+    def group_representatives(self) -> List[int]:
+        """
+        For each group, its copy whose lowest centre lies in the central cell, matched by its corners relative to that
+        centre; -1 for a group with no such copy (a sliver at the border of the tiling), left as Delaunay made it.
+        """
+        corners = [get_periodic_corners(points[None], self.number_of_centers) for points in self.group_points]
+        representatives = {tuple(key[0]): group for group, (key, central) in enumerate(corners) if central[0]}
+        return [representatives.get(tuple(key[0]), -1) for key, _ in corners]
 
-    def get_ring_sizes(self, group: int, option: int) -> np.ndarray:
+    @cached_property
+    def group_triangulations(self) -> Dict[int, List[List[Tuple[int, int, int]]]]:
+        representatives = set(self.group_representatives) - {-1}
+        return {group: get_triangulations(0, len(self.group_points[group]) - 1) for group in representatives}
+
+    @cached_property
+    def is_group_triangle(self) -> np.ndarray:
+        is_group_triangle = np.zeros(len(self.simplices), bool)
+        resolved = [group for group, representative in enumerate(self.group_representatives) if representative >= 0]
+        is_group_triangle[[simplex for group in resolved for simplex in self.group_members[group]]] = True
+        return is_group_triangle
+
+    def get_ring_sizes(self, group: int, triangulation: int) -> np.ndarray:
         """Triangles at each ring centre (its ring size) that one triangulation of a group contributes."""
-        corners = self.group_points[group][np.array(self.options[group][option])] % self.number_of_centers
+        triangles = np.array(self.group_triangulations[group][triangulation])
+        corners = self.group_points[group][triangles] % self.number_of_centers
         return np.bincount(corners.ravel(), minlength=self.number_of_centers)
 
-    def get_delaunay_option(self, group: int) -> int:
+    def get_delaunay_triangulation(self, group: int) -> int:
+        """Index of the triangulation of a group that its Delaunay triangles make."""
         position = {point: index for index, point in enumerate(self.group_points[group])}
-        members = self.simplices[list(self.groups.values())[group][1]]
+        members = self.simplices[self.group_members[group]]
         triangles = {tuple(sorted(position[point] for point in simplex)) for simplex in members}
-        options = [{tuple(sorted(triangle)) for triangle in option} for option in self.options[group]]
+        options = [{tuple(sorted(triangle)) for triangle in option} for option in self.group_triangulations[group]]
         return options.index(triangles)
 
-    def get_choices(self, group_order_keys: List[Tuple[int, float]]) -> Dict[int, int]:
-        """Option of each group class: the fewest centres with rings outside the allowed sizes, given the others."""
+    @cached_property
+    def group_order(self) -> List[int]:
+        """Groups to resolve by the position of their circle in the cell, y then x."""
+        groups = list(self.group_triangulations)
+        first_members = [self.group_members[group][0] for group in groups]
+        centers = wrap_to_cell(self.circle_centers[first_members].reshape(-1, 2), self.cell)
+        return [groups[index] for index in np.lexsort((centers[:, 0], centers[:, 1]))]
+
+    @cached_property
+    def choices(self) -> Dict[int, int]:
+        """Triangulation of each group: the fewest centres with rings outside the allowed sizes, given the others."""
         _, central = get_triangle_keys(self.simplices, self.number_of_centers)
-        outside = self.simplices[central & ~self.in_group] % self.number_of_centers
-        choices = {group: self.get_delaunay_option(group) for group in self.options}
-        ring_sizes = np.bincount(outside.ravel(), minlength=self.number_of_centers)
-        ring_sizes += sum(self.get_ring_sizes(group, option) for group, option in choices.items())
-        for group in sorted(self.options, key=group_order_keys.__getitem__):
+        ungrouped_corners = self.simplices[central & ~self.is_group_triangle] % self.number_of_centers
+        choices = {group: self.get_delaunay_triangulation(group) for group in self.group_triangulations}
+        ring_sizes = np.bincount(ungrouped_corners.ravel(), minlength=self.number_of_centers)
+        ring_sizes += sum(self.get_ring_sizes(group, triangulation) for group, triangulation in choices.items())
+        for group in self.group_order:
             ring_sizes -= self.get_ring_sizes(group, choices[group])
             centers = self.group_points[group] % self.number_of_centers
             scores = []
-            for option in range(len(self.options[group])):
-                sizes = (ring_sizes + self.get_ring_sizes(group, option))[centers]
-                scores.append(((~np.isin(sizes, self.allowed_ring_sizes)).sum(), option != choices[group], option))
+            for triangulation in range(len(self.group_triangulations[group])):
+                sizes = (ring_sizes + self.get_ring_sizes(group, triangulation))[centers]
+                outside = (~np.isin(sizes, self.allowed_ring_sizes)).sum()
+                scores.append((outside, triangulation != choices[group], triangulation))
             choices[group] = min(scores)[2]
             ring_sizes += self.get_ring_sizes(group, choices[group])
         return choices
 
-    def get_resolved_simplices(self, group_order_keys: List[Tuple[int, float]]) -> Tuple[np.ndarray, np.ndarray]:
+    @cached_property
+    def resolved_simplices(self) -> Tuple[np.ndarray, np.ndarray]:
         """Triangles counterclockwise, the groups triangulated as chosen; and which triangles came from a group."""
-        choices = self.get_choices(group_order_keys)
         added = [
-            points[np.array(self.options[group][choices[group]])]
-            for points, group in zip(self.group_points, self.group_classes)
+            points[np.array(self.group_triangulations[group][self.choices[group]])]
+            for points, group in zip(self.group_points, self.group_representatives)
+            if group >= 0
         ]
-        simplices = np.vstack([self.simplices[~self.in_group], *added])
+        simplices = np.vstack([self.simplices[~self.is_group_triangle], *added])
         corners = self.images[simplices]
         clockwise = np.cross(corners[:, 1] - corners[:, 0], corners[:, 2] - corners[:, 0]) < 0
         simplices[clockwise] = simplices[clockwise][:, [0, 2, 1]]
-        return simplices, np.arange(len(simplices)) >= (~self.in_group).sum()
+        return simplices, np.arange(len(simplices)) >= (~self.is_group_triangle).sum()
 
 
 class RingNetwork(InMemoryEntityPydantic):
@@ -245,11 +280,11 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
     Ring network of a honeycomb grain boundary (graphene, h-BN, MoS2): grains labelled 0 and 1 stacked along x without
     a gap, the lines at x = 0 and x = the width of grain 0. The hexagon centres of both grains are the ring centres and
     the sites are the vertices of their periodic Voronoi network, for any slide of the second grain along the lines.
-    Sites within `band_width` lattice constants of either line are rebuilt; every other site keeps its stacked position.
+    Sites within REBUILT_BAND_WIDTH lattice constants of either line are rebuilt; every other site keeps its stacked
+    position.
     """
 
     supercell_matrices: List[List[List[int]]]
-    band_width: float = REBUILT_BAND_WIDTH
 
     @cached_property
     def cell(self) -> np.ndarray:
@@ -291,10 +326,10 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
 
     @cached_property
     def kept_sites(self) -> np.ndarray:
-        """Sites at `band_width` lattice constants or more from both lines."""
+        """Sites at REBUILT_BAND_WIDTH lattice constants or more from both lines."""
         x_values = self.site_positions[:, 0]
         distances = np.min([np.abs(x_values - line) for line in self.line_positions + [self.cell[0]]], axis=0)
-        return np.where(distances >= self.band_width * np.sqrt(3) * self.site_distance - BAND_EDGE_TOLERANCE)[0]
+        return np.where(distances >= REBUILT_BAND_WIDTH * np.sqrt(3) * self.site_distance - BAND_EDGE_TOLERANCE)[0]
 
     @cached_property
     def grain_hexagon_centers(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -314,18 +349,18 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         centers = wrap_to_cell(centers + np.outer(grains, [0.0, slide]), self.cell)
         return centers + TIE_BREAKING_DISPLACEMENT * np.sin(2 * np.pi * (centers / self.cell) @ TIE_BREAKING_WAVES.T)
 
-    def get_triangulation(self, centers: np.ndarray, core: GrainBoundaryCoreEnum) -> Tuple[np.ndarray, ...]:
+    def get_triangulation(
+        self, centers: np.ndarray, core: GrainBoundaryCoreEnum
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Tiled ring centres and their triangles, co-circular groups triangulated for the rings of `core`."""
         images = get_periodic_images(centers, self.lattice_vectors)
-        groups = CocircularGroups(
+        triangulation = CocircularTriangulation(
             images=images,
             simplices=Delaunay(images).simplices,
             cell=self.cell,
             allowed_ring_sizes=[HEXAGON_SIZE] + CORE_RING_SIZES[core],
         )
-        wrapped = wrap_to_cell(np.array([center for center, _ in groups.groups.values()]).reshape(-1, 2), self.cell)
-        lines = self.get_nearest_lines(wrapped[:, 0], self.line_positions)
-        return (images, *groups.get_resolved_simplices(list(zip(lines.tolist(), wrapped[:, 1].tolist()))))
+        return (images, *triangulation.resolved_simplices)
 
     def get_network(self, slide: float, core: GrainBoundaryCoreEnum) -> RingNetwork:
         """Voronoi network of the ring centres, the second grain slid by `slide` along y, for the rings of `core`."""

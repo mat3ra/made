@@ -28,8 +28,14 @@ def sort_bonds(first: np.ndarray, second: np.ndarray, vectors: np.ndarray) -> Bo
     return first[order], second[order], vectors[order]
 
 
-def get_canonical_sequence(ring_sizes: List[int], is_closed: bool) -> str:
-    """Smallest of the rotations (of a chain) and reversals, so the same arrangement reads the same at both lines."""
+def get_canonical_sequence(ring_sizes: List[int], is_closed: bool, is_branched: bool) -> str:
+    """
+    "[5-7]" for a chain, "(5-7-5-7)" for a chain closing through the cell: the smallest of its rotations (if closed)
+    and reversals, so the same arrangement reads the same at both lines. "{5-5-7-7}", the sizes in order, for a
+    branched cluster, which has no single walk.
+    """
+    if is_branched:
+        return "{" + "-".join(str(size) for size in sorted(ring_sizes)) + "}"
     rotations = [ring_sizes[index:] + ring_sizes[:index] for index in range(len(ring_sizes) if is_closed else 1)]
     text = "-".join(str(size) for size in min(rotations + [sequence[::-1] for sequence in rotations]))
     return f"({text})" if is_closed else f"[{text}]"
@@ -37,9 +43,8 @@ def get_canonical_sequence(ring_sizes: List[int], is_closed: bool) -> str:
 
 class RingsArrangement(BaseModel):
     """
-    Rings other than hexagons nearest one line, and the bonds between sites of one species there. `sequence` holds
-    each cluster of edge-sharing rings: "[5-7]" for a chain, "(5-7-5-7)" for a chain closing through the cell,
-    "{5-5-7-7}" for a branched cluster, where `branching_rings` border more than two others.
+    Rings other than hexagons nearest one line, and the bonds between sites of one species there. `sequence` reads
+    each cluster of edge-sharing rings (get_canonical_sequence); `branching_rings` border more than two others.
     """
 
     ring_sizes: Dict[int, int]
@@ -203,17 +208,17 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
 
     def get_cluster_sequence(self, cluster: List[int], neighbors: Dict[int, List[int]]) -> str:
         """
-        Ring sizes walked from an end of the cluster; a chain shares as many edges as it has rings. A branched cluster
-        has no single walk: its sizes in order, "{5-5-7-7}".
+        Ring sizes walked from an end of the cluster; a closed chain shares as many edges as it has rings, a branched
+        cluster has a ring beside more than two others.
         """
         distinct_neighbors = [len(set(neighbors[ring])) for ring in cluster]
-        if max(distinct_neighbors) > 2:
-            return "{" + "-".join(str(size) for size in sorted(self.ring_sizes[cluster])) + "}"
         path = [cluster[int(np.argmin(distinct_neighbors))]]
         while following := [ring for ring in neighbors[path[-1]] if ring not in path]:
             path.append(following[0])
         shared_edges = sum(len(neighbors[ring]) for ring in cluster) // 2
-        return get_canonical_sequence([int(self.ring_sizes[ring]) for ring in path], shared_edges >= len(cluster))
+        is_branched = max(distinct_neighbors) > 2
+        ring_sizes = [int(self.ring_sizes[ring]) for ring in (cluster if is_branched else path)]
+        return get_canonical_sequence(ring_sizes, shared_edges >= len(cluster), is_branched)
 
     def get_homo_bonds(self, line_bonds: np.ndarray) -> Dict[str, int]:
         first, second, _ = self.bonds
