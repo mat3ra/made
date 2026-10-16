@@ -223,7 +223,8 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         """
         Slide of the second grain along the line, for the two grains stacked without a gap or slide: of
         `number_of_slides` slides across the period, the one whose unrelaxed ring network has `core` at both lines and
-        as many sites of each species, with the fewest rings other than hexagons, then the fewest homo bonds.
+        as many sites of each species, with the fewest rings other than hexagons, then the fewest branching rings, then
+        the fewest homo bonds.
         """
         network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=self.supercell_matrices)
         slides = np.arange(self.number_of_slides) * network.cell[1] / self.number_of_slides
@@ -235,7 +236,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     def get_ranked_slides(
         self, network: GrainBoundaryRingNetworkAnalyzer, slides: np.ndarray, core: GrainBoundaryCoreEnum
-    ) -> List[Tuple[Tuple[int, int], float]]:
+    ) -> List[Tuple[Tuple[int, int, int], float]]:
         """(rank, slide) of each slide whose network for `core` has it at both lines and balanced species."""
         ranked_slides = []
         for slide in slides:
@@ -246,10 +247,10 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return ranked_slides
 
     @staticmethod
-    def get_rank(arrangements: List[RingsArrangement], core: GrainBoundaryCoreEnum) -> Optional[Tuple[int, int]]:
+    def get_rank(arrangements: List[RingsArrangement], core: GrainBoundaryCoreEnum) -> Optional[Tuple[int, int, int]]:
         """
-        (rings other than hexagons, homo bonds) if both lines hold only the rings of `core`, each beside its partner,
-        in one arrangement; None otherwise.
+        (rings other than hexagons, branching rings, homo bonds) if both lines hold only the rings of `core`, each beside
+        its partner, in one arrangement; None otherwise.
         """
         first, second = arrangements
         if first.sequence != second.sequence or any(
@@ -259,5 +260,6 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
             return None
         return (
             sum(sum(arrangement.ring_sizes.values()) for arrangement in arrangements),
+            sum(arrangement.branching_rings for arrangement in arrangements),
             sum(sum(arrangement.homo_bonds.values()) for arrangement in arrangements),
         )

@@ -38,13 +38,15 @@ def get_canonical_sequence(ring_sizes: List[int], is_closed: bool) -> str:
 class RingsArrangement(BaseModel):
     """
     Rings other than hexagons nearest one line, and the bonds between sites of one species there. `sequence` holds
-    each cluster of edge-sharing rings: "[5-7]" for a cluster, "(5-7-5-7)" for a chain closing through the cell.
+    each cluster of edge-sharing rings: "[5-7]" for a chain, "(5-7-5-7)" for a chain closing through the cell,
+    "{5-5-7-7}" for a branched cluster, where `branching_rings` border more than two others.
     """
 
     ring_sizes: Dict[int, int]
     sequence: List[str]
     homo_bonds: Dict[str, int]
     rings_without_core_partner: int
+    branching_rings: int
 
 
 class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
@@ -175,10 +177,11 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     def get_arrangement(self, rings: np.ndarray, line_bonds: np.ndarray) -> RingsArrangement:
         """Arrangement of the given rings, each with its neighbors among them (one entry per shared edge)."""
         neighbors: Dict[int, List[int]] = {ring: [] for ring in rings}
-        rings_without_core_partner = 0
+        rings_without_core_partner, branching_rings = 0, 0
         for ring in rings:
             adjacent = self.ring_of_bond[self.reverse_bonds[self.rings[ring]]]
             neighbors[ring] = [neighbor for neighbor in adjacent if neighbor in neighbors]
+            branching_rings += len(set(neighbors[ring])) > 2
             partner_size = CORE_RING_SIZES_SUM - self.ring_sizes[ring]
             rings_without_core_partner += not np.any(self.ring_sizes[adjacent] == partner_size)
         return RingsArrangement(
@@ -186,6 +189,7 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
             sequence=sorted(self.get_cluster_sequence(cluster, neighbors) for cluster in self.get_clusters(neighbors)),
             homo_bonds=self.get_homo_bonds(line_bonds),
             rings_without_core_partner=rings_without_core_partner,
+            branching_rings=branching_rings,
         )
 
     def get_clusters(self, neighbors: Dict[int, List[int]]) -> List[List[int]]:
@@ -198,8 +202,13 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
         return [[ring for ring, label in zip(rings, labels) if label == cluster] for cluster in np.unique(labels)]
 
     def get_cluster_sequence(self, cluster: List[int], neighbors: Dict[int, List[int]]) -> str:
-        """Ring sizes walked from an end of the cluster; a chain shares as many edges as it has rings."""
+        """
+        Ring sizes walked from an end of the cluster; a chain shares as many edges as it has rings. A branched cluster
+        has no single walk: its sizes in order, "{5-5-7-7}".
+        """
         distinct_neighbors = [len(set(neighbors[ring])) for ring in cluster]
+        if max(distinct_neighbors) > 2:
+            return "{" + "-".join(str(size) for size in sorted(self.ring_sizes[cluster])) + "}"
         path = [cluster[int(np.argmin(distinct_neighbors))]]
         while following := [ring for ring in neighbors[path[-1]] if ring not in path]:
             path.append(following[0])
