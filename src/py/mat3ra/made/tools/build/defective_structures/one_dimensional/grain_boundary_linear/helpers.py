@@ -7,6 +7,7 @@ from mat3ra.esse.models.materials_category.defective_structures.one_dimensional.
 )
 
 from mat3ra.made.material import Material
+from .build_parameters import GrainBoundaryLinearBuilderParameters
 from .builder import GrainBoundaryLinearBuilder
 from .configuration import GrainBoundaryLinearConfiguration
 from ....compound_pristine_structures.two_dimensional.interface import get_commensurate_strained_configurations
@@ -124,7 +125,7 @@ def create_grain_boundary_linear_on_line(
         gaps=ArrayWithIds.from_values([] if core is not None or gap is None else [gap, gap]),
         actual_angle=analyzer.actual_angle,
     )
-    builder = GrainBoundaryLinearBuilder()
+    builder = GrainBoundaryLinearBuilder(build_parameters=GrainBoundaryLinearBuilderParameters(make_primitive=False))
     if analyzer.core is not None:
         slide = analyzer.get_slide(builder.get_material(configuration))
         configuration = configuration.model_copy(update={"xy_shift": [slide, 0.0], "core": analyzer.core})

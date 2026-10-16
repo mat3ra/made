@@ -8,6 +8,9 @@ from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.grain_boundary_network import GrainBoundaryRingNetworkAnalyzer
 from mat3ra.made.tools.analyze.interface.grain_boundary import GrainBoundaryPlanarAnalyzer
 from mat3ra.made.tools.analyze.rings import RingsMaterialAnalyzer
+from mat3ra.made.tools.build.defective_structures.one_dimensional.grain_boundary_linear.build_parameters import (
+    GrainBoundaryLinearBuilderParameters,
+)
 from mat3ra.made.tools.build.defective_structures.one_dimensional.grain_boundary_linear.builder import (
     GrainBoundaryLinearBuilder,
 )
@@ -161,8 +164,13 @@ def test_create_grain_boundary_linear(config_params, builder_params_dict, expect
 
 def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) -> float:
     """Largest distance from a stacked atom outside the rebuilt bands to the nearest atom of the grain boundary."""
-    configuration = GrainBoundaryLinearConfiguration(**grain_boundary.metadata.build[-1].configuration)
-    stacked = GrainBoundaryLinearBuilder().get_material(configuration.model_copy(update={"core": None}))
+    build = grain_boundary.metadata.build[-1]
+    builder = GrainBoundaryLinearBuilder(
+        build_parameters=GrainBoundaryLinearBuilderParameters(**build.build_parameters)
+    )
+    stacked = builder.get_material(
+        GrainBoundaryLinearConfiguration(**build.configuration).model_copy(update={"core": None})
+    )
     stacked.to_cartesian()
     grain_boundary.to_cartesian()
     coordinates, quarter_width = np.array(stacked.basis.coordinates.values), stacked.lattice.a / 4
@@ -175,6 +183,7 @@ def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) 
     "material_config, boundary_vectors, number_of_periods_across, core, elements, sequence, homo_bonds",
     [
         (GRAPHENE_2D, ((3, 1), (3, 2)), 1, "5|7", {"C": 56}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((6, 2), (6, 4)), 1, "5|7", {"C": 112}, ["[5-7]", "[5-7]"], [{}] * 2),
         (GRAPHENE_2D, ((5, 2), (5, 3)), 1, "5|7", {"C": 152}, "[5-7]", [{}] * 2),
         (GRAPHENE_2D, ((9, 4), (9, 5)), 1, "5|7", {"C": 488}, "[5-7]", [{}] * 2),
         (GRAPHENE_2D, ((4, 1), (4, 3)), 1, "5|7", {"C": 104}, "(5-7-5-7)", [{}] * 2),
@@ -253,7 +262,9 @@ def test_create_grain_boundary_linear_core(
     assert build_time < CORE_BUILD_TIME_LIMIT
     assert dict(Counter(grain_boundary.basis.elements.values)) == elements
     assert grain_boundary.lattice.b == pytest.approx(np.linalg.norm(np.array(boundary_vectors[0]) @ lattice_vectors))
-    assert [arrangement.sequence for arrangement in arrangements] == [[sequence]] * 2
+    assert [arrangement.sequence for arrangement in arrangements] == [
+        [sequence] if isinstance(sequence, str) else sequence
+    ] * 2
     assert [arrangement.homo_bonds for arrangement in arrangements] == homo_bonds
     assert [arrangement.rings_without_core_partner for arrangement in arrangements] == [0, 0]
     assert np.all(np.abs(np.linalg.norm(rings_analyzer.bonds[2], axis=1) / site_distance - 1) < 0.1)
@@ -290,8 +301,11 @@ def test_create_grain_boundary_linear_core_structure(
     grain_boundary = create_grain_boundary_linear(
         Material.create(material_config), target_angle=target_angle, boundary_vectors=boundary_vectors, core="5|7"
     )
-    configuration = GrainBoundaryLinearConfiguration(**grain_boundary.metadata.build[-1].configuration)
-    rebuilt = GrainBoundaryLinearBuilder().get_material(configuration)
+    build = grain_boundary.metadata.build[-1]
+    builder = GrainBoundaryLinearBuilder(
+        build_parameters=GrainBoundaryLinearBuilderParameters(**build.build_parameters)
+    )
+    rebuilt = builder.get_material(GrainBoundaryLinearConfiguration(**build.configuration))
     assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
     assert_two_entities_deep_almost_equal(rebuilt, grain_boundary)
 
