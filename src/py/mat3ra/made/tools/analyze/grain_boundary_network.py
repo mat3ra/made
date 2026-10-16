@@ -160,12 +160,13 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
 
     def get_site_keys(self, network: RingNetwork) -> np.ndarray:
         """
-        Integer key of each site of the network: the ranks of its three ring centres, smallest first, and the cell of
-        each relative to the cell of the first.
+        Integer key of each site of the network: the ranks of its three ring centres, smallest first, and the cells of
+        the other two relative to the cell of the first.
         """
         corners = network.bond_rings.reshape(-1, BONDS_PER_SITE)
-        order = np.argsort(self.center_ranks[corners], axis=1)
+        ranks = self.center_ranks[corners]
+        order = np.argsort(ranks, axis=1)
         cells = np.round((network.positions[:, None] - network.ring_centers[corners]) / self.cell).astype(int)
         cells = np.take_along_axis(cells, order[..., None], axis=1)
-        ranks = np.take_along_axis(self.center_ranks[corners], order, axis=1)
-        return np.column_stack([ranks, (cells - cells[:, :1]).reshape(len(corners), -1)])
+        relative_cells = (cells[:, 1:] - cells[:, :1]).reshape(len(corners), -1)
+        return np.column_stack([np.take_along_axis(ranks, order, axis=1), relative_cells])

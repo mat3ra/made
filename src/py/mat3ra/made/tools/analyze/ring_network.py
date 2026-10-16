@@ -11,10 +11,10 @@ from .rings import IMAGE_SHIFTS, RingNetwork, get_periodic_images
 
 # a Voronoi vertex is the circumcentre of one Delaunay triangle, so every site of the network has three bonds
 BONDS_PER_SITE = 3
-# positions this close are one: above the tie-breaking displacement (1e-5) and the rounding of stored coordinates; the
-# measured margins (spectrum rows) are 1.5e-3 from a co-circular circle to the nearest other centre and 3.9e-3 from the
-# rebuilt band's edge to the nearest site off it
-POSITION_TOLERANCE = 1e-3  # angstrom
+# positions this close are one, measured on the spectrum rows at every slide: a co-circular group's centres lie within
+# 6.1e-5 of their circle, while a fourth centre comes no closer than 9.3e-4 to an ordinary triangle's circle (graphene
+# (15,7)|(15,8), a slide not chosen); sites on the rebuilt band's edge lie within 2.6e-8 of it, others 3.9e-3 or more
+POSITION_TOLERANCE = 5e-4  # angstrom
 # positions closer than this are equal when two triangulations of a group are equally good: above the ~1e-7 angstrom
 # by which centres from coordinates stored to 9 decimals differ, below the tie-breaking displacement (1e-5), which it
 # must not merge
