@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.material import BasisUnitsEnum
@@ -10,7 +8,7 @@ from .build_parameters import GrainBoundaryLinearBuilderParameters
 from .configuration import GrainBoundaryLinearConfiguration
 from .settling import NetworkSettling
 from ....compound_pristine_structures.two_dimensional.interface import InterfaceBuilder
-from .....analyze.grain_boundary_network import GrainBoundaryRingNetworkAnalyzer, RingNetwork, wrap_to_cell
+from .....analyze.grain_boundary_network import GrainBoundaryRingNetworkAnalyzer, wrap_to_cell
 from .....build_components import MaterialWithBuildMetadata
 from .....utils import unwrap
 
@@ -30,23 +28,12 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
     """
     Creates a linear grain boundary by stacking two materials along x or y direction.
     With a core, the sites near both lines become the settled vertices of the ring network
-    (GrainBoundaryRingNetworkAnalyzer), each with the atoms of its sublattice's column: the network the slide was
-    chosen by when given (`ring_network`), else the one of the configuration's stack (a build from metadata).
+    (GrainBoundaryRingNetworkAnalyzer), each with the atoms of its sublattice's column.
     """
 
     _ConfigurationType = GrainBoundaryLinearConfiguration
     _BuildParametersType = GrainBoundaryLinearBuilderParameters
     _DefaultBuildParameters = GrainBoundaryLinearBuilderParameters()
-
-    ring_network: Optional[RingNetwork] = None
-
-    def __init__(
-        self,
-        build_parameters: Optional[GrainBoundaryLinearBuilderParameters] = None,
-        ring_network: Optional[RingNetwork] = None,
-    ):
-        super().__init__(build_parameters)
-        self.ring_network = ring_network
 
     def _generate(self, configuration: GrainBoundaryLinearConfiguration) -> MaterialWithBuildMetadata:
         material = super()._generate(configuration)
@@ -54,7 +41,7 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
             return material
         supercell_matrices = [unwrap(component.xy_supercell_matrix) for component in configuration.stack_components]
         network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=supercell_matrices)
-        ring_network = self.ring_network or network.get_network(0.0, configuration.core)
+        ring_network = network.get_network(0.0, configuration.core)
         movable = np.ones(len(ring_network.positions), bool)
         movable[network.get_kept_vertices(ring_network.positions)] = False
         settling = NetworkSettling(

@@ -127,10 +127,8 @@ def create_grain_boundary_linear_on_line(
         gaps=ArrayWithIds.from_values([] if core is not None or gap is None else [gap, gap]),
         actual_angle=analyzer.actual_angle,
     )
-    build_parameters = GrainBoundaryLinearBuilderParameters(make_primitive=False)
-    builder = GrainBoundaryLinearBuilder(build_parameters=build_parameters)
+    builder = GrainBoundaryLinearBuilder(build_parameters=GrainBoundaryLinearBuilderParameters(make_primitive=False))
     if analyzer.core is not None:
-        slide, ring_network = analyzer.get_slid_network(builder.get_material(configuration))
+        slide = analyzer.get_slide(builder.get_material(configuration))
         configuration = configuration.model_copy(update={"xy_shift": [slide, 0.0], "core": analyzer.core})
-        builder = GrainBoundaryLinearBuilder(build_parameters=build_parameters, ring_network=ring_network)
     return builder.get_material(configuration)

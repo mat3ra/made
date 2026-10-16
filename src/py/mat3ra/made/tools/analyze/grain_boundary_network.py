@@ -417,7 +417,8 @@ class GrainBoundaryRingNetworkAnalyzer(RingsMaterialAnalyzer):
         """The stacked site whose atoms each vertex takes: that of its grain and sublattice."""
         return np.array([lattice.sublattice_sites for lattice in self.grain_lattices])[grains, sublattices]
 
-    def get_rings_analyzer(self, network: RingNetwork) -> RingsNetworkAnalyzer:
+    def get_rings_analyzer(self, slide: float, core: GrainBoundaryCoreEnum) -> RingsNetworkAnalyzer:
+        network = self.get_network(slide, core)
         return RingsNetworkAnalyzer(
             material=self.material,
             network_positions=network.positions,
