@@ -21,7 +21,7 @@ TIE_BREAKING_WAVES = np.array([[3, 5], [7, 2]])
 # distinct circles of a lattice
 COCIRCULAR_TOLERANCE = 1e-3  # angstrom
 # positions closer than this are equal when two triangulations of a group are equally good: above the ~1e-7 angstrom
-# by which the centres of the selection and of the build differ, below the tie-breaking displacement it must not merge
+# by which the centres of the selection and of the build differ, below TIE_BREAKING_DISPLACEMENT, which it must not merge
 TIE_KEY_TOLERANCE = 1e-6  # angstrom
 # sites on the edge of the rebuilt band (lattice sites can sit exactly there) stay, whatever the rounding
 BAND_EDGE_TOLERANCE = 1e-3  # angstrom
