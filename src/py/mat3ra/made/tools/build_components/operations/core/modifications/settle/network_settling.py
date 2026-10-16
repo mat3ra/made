@@ -1,5 +1,4 @@
 from functools import cached_property
-from itertools import combinations
 from typing import Tuple
 
 import numpy as np
@@ -7,20 +6,19 @@ from mat3ra.code.entity import InMemoryEntityPydantic
 from scipy.optimize import least_squares
 from scipy.sparse import coo_matrix
 
-from .....analyze.grain_boundary_network import BONDS_PER_SITE
-from .....analyze.rings import Bonds
+from ......analyze.rings import Bonds
 
 # weight of a second-neighbor distance against a bond, which enters once per direction
 SECOND_NEIGHBOR_WEIGHT = np.sqrt(0.5)
 SETTLING_TOLERANCE = 1e-10
-BOND_PAIRS_AT_SITE = list(combinations(range(BONDS_PER_SITE), 2))
 
 
 class NetworkSettling(InMemoryEntityPydantic):
     """
-    Settles the movable sites of a grain boundary network in the plane by least squares on the bond length of the
-    input lattice and the second-neighbor distance, sqrt(3) times it, between the two ends of two bonds at one site;
-    every other site stays fixed. Bonds are grouped by site, BONDS_PER_SITE each.
+    Settles the movable sites of a planar network of bonded sites by least squares, every other site fixed: each bond
+    toward its length in `bond_lengths`, and the ends of each two bonds next to each other around a site toward their
+    distance at equal angles around it (sqrt(3) times the bond length for three equal bonds). Bonds are grouped by
+    site, in order around it.
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -28,22 +26,36 @@ class NetworkSettling(InMemoryEntityPydantic):
     positions: np.ndarray
     bonds: Bonds
     movable: np.ndarray
-    site_distance: float
+    bond_lengths: np.ndarray
 
     @cached_property
     def variables(self) -> np.ndarray:
         return np.where(self.movable)[0]
 
     @cached_property
+    def neighbor_bond_pairs(self) -> np.ndarray:
+        """Each two bonds next to each other around a site, once, the earlier bond first."""
+        first = self.bonds[0]
+        bonds_at_site, starts = np.bincount(first)[first], np.searchsorted(first, first)
+        following = starts + (np.arange(len(first)) - starts + 1) % bonds_at_site
+        return np.unique(np.sort(np.column_stack([np.arange(len(first)), following]), axis=1), axis=0)
+
+    def get_second_neighbor_distances(self, pairs: np.ndarray) -> np.ndarray:
+        """Distance between the ends of two bonds of their lengths, at 360 degrees over the bonds of their site."""
+        lengths = self.bond_lengths[pairs]
+        chords = 2 * np.sin(np.pi / np.bincount(self.bonds[0])[self.bonds[0][pairs[:, 0]]])
+        return np.sqrt((lengths[:, 0] - lengths[:, 1]) ** 2 + (chords * np.sqrt(lengths[:, 0] * lengths[:, 1])) ** 2)
+
+    @cached_property
     def distance_terms(self) -> Tuple[np.ndarray, ...]:
         """(start, end, offset to the image of end, target, weight) of each term touching a movable site."""
         first, second, edge_vectors = self.bonds
         offsets = edge_vectors - (self.positions[second] - self.positions[first])
-        pairs = np.arange(len(first)).reshape(-1, BONDS_PER_SITE)[:, BOND_PAIRS_AT_SITE].reshape(-1, 2)
+        pairs = self.neighbor_bond_pairs
         bond_starts = np.concatenate([first, second[pairs[:, 0]]])
         bond_ends = np.concatenate([second, second[pairs[:, 1]]])
         offsets = np.concatenate([offsets, offsets[pairs[:, 1]] - offsets[pairs[:, 0]]])
-        targets = self.site_distance * np.repeat([1.0, np.sqrt(3)], [len(first), len(pairs)])
+        targets = np.concatenate([self.bond_lengths, self.get_second_neighbor_distances(pairs)])
         weights = np.repeat([1.0, SECOND_NEIGHBOR_WEIGHT], [len(first), len(pairs)])
         terms = self.movable[bond_starts] | self.movable[bond_ends]
         return bond_starts[terms], bond_ends[terms], offsets[terms], targets[terms], weights[terms]

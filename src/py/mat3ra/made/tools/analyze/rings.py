@@ -11,8 +11,8 @@ from scipy.spatial import cKDTree
 from . import BaseMaterialAnalyzer
 
 HEXAGON_SIZE = 6
-# a dislocation core pairs an n-membered ring with a (12 - n)-membered one: 5|7, 4|8
-CORE_RING_SIZES_SUM = 12
+# the sizes of the rings that meet at each ring core, by its notation
+RING_CORE_SIZES: Dict[str, Tuple[int, ...]] = {"5|7": (5, 7), "4|8": (4, 8), "6": (HEXAGON_SIZE,)}
 IMAGE_SHIFTS = np.array([[i, j] for i in (-1, 0, 1) for j in (-1, 0, 1)])
 CENTRAL_IMAGE_INDEX = 4
 Bonds = Tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -26,6 +26,11 @@ def get_periodic_images(positions: np.ndarray, lattice_vectors: np.ndarray) -> n
 def sort_bonds(first: np.ndarray, second: np.ndarray, vectors: np.ndarray) -> Bonds:
     order = np.lexsort((np.arctan2(vectors[:, 1], vectors[:, 0]), first))
     return first[order], second[order], vectors[order]
+
+
+def get_core_partner_sizes(ring_size: int) -> List[int]:
+    """Sizes of the rings that form a ring core (RING_CORE_SIZES) with a ring of `ring_size`."""
+    return [size for sizes in RING_CORE_SIZES.values() if ring_size in sizes for size in sizes if size != ring_size]
 
 
 def get_canonical_sequence(ring_sizes: List[int], is_closed: bool, is_branched: bool) -> str:
@@ -187,8 +192,8 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
             adjacent = self.ring_of_bond[self.reverse_bonds[self.rings[ring]]]
             neighbors[ring] = [neighbor for neighbor in adjacent if neighbor in neighbors]
             branching_rings += len(set(neighbors[ring])) > 2
-            partner_size = CORE_RING_SIZES_SUM - self.ring_sizes[ring]
-            rings_without_core_partner += not np.any(self.ring_sizes[adjacent] == partner_size)
+            partner_sizes = get_core_partner_sizes(self.ring_sizes[ring])
+            rings_without_core_partner += not np.any(np.isin(self.ring_sizes[adjacent], partner_sizes))
         return RingsArrangement(
             ring_sizes=dict(Counter(self.ring_sizes[rings].tolist())),
             sequence=sorted(self.get_cluster_sequence(cluster, neighbors) for cluster in self.get_clusters(neighbors)),

@@ -19,8 +19,8 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab_strained_s
 )
 from pydantic import model_validator
 
-from ..grain_boundary_network import CORE_RING_SIZES, REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer
-from ..rings import RingsArrangement, RingsMaterialAnalyzer
+from ..grain_boundary_network import REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer
+from ..rings import HEXAGON_SIZE, RING_CORE_SIZES, RingsArrangement, RingsMaterialAnalyzer
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 from .zsl import ZSLInterfaceAnalyzer
@@ -240,7 +240,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         slides = np.arange(self.number_of_slides) * network.cell[1] / self.number_of_slides
         valid_slides = self.get_ranked_slides(network, slides, self.core)
         if not valid_slides:
-            achievable = [core.value for core in CORE_RING_SIZES if self.get_ranked_slides(network, slides, core)]
+            achievable = [core.value for core in GrainBoundaryCoreEnum if self.get_ranked_slides(network, slides, core)]
             raise ValueError(f"No slide gives the requested core at both boundaries; achievable: {achievable}")
         return float(min(valid_slides)[1])
 
@@ -250,7 +250,8 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         """(rank, slide) of each slide whose network for `core` has it at both lines and balanced species."""
         ranked_slides = []
         for slide in slides:
-            rings_analyzer = network.get_rings_analyzer(slide, core)
+            ring_network = network.get_slid_network(slide, core)
+            rings_analyzer = network.get_rings_analyzer(ring_network, network.get_column_sites(ring_network, slide))
             rank = self.get_rank(rings_analyzer.get_line_arrangements(network.line_positions), core)
             if rank and len(set(Counter(rings_analyzer.site_species.tolist()).values())) == 1:
                 ranked_slides.append((rank, float(slide)))
@@ -267,8 +268,9 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
             (arrangement.sequence, arrangement.branching_rings, sorted(arrangement.homo_bonds.values()))
             for arrangement in arrangements
         ]
+        core_ring_sizes = [size for size in RING_CORE_SIZES[core.value] if size != HEXAGON_SIZE]
         if first != second or any(
-            sorted(arrangement.ring_sizes) != CORE_RING_SIZES[core] or arrangement.rings_without_core_partner
+            sorted(arrangement.ring_sizes) != core_ring_sizes or arrangement.rings_without_core_partner
             for arrangement in arrangements
         ):
             return None
