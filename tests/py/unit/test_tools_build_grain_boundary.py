@@ -1,5 +1,6 @@
 import time
 from collections import Counter
+from typing import List
 
 import numpy as np
 import pytest
@@ -175,7 +176,7 @@ def get_rebuilt_grain_boundary(grain_boundary: Material, configuration_update: d
     )
 
 
-def get_line_positions(grain_boundary: Material) -> list:
+def get_line_positions(grain_boundary: Material) -> List[float]:
     """x of the two lines, from the widths of the grains recorded in the build metadata."""
     components = grain_boundary.metadata.build[-1].configuration["stack_components"]
     matrices = [component["xy_supercell_matrix"] for component in components]
@@ -406,6 +407,7 @@ def test_create_grain_boundary_linear_core_structure(
         (GRAPHENE_2D, ((3, 1), (3, 2)), "5|7", None, AxisEnum.y, "stacked along x"),
         (GRAPHENE_2D, ((3, 1), (3, 2)), "4|8", None, AxisEnum.x, r"achievable: \['5\|7'\]"),
         (BORON_NITRIDE_2D, ((1, 1), (1, 0)), "5|7", None, AxisEnum.x, "too short along the boundary"),
+        (BORON_NITRIDE_2D, ((4, 4), (4, 0)), "5|7", None, AxisEnum.x, r"achievable: \['6'\]"),
         (GRAPHENE_2D, ((3, 1), (3, 2)), "5|7", 1, AxisEnum.x, "number_of_periods_across must be at least 2"),
     ],
 )

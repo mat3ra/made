@@ -19,7 +19,7 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab_strained_s
 )
 from pydantic import model_validator
 
-from ..grain_boundary_network import CORE_RING_SIZES, REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer
+from ..grain_boundary_network import CORE_RING_SIZES, REBUILT_BAND_WIDTH, GrainBoundaryRingNetworkAnalyzer, RingNetwork
 from ..rings import RingsArrangement, RingsMaterialAnalyzer
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
@@ -109,7 +109,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     vectors of the slab, are given or found as the shortest pair of equal length rotated by `target_angle` from the
     first to the second.
 
-    With a `core` (honeycomb lattices only), `get_slide` chooses the slide of the second grain along the line.
+    With a `core` (honeycomb lattices only), `get_slid_network` chooses the slide of the second grain along the line.
     """
 
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
@@ -117,8 +117,8 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     angle_tolerance: float = 0.1
     number_of_periods_across: Optional[int] = None
     core: Optional[GrainBoundaryCoreEnum] = None
-    # the slides tried are part of the rule: an even number, so that the half-period slide is a candidate; one slide per
-    # lattice offset (about 2 |v|^2 / a^2 per period) would take 30 s for graphene at 4.4 degrees
+    # the slides tried are part of the rule: a multiple of 6, so that P/2 and P/6 are candidates (h-BN (2,1)|(-2,-1) 4|8
+    # is found only at P/6); one slide per lattice offset (2 |v|^2 / a^2 per period) takes 30 s for graphene at 4.4 deg
     number_of_slides: int = 48
     maximum_vector_component: int = 30
 
@@ -209,10 +209,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         if self.number_of_periods_across is None:
             return self.minimum_periods_across
         if self.number_of_periods_across < self.minimum_periods_across:
-            raise ValueError(
-                f"number_of_periods_across must be at least {self.minimum_periods_across}, for each grain to hold the "
-                "rebuilt bands of the core"
-            )
+            raise ValueError(f"number_of_periods_across must be at least {self.minimum_periods_across}")
         return self.number_of_periods_across
 
     @cached_property
@@ -233,11 +230,11 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
             for matrix in self.supercell_matrices
         ]
 
-    def get_slide(self, material: Material) -> float:
+    def get_slid_network(self, material: Material) -> Tuple[float, RingNetwork]:
         """
-        Slide of the second grain along the line, for the two grains stacked without a gap or slide: of
-        `number_of_slides` slides across the period, the one of best rank (get_rank) whose unrelaxed ring network has as
-        many sites of each species.
+        Slide of the second grain along the line, for the two grains stacked without a gap or slide, and the ring
+        network ranked for it: of `number_of_slides` slides across the period, the one of best rank (get_rank) whose
+        unrelaxed ring network has as many sites of each species.
         """
         network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=self.supercell_matrices)
         slides = np.arange(self.number_of_slides) * network.cell[1] / self.number_of_slides
@@ -245,18 +242,20 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         if not valid_slides:
             achievable = [core.value for core in CORE_RING_SIZES if self.get_ranked_slides(network, slides, core)]
             raise ValueError(f"No slide gives the requested core at both boundaries; achievable: {achievable}")
-        return float(min(valid_slides)[1])
+        _, slide, ring_network = min(valid_slides)
+        return slide, ring_network
 
     def get_ranked_slides(
         self, network: GrainBoundaryRingNetworkAnalyzer, slides: np.ndarray, core: GrainBoundaryCoreEnum
-    ) -> List[Tuple[Tuple[int, int, int], float]]:
-        """(rank, slide) of each slide whose network for `core` has it at both lines and balanced species."""
+    ) -> List[Tuple[Tuple[int, int, int], float, RingNetwork]]:
+        """(rank, slide, ring network) of each slide whose network for `core` has it at both lines, balanced species."""
         ranked_slides = []
         for slide in slides:
-            rings_analyzer = network.get_rings_analyzer(slide, core)
+            ring_network = network.get_network(slide, core)
+            rings_analyzer = network.get_rings_analyzer(ring_network)
             rank = self.get_rank(rings_analyzer.get_line_arrangements(network.line_positions), core)
             if rank and len(set(Counter(rings_analyzer.site_species.tolist()).values())) == 1:
-                ranked_slides.append((rank, float(slide)))
+                ranked_slides.append((rank, float(slide), ring_network))
         return ranked_slides
 
     @staticmethod

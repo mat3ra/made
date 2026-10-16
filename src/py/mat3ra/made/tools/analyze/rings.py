@@ -212,13 +212,13 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
         cluster has a ring beside more than two others.
         """
         distinct_neighbors = [len(set(neighbors[ring])) for ring in cluster]
+        is_closed = sum(len(neighbors[ring]) for ring in cluster) // 2 >= len(cluster)
+        if max(distinct_neighbors) > 2:
+            return get_canonical_sequence([int(self.ring_sizes[ring]) for ring in cluster], is_closed, True)
         path = [cluster[int(np.argmin(distinct_neighbors))]]
         while following := [ring for ring in neighbors[path[-1]] if ring not in path]:
             path.append(following[0])
-        shared_edges = sum(len(neighbors[ring]) for ring in cluster) // 2
-        is_branched = max(distinct_neighbors) > 2
-        ring_sizes = [int(self.ring_sizes[ring]) for ring in (cluster if is_branched else path)]
-        return get_canonical_sequence(ring_sizes, shared_edges >= len(cluster), is_branched)
+        return get_canonical_sequence([int(self.ring_sizes[ring]) for ring in path], is_closed, False)
 
     def get_homo_bonds(self, line_bonds: np.ndarray) -> Dict[str, int]:
         first, second, _ = self.bonds
