@@ -20,7 +20,7 @@ COCIRCULAR_TOLERANCE = 1e-3  # angstrom
 # sites on the edge of the rebuilt band (lattice sites can sit exactly there) stay, whatever the rounding
 BAND_EDGE_TOLERANCE = 1e-3  # angstrom
 REBUILT_BAND_WIDTH = 2.0  # lattice constants
-CORE_RING_SIZES = {
+CORE_RING_SIZES: Dict[GrainBoundaryCoreEnum, List[int]] = {
     GrainBoundaryCoreEnum.field_5_7: [5, 7],
     GrainBoundaryCoreEnum.field_4_8: [4, 8],
     GrainBoundaryCoreEnum.field_6: [],
