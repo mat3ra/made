@@ -58,9 +58,9 @@ def create_grain_boundary_linear(
             the boundary, equal in length, in units of the lattice vectors; each grain is then the rectangular
             supercell [shortest perpendicular vector, boundary vector] of the conventional cell, stacked along x
             (GrainBoundaryLinearAnalyzer); the commensurate-search arguments do not apply.
-        core (Optional[GrainBoundaryCoreEnum]): Ring pair ("5|7", "4|8") rebuilt along both lines of a honeycomb
-            lattice, the grains at their natural spacing (no gap). Without boundary vectors, they are found from the
-            target angle.
+        core (Optional[GrainBoundaryCoreEnum]): Ring pair ("5|7", "4|8"), or "6" for hexagons only, rebuilt along both
+            lines of a honeycomb lattice, the grains at their natural spacing (no gap). Without boundary vectors, they
+            are found from the target angle.
         number_of_periods_across (int): Repetitions of the perpendicular vector in each grain; with a core, raised to
             the fewest that hold the rebuilt bands at both lines.
 

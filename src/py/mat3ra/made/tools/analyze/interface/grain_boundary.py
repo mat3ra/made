@@ -222,9 +222,9 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     def get_slide(self, material: Material) -> float:
         """
         Slide of the second grain along the line, for the two grains stacked without a gap or slide: of
-        `number_of_slides` slides across the period, the one whose unrelaxed ring network has `core` at both lines and
-        as many sites of each species, with the fewest rings other than hexagons, then the fewest branching rings, then
-        the fewest homo bonds.
+        `number_of_slides` slides across the period, the one whose unrelaxed ring network has `core` at both lines, the
+        same homo bonds there up to the element swap, and as many sites of each species, with the fewest rings other
+        than hexagons, then the fewest branching rings, then the fewest homo bonds.
         """
         network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=self.supercell_matrices)
         slides = np.arange(self.number_of_slides) * network.cell[1] / self.number_of_slides
@@ -250,10 +250,13 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     def get_rank(arrangements: List[RingsArrangement], core: GrainBoundaryCoreEnum) -> Optional[Tuple[int, int, int]]:
         """
         (rings other than hexagons, branching rings, homo bonds) if both lines hold only the rings of `core`, each
-        beside its partner, in one arrangement; None otherwise.
+        beside its partner, in one arrangement, with as many homo bonds of each kind up to the element swap; None
+        otherwise.
         """
-        first, second = arrangements
-        if first.sequence != second.sequence or any(
+        first, second = [
+            (arrangement.sequence, sorted(arrangement.homo_bonds.values())) for arrangement in arrangements
+        ]
+        if first != second or any(
             sorted(arrangement.ring_sizes) != CORE_RING_SIZES[core] or arrangement.rings_without_core_partner
             for arrangement in arrangements
         ):

@@ -260,6 +260,16 @@ def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) 
             [{"Mo-Mo": 1, "S-S": 1}] * 2,
         ),
         (GRAPHENE_2D, ((15, 7), (15, 8)), 1, "5|7", {"C": 1352}, "[5-7]", [{}] * 2),
+        (BORON_NITRIDE_2D, ((2, 2), (2, 0)), 1, "6", {"B": 24, "N": 24}, [], [{"B-B": 4}, {"N-N": 4}]),
+        (
+            MOLYBDENUM_DISULFIDE_2D,
+            ((10, 9), (10, 1)),
+            1,
+            "5|7",
+            {"Mo": 364, "S": 728},
+            ["[5-7]", "[5-7]"],
+            [{"S-S": 16}, {"Mo-Mo": 16}],
+        ),
     ],
 )
 def test_create_grain_boundary_linear_core(
