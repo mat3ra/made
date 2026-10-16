@@ -215,7 +215,8 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
 
 class RingsNetworkAnalyzer(RingsMaterialAnalyzer):
     """
-    The same analysis for a given network of sites in the cell of the material: positions, species, bonds.
+    The same analysis for a given network of sites in the cell of the material: positions, species, bonds, the ring on
+    the left of each bond and the ring centres, so the rings come from the network itself, not from its geometry.
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -223,6 +224,8 @@ class RingsNetworkAnalyzer(RingsMaterialAnalyzer):
     network_positions: np.ndarray
     network_species: np.ndarray
     network_bonds: Bonds
+    network_bond_rings: np.ndarray
+    network_ring_centers: np.ndarray
 
     @cached_property
     def site_positions(self) -> np.ndarray:
@@ -234,4 +237,17 @@ class RingsNetworkAnalyzer(RingsMaterialAnalyzer):
 
     @cached_property
     def bonds(self) -> Bonds:
-        return sort_bonds(*self.network_bonds)
+        return self.network_bonds
+
+    @cached_property
+    def ring_of_bond(self) -> np.ndarray:
+        return self.network_bond_rings
+
+    @cached_property
+    def rings(self) -> List[np.ndarray]:
+        ring_sizes = np.bincount(self.network_bond_rings, minlength=len(self.network_ring_centers))
+        return np.split(np.argsort(self.network_bond_rings, kind="stable"), np.cumsum(ring_sizes)[:-1])
+
+    @cached_property
+    def ring_centers(self) -> np.ndarray:
+        return self.network_ring_centers

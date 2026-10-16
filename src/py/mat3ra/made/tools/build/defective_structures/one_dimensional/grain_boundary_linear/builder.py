@@ -41,15 +41,18 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
             return material
         supercell_matrices = [unwrap(component.xy_supercell_matrix) for component in configuration.stack_components]
         network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=supercell_matrices)
-        positions, bonds, grains, sublattices = network.get_network(0.0)
-        movable = np.ones(len(positions), bool)
-        movable[network.get_kept_vertices(positions)] = False
+        ring_network = network.get_network(0.0, configuration.core)
+        movable = np.ones(len(ring_network.positions), bool)
+        movable[network.get_kept_vertices(ring_network.positions)] = False
         settling = NetworkSettling(
-            positions=positions, bonds=bonds, movable=movable, site_distance=network.site_distance
+            positions=ring_network.positions,
+            bonds=ring_network.bonds,
+            movable=movable,
+            site_distance=network.site_distance,
         )
         rebuilt_positions = wrap_to_cell(settling.settled_positions[movable], network.cell)
-        column_sites = network.get_column_sites(grains[movable], sublattices[movable])
-        return self._get_assembled_material(network, rebuilt_positions, column_sites, grains[movable])
+        column_sites = network.get_column_sites(ring_network.grains[movable], ring_network.sublattices[movable])
+        return self._get_assembled_material(network, rebuilt_positions, column_sites, ring_network.grains[movable])
 
     def _get_assembled_material(
         self,

@@ -19,13 +19,12 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab_strained_s
 )
 from pydantic import model_validator
 
-from ..grain_boundary_network import GrainBoundaryRingNetworkAnalyzer
+from ..grain_boundary_network import CORE_RING_SIZES, GrainBoundaryRingNetworkAnalyzer
 from ..rings import RingsArrangement, RingsMaterialAnalyzer
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 from .zsl import ZSLInterfaceAnalyzer
 
-CORE_RING_SIZES = {GrainBoundaryCoreEnum.field_5_7: [5, 7], GrainBoundaryCoreEnum.field_4_8: [4, 8]}
 LENGTH_TOLERANCE = 1e-3  # relative
 HONEYCOMB_ANGLE_TOLERANCE = 0.5  # degrees
 INTEGER_TOLERANCE = 1e-3
@@ -115,7 +114,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     angle_tolerance: float = 0.1
     number_of_periods_across: int = 1
     core: Optional[GrainBoundaryCoreEnum] = None
-    number_of_slides: int = 24
+    number_of_slides: int = 48
     maximum_vector_component: int = 30
 
     @model_validator(mode="after")
@@ -215,21 +214,24 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         as many sites of each species, with the fewest rings other than hexagons, then the fewest homo bonds.
         """
         network = GrainBoundaryRingNetworkAnalyzer(material=material, supercell_matrices=self.supercell_matrices)
-        # half steps: at the symmetric slides several ring centres lie on one circle and the network is not unique
-        slides = (np.arange(self.number_of_slides) + 0.5) * network.cell[1] / self.number_of_slides
-        rings_analyzers = [network.get_rings_analyzer(slide) for slide in slides]
-        arrangements = [analyzer.get_line_arrangements(network.line_positions) for analyzer in rings_analyzers]
-        balanced = [len(set(Counter(analyzer.site_species.tolist()).values())) == 1 for analyzer in rings_analyzers]
-        ranked_slides = [(self.get_rank(pair, self.core), slide) for pair, slide in zip(arrangements, slides)]
-        valid_slides = [
-            (rank, slide) for (rank, slide), is_balanced in zip(ranked_slides, balanced) if rank and is_balanced
-        ]
+        slides = np.arange(self.number_of_slides) * network.cell[1] / self.number_of_slides
+        valid_slides = self.get_ranked_slides(network, slides, self.core)
         if not valid_slides:
-            achievable = [
-                core.value for core in CORE_RING_SIZES if any(self.get_rank(pair, core) for pair in arrangements)
-            ]
+            achievable = [core.value for core in CORE_RING_SIZES if self.get_ranked_slides(network, slides, core)]
             raise ValueError(f"No slide gives the requested core at both boundaries; achievable: {achievable}")
         return float(min(valid_slides)[1])
+
+    def get_ranked_slides(
+        self, network: GrainBoundaryRingNetworkAnalyzer, slides: np.ndarray, core: GrainBoundaryCoreEnum
+    ) -> List[Tuple[Tuple[int, int], float]]:
+        """(rank, slide) of each slide whose network for `core` has it at both lines and balanced species."""
+        ranked_slides = []
+        for slide in slides:
+            rings_analyzer = network.get_rings_analyzer(slide, core)
+            rank = self.get_rank(rings_analyzer.get_line_arrangements(network.line_positions), core)
+            if rank and len(set(Counter(rings_analyzer.site_species.tolist()).values())) == 1:
+                ranked_slides.append((rank, float(slide)))
+        return ranked_slides
 
     @staticmethod
     def get_rank(arrangements: List[RingsArrangement], core: GrainBoundaryCoreEnum) -> Optional[Tuple[int, int]]:

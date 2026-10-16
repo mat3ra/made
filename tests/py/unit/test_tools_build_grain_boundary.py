@@ -172,49 +172,77 @@ def get_kept_atoms_deviation(grain_boundary: Material, lattice_constant: float) 
 
 
 @pytest.mark.parametrize(
-    "material_config, boundary_vectors, number_of_periods_across, elements, sequence, homo_bonds",
+    "material_config, boundary_vectors, number_of_periods_across, core, elements, sequence, homo_bonds",
     [
-        (GRAPHENE_2D, ((3, 1), (3, 2)), 1, {"C": 56}, "[5-7]", [{}] * 2),
-        (GRAPHENE_2D, ((5, 2), (5, 3)), 1, {"C": 152}, "[5-7]", [{}] * 2),
-        (GRAPHENE_2D, ((9, 4), (9, 5)), 1, {"C": 488}, "[5-7]", [{}] * 2),
-        (GRAPHENE_2D, ((4, 1), (4, 3)), 1, {"C": 104}, "(5-7-5-7)", [{}] * 2),
-        (BORON_NITRIDE_2D, ((3, 1), (3, 2)), 1, {"B": 28, "N": 28}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
-        (BORON_NITRIDE_2D, ((5, 2), (5, 3)), 1, {"B": 76, "N": 76}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), 1, "5|7", {"C": 56}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((5, 2), (5, 3)), 1, "5|7", {"C": 152}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((9, 4), (9, 5)), 1, "5|7", {"C": 488}, "[5-7]", [{}] * 2),
+        (GRAPHENE_2D, ((4, 1), (4, 3)), 1, "5|7", {"C": 104}, "(5-7-5-7)", [{}] * 2),
+        (BORON_NITRIDE_2D, ((3, 1), (3, 2)), 1, "5|7", {"B": 28, "N": 28}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((5, 2), (5, 3)), 1, "5|7", {"B": 76, "N": 76}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((9, 4), (9, 5)), 1, "5|7", {"B": 244, "N": 244}, "[5-7]", [{"N-N": 2}, {"B-B": 2}]),
+        (BORON_NITRIDE_2D, ((4, 1), (4, 3)), 1, "5|7", {"B": 52, "N": 52}, "(5-7-5-7)", [{"N-N": 4}, {"B-B": 4}]),
+        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 1, "5|7", {"B": 52, "N": 52}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
+        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 2, "5|7", {"B": 104, "N": 104}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
+        (BORON_NITRIDE_2D, ((9, 4), (-9, -5)), 1, "5|7", {"B": 244, "N": 244}, "[5-7]", [{"B-B": 4, "N-N": 4}] * 2),
+        (MOLYBDENUM_DISULFIDE_2D, ((3, 1), (3, 2)), 1, "5|7", {"Mo": 28, "S": 56}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
         (
-            BORON_NITRIDE_2D,
+            MOLYBDENUM_DISULFIDE_2D,
+            ((5, 2), (5, 3)),
+            1,
+            "5|7",
+            {"Mo": 76, "S": 152},
+            "[5-7]",
+            [{"Mo-Mo": 2}, {"S-S": 2}],
+        ),
+        (
+            MOLYBDENUM_DISULFIDE_2D,
             ((9, 4), (9, 5)),
             1,
-            {"B": 244, "N": 244},
+            "5|7",
+            {"Mo": 244, "S": 488},
             "[5-7]",
-            [{"B-B": 1, "N-N": 3}, {"B-B": 3, "N-N": 1}],
+            [{"Mo-Mo": 2}, {"S-S": 2}],
         ),
-        (BORON_NITRIDE_2D, ((4, 1), (4, 3)), 1, {"B": 52, "N": 52}, "(5-7-5-7)", [{"N-N": 4}, {"B-B": 4}]),
-        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 1, {"B": 52, "N": 52}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
-        (BORON_NITRIDE_2D, ((4, 1), (-4, -3)), 2, {"B": 104, "N": 104}, "(5-7-5-7)", [{"B-B": 1, "N-N": 1}] * 2),
-        (BORON_NITRIDE_2D, ((9, 4), (-9, -5)), 1, {"B": 244, "N": 244}, "[5-7]", [{"B-B": 4, "N-N": 4}] * 2),
-        (MOLYBDENUM_DISULFIDE_2D, ((3, 1), (3, 2)), 1, {"Mo": 28, "S": 56}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
-        (MOLYBDENUM_DISULFIDE_2D, ((5, 2), (5, 3)), 1, {"Mo": 76, "S": 152}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
-        (MOLYBDENUM_DISULFIDE_2D, ((9, 4), (9, 5)), 1, {"Mo": 244, "S": 488}, "[5-7]", [{"Mo-Mo": 2}, {"S-S": 2}]),
-        (MOLYBDENUM_DISULFIDE_2D, ((4, 1), (4, 3)), 1, {"Mo": 52, "S": 104}, "(5-7-5-7)", [{"Mo-Mo": 4}, {"S-S": 4}]),
+        (
+            MOLYBDENUM_DISULFIDE_2D,
+            ((4, 1), (4, 3)),
+            1,
+            "5|7",
+            {"Mo": 52, "S": 104},
+            "(5-7-5-7)",
+            [{"Mo-Mo": 4}, {"S-S": 4}],
+        ),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((4, 1), (-4, -3)),
             1,
+            "5|7",
             {"Mo": 52, "S": 104},
             "(5-7-5-7)",
             [{"Mo-Mo": 1, "S-S": 1}] * 2,
         ),
-        (MOLYBDENUM_DISULFIDE_2D, ((9, 4), (-9, -5)), 1, {"Mo": 244, "S": 488}, "[5-7]", [{"Mo-Mo": 5, "S-S": 5}] * 2),
-        (GRAPHENE_2D, ((15, 7), (15, 8)), 1, {"C": 1352}, "[5-7]", [{}] * 2),
+        (
+            MOLYBDENUM_DISULFIDE_2D,
+            ((9, 4), (-9, -5)),
+            1,
+            "5|7",
+            {"Mo": 244, "S": 488},
+            "[5-7]",
+            [{"Mo-Mo": 4, "S-S": 4}] * 2,
+        ),
+        (BORON_NITRIDE_2D, ((2, 1), (-2, -1)), 6, "4|8", {"B": 24, "N": 24}, "(4-8)", [{}] * 2),
+        (MOLYBDENUM_DISULFIDE_2D, ((2, 1), (-2, -1)), 5, "4|8", {"Mo": 20, "S": 40}, "(4-8)", [{}] * 2),
+        (GRAPHENE_2D, ((15, 7), (15, 8)), 1, "5|7", {"C": 1352}, "[5-7]", [{}] * 2),
     ],
 )
 def test_create_grain_boundary_linear_core(
-    material_config, boundary_vectors, number_of_periods_across, elements, sequence, homo_bonds
+    material_config, boundary_vectors, number_of_periods_across, core, elements, sequence, homo_bonds
 ):
     material = Material.create(material_config)
     start = time.perf_counter()
     grain_boundary = create_grain_boundary_linear(
-        material, boundary_vectors=boundary_vectors, core="5|7", number_of_periods_across=number_of_periods_across
+        material, boundary_vectors=boundary_vectors, core=core, number_of_periods_across=number_of_periods_across
     )
     build_time = time.perf_counter() - start
     rings_analyzer = RingsMaterialAnalyzer(material=grain_boundary)
@@ -275,8 +303,7 @@ def test_create_grain_boundary_linear_core_structure(
         (BULK_GRAPHITE, ((2, 1), (1, 2)), "5|7", 1, AxisEnum.x, "honeycomb"),
         (GRAPHENE_2D, None, "5|7", 1, AxisEnum.x, "rotated by 0"),
         (GRAPHENE_2D, ((3, 1), (3, 2)), "5|7", 1, AxisEnum.y, "stacked along x"),
-        (BORON_NITRIDE_2D, ((2, 1), (-2, -1)), "4|8", 6, AxisEnum.x, r"achievable: \['5\|7'\]"),
-        (MOLYBDENUM_DISULFIDE_2D, ((2, 1), (-2, -1)), "4|8", 5, AxisEnum.x, r"achievable: \['5\|7'\]"),
+        (GRAPHENE_2D, ((3, 1), (3, 2)), "4|8", 1, AxisEnum.x, r"achievable: \['5\|7'\]"),
     ],
 )
 def test_create_grain_boundary_linear_invalid(
