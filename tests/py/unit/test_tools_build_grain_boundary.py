@@ -44,8 +44,9 @@ from .utils import OSPlatform, assert_two_entities_deep_almost_equal, get_platfo
 GRAPHENE_2D = Materials.get_by_name_and_categories("Graphene", "2D")
 BORON_NITRIDE_2D = Materials.get_by_name_and_categories("Boron_Nitride", "2D")
 MOLYBDENUM_DISULFIDE_2D = Materials.get_by_name_and_categories("Molybdenum_Disulfide", "2D")
-# rows build in up to 5.4 s on a loaded M1 and vary by machine; the regression this guards took 40-60 s
-CORE_BUILD_TIME_LIMIT = 20.0  # seconds
+# twice the slowest row measured, graphene (8, 7)|(7, 8) in 4.8 s on an M1 at load 20-30; the regression it guards
+# took 40-60 s
+CORE_BUILD_TIME_LIMIT = 10.0  # seconds
 
 
 @pytest.mark.parametrize(
@@ -270,7 +271,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "B",
             {"B": 336, "N": 336},
             [[[5, 7], [5, 7, 5, 7]]] * 2,
-            [{"B-B": 5}, {"N-N": 5}],
+            [{"B-B": 9}, {"N-N": 9}],
         ),
         (
             BORON_NITRIDE_2D,

@@ -153,7 +153,9 @@ def create_grain_boundary_linear_with_core(
         angle_tolerance=angle_tolerance,
         number_of_periods_across=number_of_periods_across,
     )
-    for configuration in analyzer.configurations:
+    # the best of all orientations of the second grain by default; the first orientation that has the homo bonds asked
+    images = [analyzer.configurations] if homo_bonds is None else map(analyzer.get_configurations, analyzer.images)
+    for configuration in (configuration for configurations in images for configuration in configurations):
         if configuration.core_ring_sizes == core_ring_sizes and homo_bonds in (None, configuration.homo_bonds):
             return GrainBoundaryLinearBuilder(build_parameters=analyzer.build_parameters).get_material(configuration)
     achievable = {("|".join(map(str, item.core_ring_sizes)), item.homo_bonds) for item in analyzer.configurations}

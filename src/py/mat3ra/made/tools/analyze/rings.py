@@ -1,7 +1,7 @@
 """Rings and homo bonds of a 2D material's top-view bond network, read per boundary line from its geometry."""
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import cached_property
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 import numpy as np
 from mat3ra.code.entity import InMemoryEntityPydantic
@@ -30,11 +30,22 @@ def get_canonical_sequence(sizes: List[int]) -> List[int]:
     return min(readings + [reading[::-1] for reading in readings])
 
 
+def get_chain(start: int, neighbors: Dict[int, Set[int]]) -> List[int]:
+    """The rings met walking from `start` along shared edges, each step away from the rings already walked."""
+    chain = [start]
+    following = list(neighbors[start])
+    while following:
+        chain.append(min(following))
+        following = [ring for ring in neighbors[chain[-1]] if ring not in chain]
+    return chain
+
+
 class RingsArrangement(BaseModel):
     """
-    Defect rings nearest one line: each cluster of them sharing edges as its ring sizes in order along the line (the
-    least reading of that cyclic sequence), and the pairs of defect rings of one size sharing an edge; the bonds between
-    sites of one species there, by species.
+    Defect rings nearest one line: each cluster of them sharing edges as the ring sizes along the chain they form (its
+    least reading, over the starts of a closed chain and both directions; the sorted sizes if a ring shares edges with
+    three others), and the pairs of defect rings of one size sharing an edge; the bonds between sites of one species
+    there, by species.
     """
 
     cores: List[List[int]]
@@ -73,13 +84,23 @@ class RingsAndBonds(InMemoryEntityPydantic):
         )
         return connected_components(graph)[1]
 
+    @cached_property
+    def defect_neighbors(self) -> Dict[int, Set[int]]:
+        """The other defect rings each defect ring shares an edge with."""
+        neighbors: Dict[int, Set[int]] = defaultdict(set)
+        for first, second in self.defect_pairs.tolist():
+            neighbors[first] |= {second} - {first}
+        return neighbors
+
     def get_core(self, rings: np.ndarray) -> List[int]:
-        """
-        Sizes of the rings in order along the line, rings level along it by their position across it, as the least
-        reading of that cyclic sequence.
-        """
-        order = np.lexsort((self.ring_centers[rings, 0], self.ring_centers[rings, 1] % self.cell[1]))
-        return get_canonical_sequence(self.ring_sizes[rings][order].tolist())
+        """Sizes of a cluster's rings as RingsArrangement reads them: along their chain, or sorted if it branches."""
+        members = set(rings.tolist())
+        neighbors = {ring: self.defect_neighbors[ring] & members for ring in members}
+        if any(len(others) > 2 for others in neighbors.values()):
+            return sorted(self.ring_sizes[rings].tolist())
+        ends = [ring for ring, others in neighbors.items() if len(others) < 2]
+        sizes = self.ring_sizes[get_chain(min(ends or members), neighbors)].tolist()
+        return min(sizes, sizes[::-1]) if ends else get_canonical_sequence(sizes)
 
     def get_homo_bonds(self, bonds: np.ndarray) -> Dict[str, int]:
         """Bonds between sites of one species among the given ones, by species; none in a material of one species."""

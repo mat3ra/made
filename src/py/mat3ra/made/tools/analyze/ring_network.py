@@ -154,6 +154,23 @@ class RingNetworkAnalyzer(BaseMaterialAnalyzer):
     def line_positions(self) -> List[float]:
         return [0.0, float(self.grain_widths[0])]
 
+    def get_second_grain_turned(self, supercell_matrices: List[List[List[int]]]) -> "RingNetworkAnalyzer":
+        """
+        The same stack with the second grain turned by 180 degrees about its cell's centre, as stacking it with its
+        supercell matrix negated gives (the given matrices).
+        """
+        material = self.material.clone()
+        material.to_cartesian()
+        coordinates = np.array(material.basis.coordinates.values)
+        second = np.array(material.basis.labels.values) == 1
+        coordinates[second, 0] = self.line_positions[1] + wrap_to_cell(
+            self.cell[0] - coordinates[second, 0], self.grain_widths[1]
+        )
+        coordinates[second, 1] = wrap_to_cell(-coordinates[second, 1], self.cell[1])
+        material.set_coordinates(coordinates.tolist())
+        material.to_crystal()
+        return RingNetworkAnalyzer(material=material, supercell_matrices=supercell_matrices, band_width=self.band_width)
+
     @cached_property
     def site_grains(self) -> np.ndarray:
         return np.array(self.material.basis.labels.values)[self.sites.site_first_atoms]

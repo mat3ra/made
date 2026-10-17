@@ -4,7 +4,7 @@ at each candidate slide of the second grain along it.
 """
 from functools import cached_property
 from math import ceil, gcd
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, cast
 
 import numpy as np
 from mat3ra.code.array_with_ids import ArrayWithIds
@@ -184,12 +184,30 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
             stack_components=components, gaps=ArrayWithIds.from_values([]), actual_angle=actual_angle
         )
 
-    def get_network_analyzer(self, configuration: GrainBoundaryLinearConfiguration) -> RingNetworkAnalyzer:
+    @cached_property
+    def images(self) -> Tuple[bool, ...]:
+        """
+        Whether the second grain is rotated by 180 degrees, for each orientation of it ranked: as given and rotated; the
+        given one only for a one-species honeycomb, which that turn maps onto itself.
+        """
+        return (False, True) if 180 % self.symmetry_angle else (False,)
+
+    @cached_property
+    def stack(self) -> RingNetworkAnalyzer:
+        """The ring network reading of the grains stacked once, the second as given unless that is no rotation."""
+        configuration = cast(
+            GrainBoundaryLinearConfiguration, self.get_stack_configuration(False) or self.get_stack_configuration(True)
+        )
         return RingNetworkAnalyzer(
             material=GrainBoundaryLinearBuilder(build_parameters=self.build_parameters).get_material(configuration),
             supercell_matrices=[unwrap(component.xy_supercell_matrix) for component in configuration.stack_components],
             band_width=self.build_parameters.band_width,
         )
+
+    def get_network_analyzer(self, configuration: GrainBoundaryLinearConfiguration) -> RingNetworkAnalyzer:
+        """The ring network reading of the stacked grains: the stack itself, or its second grain turned."""
+        matrices = [unwrap(component.xy_supercell_matrix) for component in configuration.stack_components]
+        return self.stack if self.stack.supercell_matrices == matrices else self.stack.get_second_grain_turned(matrices)
 
     def get_candidate_slides(self, network_analyzer: RingNetworkAnalyzer) -> np.ndarray:
         """
@@ -258,11 +276,22 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return ranked
 
     @cached_property
+    def ranked_as_given(self) -> List[Tuple[tuple, GrainBoundaryLinearConfiguration]]:
+        return self.get_ranked_configurations(False)
+
+    @cached_property
+    def ranked_rotated(self) -> List[Tuple[tuple, GrainBoundaryLinearConfiguration]]:
+        return self.get_ranked_configurations(True) if True in self.images else []
+
+    def get_configurations(self, rotated: bool) -> List[GrainBoundaryLinearConfiguration]:
+        """The configurations of one orientation of the second grain, best ranked first."""
+        ranked = self.ranked_rotated if rotated else self.ranked_as_given
+        return [configuration for _, configuration in sorted(ranked, key=lambda item: item[0])]
+
+    @cached_property
     def configurations(self) -> List[GrainBoundaryLinearConfiguration]:
-        """The configurations of both images of the second grain, best ranked first."""
+        """The configurations of every orientation of the second grain, best ranked first."""
         if self.get_stack_configuration(False) is None and self.get_stack_configuration(True) is None:
             raise ValueError(f"The matching vectors {self.matching_vectors.tolist()} are equivalent to no rotation")
-        # a 180 degree turn maps a one-species honeycomb onto itself: its rotated second grain repeats the given one
-        images = (False, True) if 180 % self.symmetry_angle else (False,)
-        ranked = [item for rotated in images for item in self.get_ranked_configurations(rotated)]
+        ranked = self.ranked_as_given + self.ranked_rotated
         return [configuration for _, configuration in sorted(ranked, key=lambda item: item[0])]
