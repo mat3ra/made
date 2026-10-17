@@ -34,14 +34,6 @@ def get_center_of_coordinates(coordinates: List[List[float]]) -> List[float]:
     return np.mean(np.array(coordinates), axis=0).tolist()
 
 
-def get_tolerant_ranks(values: np.ndarray, tolerance: float) -> np.ndarray:
-    """Rank of each value: in sorted order, a value more than `tolerance` above the previous one starts a new rank."""
-    order = np.argsort(values, kind="stable")
-    ranks = np.empty(len(values), int)
-    ranks[order] = np.cumsum(np.diff(values[order], prepend=values[order][:1]) > tolerance)
-    return ranks
-
-
 def create_2d_supercell_matrices(max_search: int) -> List[np.ndarray]:
     """
     Create a list of 2D supercell matrices within a maximum search range.

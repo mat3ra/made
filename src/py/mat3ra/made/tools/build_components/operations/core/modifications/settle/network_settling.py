@@ -1,3 +1,4 @@
+"""Step 5, settling: the rebuilt sites pulled to one bond length by least squares, every other site fixed."""
 from functools import cached_property
 from typing import Tuple
 
@@ -6,21 +7,20 @@ from mat3ra.code.entity import InMemoryEntityPydantic
 from scipy.optimize import least_squares
 from scipy.sparse import coo_matrix
 
-from ......analyze.ring_network import BONDS_PER_SITE
 from ......analyze.rings import Bonds
 
+# a site of a ring network is a triangle of ring centres, bonded across its three edges
+BONDS_PER_SITE = 3
 # second-neighbor distances (the angles) weigh a quarter of a bond, so bonds keep their length first; a bond enters
 # twice (once per direction), hence sqrt(2 * 0.25) on the residual
 SECOND_NEIGHBOR_WEIGHT = np.sqrt(0.5)
-# converged far below the 1e-9 to which coordinates are stored
-SETTLING_TOLERANCE = 1e-10
 
 
 class NetworkSettling(InMemoryEntityPydantic):
     """
     Settles the movable sites of a planar network of three bonds per site by least squares, every other site fixed:
     each bond toward `bond_length`, and the ends of each two bonds of a site toward sqrt(3) times it (equal angles).
-    Bonds are sorted by site, the three of a site in order around it.
+    Bonds are sorted by site; `tolerance` is that of least_squares on the coordinates, in angstrom.
     """
 
     model_config = {"arbitrary_types_allowed": True}
@@ -29,6 +29,7 @@ class NetworkSettling(InMemoryEntityPydantic):
     bonds: Bonds
     movable: np.ndarray
     bond_length: float
+    tolerance: float
 
     @cached_property
     def variables(self) -> np.ndarray:
@@ -75,9 +76,9 @@ class NetworkSettling(InMemoryEntityPydantic):
             self.get_distance_residuals,
             self.positions[self.variables].ravel(),
             jac_sparsity=self.jacobian_sparsity,
-            ftol=SETTLING_TOLERANCE,
-            xtol=SETTLING_TOLERANCE,
-            gtol=SETTLING_TOLERANCE,
+            ftol=self.tolerance,
+            xtol=self.tolerance,
+            gtol=self.tolerance,
         )
         settled = self.positions.copy()
         settled[self.variables] = result.x.reshape(-1, 2)

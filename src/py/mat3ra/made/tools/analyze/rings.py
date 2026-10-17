@@ -1,9 +1,9 @@
+"""Rings and homo bonds of any 2D material's top-view bond network, by boundary line: the reader of the page."""
 from collections import Counter
 from functools import cached_property
 from typing import Dict, List, Tuple
 
 import numpy as np
-from mat3ra.code.entity import InMemoryEntityPydantic
 from pydantic import BaseModel
 from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import connected_components
@@ -13,6 +13,7 @@ from . import BaseMaterialAnalyzer
 
 # the ring of a perfect honeycomb; every other ring is a defect ring
 HEXAGON_SIZE = 6
+# the cell and its eight neighbors, the cell itself in the middle
 IMAGE_SHIFTS = np.array([[i, j] for i in (-1, 0, 1) for j in (-1, 0, 1)])
 CENTRAL_IMAGE_INDEX = len(IMAGE_SHIFTS) // 2
 Bonds = Tuple[np.ndarray, np.ndarray, np.ndarray]
@@ -23,38 +24,57 @@ def get_periodic_images(positions: np.ndarray, lattice_vectors: np.ndarray) -> n
     return (positions[None] + (IMAGE_SHIFTS @ lattice_vectors)[:, None]).reshape(-1, 2)
 
 
-class RingNetwork(InMemoryEntityPydantic):
-    """
-    Sites of a network in a cell: positions, bonds grouped by site (three each, in order around it) with the ring on the
-    left of each bond, and the ring centres.
-    """
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    positions: np.ndarray
-    bonds: Bonds
-    bond_rings: np.ndarray
-    ring_centers: np.ndarray
+def get_line_offsets(x_values: np.ndarray, line_positions: List[float], width: float) -> np.ndarray:
+    """Signed distance from each line x = const to each x, periodic in the cell width."""
+    return (np.subtract.outer(x_values, line_positions) + width / 2) % width - width / 2
 
 
 class RingsArrangement(BaseModel):
     """
-    Defect rings nearest one line, and the bonds between sites of one species there. `sequence` reads each cluster of
-    edge-sharing rings (get_cluster_sequence); a ring's core partner is an edge-sharing defect ring of another size;
-    `branching_rings` border more than two others.
+    Defect rings nearest one line, as the sorted sizes of each cluster of them sharing edges, and the bonds between
+    sites of one species there, by species.
     """
 
-    ring_sizes: Dict[int, int]
-    sequence: List[str]
+    cores: List[List[int]]
     homo_bonds: Dict[str, int]
-    rings_without_core_partner: int
-    branching_rings: int
+
+
+def get_line_arrangements(
+    rings: Tuple[np.ndarray, np.ndarray],
+    ring_pairs: Tuple[np.ndarray, np.ndarray],
+    bonds: Tuple[np.ndarray, np.ndarray],
+    line_positions: List[float],
+    width: float,
+) -> List[RingsArrangement]:
+    """
+    Arrangement nearest each line x = const of a cell of the given width along x, from the rings (x, size), the pairs
+    of rings sharing an edge, and the bonds (x of the middle, species at both ends), each bond once in each direction.
+    A material of one species has no homo bonds to tell apart, so none are counted.
+    """
+    ring_lines = np.argmin(np.abs(get_line_offsets(rings[0], line_positions, width)), axis=1)
+    is_defect = rings[1] != HEXAGON_SIZE
+    linked = is_defect[ring_pairs[0]] & is_defect[ring_pairs[1]]
+    pairs = (ring_pairs[0][linked], ring_pairs[1][linked])
+    clusters = connected_components(coo_matrix((np.ones(len(pairs[0])), pairs), shape=(len(is_defect),) * 2))[1]
+    bond_lines = np.argmin(np.abs(get_line_offsets(bonds[0], line_positions, width)), axis=1)
+    species = bonds[1]
+    homo = (species[:, 0] == species[:, 1]) & (len(set(species.ravel())) > 1)
+    arrangements = []
+    for line in range(len(line_positions)):
+        rings_at_line = is_defect & (ring_lines == line)
+        cores = [
+            sorted(rings[1][rings_at_line & (clusters == cluster)].tolist()) for cluster in set(clusters[rings_at_line])
+        ]
+        homo_elements = Counter(species[homo & (bond_lines == line), 0].tolist())
+        homo_bonds = {f"{element}-{element}": count // 2 for element, count in homo_elements.items()}
+        arrangements.append(RingsArrangement(cores=sorted(cores), homo_bonds=homo_bonds))
+    return arrangements
 
 
 class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
     """
     Rings of the top-view bond network of a 2D material: the faces of that periodic planar network, their sizes, and
-    how the defect rings are arranged nearest given lines of the cell. A site is the set of atoms sharing one top-view
+    the defect rings and homo bonds nearest given lines of the cell. A site is the set of atoms sharing one top-view
     position (MoS2: Mo, and the two S above each other).
     """
 
@@ -162,103 +182,13 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
             [np.mean(np.cumsum(vectors[ring], axis=0) - vectors[ring], axis=0) for ring in self.rings]
         )
 
-    def get_nearest_lines(self, x_values: np.ndarray, line_positions: List[float]) -> np.ndarray:
-        """Index of the nearest line x = const to each x, periodic in the cell width."""
-        width = self.lattice_vectors[0, 0]
-        return np.argmin(np.abs((np.subtract.outer(x_values, line_positions) + width / 2) % width - width / 2), axis=1)
-
     def get_line_arrangements(self, line_positions: List[float]) -> List[RingsArrangement]:
         """Arrangement nearest each line x = const of a cell whose first lattice vector lies along x."""
-        ring_lines = self.get_nearest_lines(self.ring_centers[:, 0], line_positions)
-        first, _, vectors = self.bonds
-        bond_lines = self.get_nearest_lines(self.site_positions[first, 0] + vectors[:, 0] / 2, line_positions)
-        defect_rings = self.ring_sizes != HEXAGON_SIZE
-        return [
-            self.get_arrangement(np.where(defect_rings & (ring_lines == line))[0], bond_lines == line)
-            for line in range(len(line_positions))
-        ]
-
-    def get_arrangement(self, rings: np.ndarray, line_bonds: np.ndarray) -> RingsArrangement:
-        """Arrangement of the given rings, each with its neighbors among them (one entry per shared edge)."""
-        neighbors: Dict[int, List[int]] = {ring: [] for ring in rings}
-        rings_without_core_partner, branching_rings = 0, 0
-        for ring in rings:
-            adjacent = self.ring_of_bond[self.reverse_bonds[self.rings[ring]]]
-            neighbors[ring] = [neighbor for neighbor in adjacent if neighbor in neighbors]
-            branching_rings += len(set(neighbors[ring])) > 2
-            sizes = self.ring_sizes[adjacent]
-            rings_without_core_partner += not np.any((sizes != HEXAGON_SIZE) & (sizes != self.ring_sizes[ring]))
-        first, second, _ = self.bonds
-        species = self.site_species
-        homo = line_bonds & (species[first] == species[second]) & (len(set(species)) > 1)
-        return RingsArrangement(
-            ring_sizes=dict(Counter(self.ring_sizes[rings].tolist())),
-            sequence=sorted(self.get_cluster_sequence(cluster, neighbors) for cluster in self.get_clusters(neighbors)),
-            homo_bonds={f"{element}-{element}": count // 2 for element, count in Counter(species[first[homo]]).items()},
-            rings_without_core_partner=rings_without_core_partner,
-            branching_rings=branching_rings,
+        first, second, vectors = self.bonds
+        return get_line_arrangements(
+            (self.ring_centers[:, 0], self.ring_sizes),
+            (self.ring_of_bond, self.ring_of_bond[self.reverse_bonds]),
+            (self.site_positions[first, 0] + vectors[:, 0] / 2, self.site_species[np.column_stack([first, second])]),
+            line_positions,
+            self.lattice_vectors[0, 0],
         )
-
-    def get_clusters(self, neighbors: Dict[int, List[int]]) -> List[List[int]]:
-        rings = list(neighbors)
-        index = {ring: position for position, ring in enumerate(rings)}
-        pairs = [(index[ring], index[neighbor]) for ring in rings for neighbor in neighbors[ring]]
-        rows, columns = np.array(pairs, int).reshape(-1, 2).T
-        graph = coo_matrix((np.ones(len(rows)), (rows, columns)), shape=(len(rings), len(rings)))
-        labels = connected_components(graph, directed=False)[1]
-        return [[ring for ring, label in zip(rings, labels) if label == cluster] for cluster in np.unique(labels)]
-
-    def get_cluster_sequence(self, cluster: List[int], neighbors: Dict[int, List[int]]) -> str:
-        """
-        "{5-5-7-7}", the sizes in order, for a branched cluster (a ring beside more than two others); otherwise the
-        sizes walked from an end, "(5-7-5-7)" if the chain closes through the cell (as many shared edges as rings),
-        "[5-7]" if not, the smallest of its rotations and reversals, so one arrangement reads the same at both lines.
-        """
-        distinct_neighbors = [len(set(neighbors[ring])) for ring in cluster]
-        if max(distinct_neighbors) > 2:
-            return "{" + "-".join(str(size) for size in sorted(self.ring_sizes[cluster])) + "}"
-        is_closed = sum(len(neighbors[ring]) for ring in cluster) // 2 >= len(cluster)
-        path = [cluster[int(np.argmin(distinct_neighbors))]]
-        while following := [ring for ring in neighbors[path[-1]] if ring not in path]:
-            path.append(following[0])
-        sizes = [int(self.ring_sizes[ring]) for ring in path]
-        rotations = [sizes[index:] + sizes[:index] for index in range(len(sizes) if is_closed else 1)]
-        text = "-".join(str(size) for size in min(rotations + [rotation[::-1] for rotation in rotations]))
-        return f"({text})" if is_closed else f"[{text}]"
-
-
-class RingsNetworkAnalyzer(RingsMaterialAnalyzer):
-    """
-    The same analysis of a ring network in the cell of the material, its sites of `network_species`: the rings come
-    from the network itself, not from its geometry.
-    """
-
-    model_config = {"arbitrary_types_allowed": True}
-
-    network: RingNetwork
-    network_species: np.ndarray
-
-    @cached_property
-    def site_positions(self) -> np.ndarray:
-        return self.network.positions
-
-    @cached_property
-    def site_species(self) -> np.ndarray:
-        return self.network_species
-
-    @cached_property
-    def bonds(self) -> Bonds:
-        return self.network.bonds
-
-    @cached_property
-    def ring_of_bond(self) -> np.ndarray:
-        return self.network.bond_rings
-
-    @cached_property
-    def rings(self) -> List[np.ndarray]:
-        ring_sizes = np.bincount(self.network.bond_rings, minlength=len(self.network.ring_centers))
-        return np.split(np.argsort(self.network.bond_rings, kind="stable"), np.cumsum(ring_sizes)[:-1])
-
-    @cached_property
-    def ring_centers(self) -> np.ndarray:
-        return self.network.ring_centers

@@ -8,13 +8,8 @@ from .fixtures.grain_boundary import GRAIN_BOUNDARY_LINEAR_BORON_NITRIDE_5_7
 from .utils import assert_two_entities_deep_almost_equal
 
 GRAPHENE_2D = Materials.get_by_name_and_categories("Graphene", "2D")
-TYPE_III_LINE = {
-    "ring_sizes": {5: 2, 7: 2},
-    "sequence": ["(5-7-5-7)"],
-    "homo_bonds": {"B-B": 1, "N-N": 1},
-    "rings_without_core_partner": 0,
-}
-NO_DEFECT_LINE = {"ring_sizes": {}, "sequence": [], "homo_bonds": {}, "rings_without_core_partner": 0}
+TYPE_III_LINE = {"cores": [[5, 5, 7, 7]], "homo_bonds": {"B-B": 1, "N-N": 1}}
+NO_DEFECT_LINE: dict = {"cores": [], "homo_bonds": {}}
 
 
 @pytest.mark.parametrize(

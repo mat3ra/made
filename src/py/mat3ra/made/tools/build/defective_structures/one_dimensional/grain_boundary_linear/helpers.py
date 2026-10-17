@@ -1,18 +1,17 @@
-from typing import Optional, Tuple, Union
+"""The user call: a grain boundary from an angle or matching vectors, with a core and its homo bonds rebuilt."""
+from typing import List, Optional, Tuple, Union
 
 from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
-from mat3ra.esse.models.materials_category.defective_structures.one_dimensional.grain_boundary_linear.configuration import (  # noqa: E501
-    GrainBoundaryCoreEnum,
-)
 
 from mat3ra.made.material import Material
-from .build_parameters import GrainBoundaryLinearBuilderParameters
 from .builder import GrainBoundaryLinearBuilder
 from .configuration import GrainBoundaryLinearConfiguration
+from .enums import HomoBondsEnum
 from ....compound_pristine_structures.two_dimensional.interface import get_commensurate_strained_configurations
 from ....pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
-from .....analyze.interface.grain_boundary import GrainBoundaryLinearAnalyzer
+from .....analyze.interface.grain_boundary_linear import GrainBoundaryLinearAnalyzer
+from .....analyze.rings import HEXAGON_SIZE
 from .....build_components import MaterialWithBuildMetadata
 
 
@@ -24,13 +23,14 @@ def create_grain_boundary_linear(
     limit_max_int: int = 20,
     return_first_match: bool = True,
     direction: AxisEnum = AxisEnum.x,
-    gap: Optional[float] = 3.0,
+    gap: float = 3.0,
     miller_indices: Tuple[int, int, int] = (0, 0, 1),
     number_of_layers: int = 1,
     vacuum: float = 0.0,
     use_conventional_cell: bool = True,
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None,
-    core: Optional[GrainBoundaryCoreEnum] = None,
+    core: Optional[str] = None,
+    homo_bonds: str = HomoBondsEnum.alternating.value,
     number_of_periods_across: Optional[int] = None,
 ) -> Material:
     """
@@ -50,34 +50,38 @@ def create_grain_boundary_linear(
         limit_max_int (int): Limit for maximum integer to search for supercell matrices.
         return_first_match (bool): Whether to return the first match or all matches.
         direction (AxisEnum): Direction along which to stack components (x or y).
-        gap (Optional[float]): The gap between the two phases in Angstroms; None stacks them at their natural spacing.
+        gap (float): The gap between the two phases in Angstroms.
         miller_indices (Tuple[int, int, int]): Miller indices for the slab surface.
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
-        boundary_vectors (Optional[Tuple[Tuple[int, int], Tuple[int, int]]]): Lattice vectors of the two grains along
-            the boundary, equal in length, in units of the lattice vectors; each grain is then the rectangular
-            supercell [shortest perpendicular vector, boundary vector] of the conventional cell, stacked along x
-            (GrainBoundaryLinearAnalyzer); the commensurate-search arguments do not apply.
-        core (Optional[GrainBoundaryCoreEnum]): Ring pair ("5|7", "4|8"), or "6" for hexagons only, rebuilt along both
-            lines of a honeycomb lattice, the grains at their natural spacing (no gap). Without boundary vectors, they
-            are found from the target angle.
-        number_of_periods_across (Optional[int]): Repetitions of the perpendicular vector in each grain; by default
-            1, with a core the fewest that hold the rebuilt bands at both lines of each grain.
+        boundary_vectors (Optional[Tuple[Tuple[int, int], Tuple[int, int]]]): With a core, the matching vectors of the
+            two grains in the 60 degree basis ((3, 1), (1, 3) is the 32.2 degree boundary); by default found from the
+            target angle and tolerance.
+        core (Optional[str]): Ring sizes of the core rebuilt along both boundaries of a honeycomb monolayer, "5|7",
+            "4|8", "6" for hexagons only, or any sizes whose sum of n - 6 is 0; the arguments from max_repetition_int
+            to number_of_layers and use_conventional_cell then do not apply.
+        homo_bonds (str): With a core, "alternating" (the grains mirror images with the elements swapped), "none",
+            or an element of the material (the first boundary rich in it, the second in the other).
+        number_of_periods_across (Optional[int]): With a core, repetitions of each grain across the boundary; by
+            default the fewest that hold both rebuilt bands.
 
     Returns:
         Material: The grain boundary material.
 
     Raises:
-        ValueError: If no commensurate lattice matches are found; with boundary vectors or a core, if the direction is
-            not x, no two different vectors of equal length are rotated by the target angle, no lattice vector is
-            perpendicular to a boundary vector, the core is asked of a lattice that is not a honeycomb, the cell is too
-            short along the boundary for its ring network, number_of_periods_across is below the fewest the core
-            needs, or no slide gives the core at both boundaries.
+        ValueError: If no commensurate lattice matches are found; with a core, if it is not achievable (the message
+            lists what is), or the material, vectors, homo bonds or periods do not allow one.
     """
-    if boundary_vectors is not None or core is not None:
-        slab = SlabConfiguration.from_parameters(material, miller_indices, number_of_layers, vacuum=vacuum)
-        return create_grain_boundary_linear_on_line(
-            slab, boundary_vectors, target_angle, angle_tolerance, number_of_periods_across, core, direction, gap
+    if core is not None:
+        return create_grain_boundary_linear_with_core(
+            material,
+            boundary_vectors,
+            target_angle,
+            angle_tolerance,
+            core,
+            homo_bonds,
+            number_of_periods_across,
+            vacuum,
         )
     strained_configs, actual_angle = get_commensurate_strained_configurations(
         material=material,
@@ -91,6 +95,7 @@ def create_grain_boundary_linear(
         vacuum=vacuum,
         use_conventional_cell=use_conventional_cell,
     )
+
     grain_boundary_config = GrainBoundaryLinearConfiguration(
         stack_components=strained_configs,
         direction=direction,
@@ -100,19 +105,33 @@ def create_grain_boundary_linear(
     return GrainBoundaryLinearBuilder().get_material(grain_boundary_config)
 
 
-def create_grain_boundary_linear_on_line(
-    slab: SlabConfiguration,
+def get_core_ring_sizes(core: str) -> List[int]:
+    """Ring sizes of a core label, "5|7" -> [5, 7]; sizes whose sum of n - 6 is not 0 are a disclination, refused."""
+    sizes = sorted(int(size) for size in core.split("|"))
+    if sum(size - HEXAGON_SIZE for size in sizes):
+        raise ValueError(f"Core {core} is a disclination, which bends the sheet: the sum of n - 6 must be 0")
+    return sizes
+
+
+def create_grain_boundary_linear_with_core(
+    material: Union[Material, MaterialWithBuildMetadata],
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]],
     target_angle: float,
     angle_tolerance: float,
+    core: str,
+    homo_bonds: str,
     number_of_periods_across: Optional[int],
-    core: Optional[GrainBoundaryCoreEnum],
-    direction: AxisEnum,
-    gap: Optional[float],
+    vacuum: float,
 ) -> MaterialWithBuildMetadata:
-    """Grain boundary of two rectangular grains along x; with a core, slid as the analyzer chooses and rebuilt."""
-    if direction != AxisEnum.x:
-        raise ValueError(f"Grains matched on a boundary line are stacked along x, not {direction.value}")
+    """
+    The first ranked configuration of GrainBoundaryLinearAnalyzer with the requested core and homo bonds, the second
+    grain rotated by 180 degrees for "alternating" and as given otherwise.
+    """
+    requested = (get_core_ring_sizes(core), homo_bonds)
+    elements = sorted(set(material.basis.elements.values))
+    if homo_bonds not in [*HomoBondsEnum, *elements]:
+        raise ValueError(f"homo_bonds is alternating, none or an element of the material: {', '.join(elements)}")
+    slab = SlabConfiguration.from_parameters(material, (0, 0, 1), 1, vacuum=vacuum)
     analyzer = GrainBoundaryLinearAnalyzer(
         substrate_slab_configuration=slab,
         film_slab_configuration=slab,
@@ -120,15 +139,11 @@ def create_grain_boundary_linear_on_line(
         target_angle=target_angle,
         angle_tolerance=angle_tolerance,
         number_of_periods_across=number_of_periods_across,
-        core=core,
     )
-    configuration = GrainBoundaryLinearConfiguration(
-        stack_components=analyzer.grain_configurations,
-        gaps=ArrayWithIds.from_values([] if core is not None or gap is None else [gap, gap]),
-        actual_angle=analyzer.actual_angle,
+    for configuration in analyzer.get_configurations(rotated=homo_bonds == HomoBondsEnum.alternating):
+        if (configuration.core_ring_sizes, configuration.homo_bonds) == requested:
+            return GrainBoundaryLinearBuilder(build_parameters=analyzer.build_parameters).get_material(configuration)
+    achievable = {("|".join(map(str, item.core_ring_sizes)), item.homo_bonds) for item in analyzer.configurations}
+    raise ValueError(
+        f"No slide gives core {core} with homo bonds {homo_bonds} at both boundaries; achievable: {sorted(achievable)}"
     )
-    builder = GrainBoundaryLinearBuilder(build_parameters=GrainBoundaryLinearBuilderParameters(make_primitive=False))
-    if analyzer.core is not None:
-        slide = analyzer.get_slide(builder.get_material(configuration))
-        configuration = configuration.model_copy(update={"xy_shift": [slide, 0.0], "core": analyzer.core})
-    return builder.get_material(configuration)
