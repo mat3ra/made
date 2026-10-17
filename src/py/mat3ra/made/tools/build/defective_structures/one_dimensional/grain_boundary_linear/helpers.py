@@ -30,7 +30,7 @@ def create_grain_boundary_linear(
     use_conventional_cell: bool = True,
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None,
     core: Optional[str] = None,
-    homo_bonds: str = HomoBondsEnum.alternating.value,
+    homo_bonds: Optional[str] = None,
     number_of_periods_across: Optional[int] = None,
 ) -> Material:
     """
@@ -58,10 +58,12 @@ def create_grain_boundary_linear(
             two grains in the 60 degree basis ((3, 1), (1, 3) is the 32.2 degree boundary); by default found from the
             target angle and tolerance.
         core (Optional[str]): Ring sizes of the core rebuilt along both boundaries of a honeycomb monolayer, "5|7",
-            "4|8", "6" for hexagons only, or any sizes whose sum of n - 6 is 0; the arguments from max_repetition_int
-            to number_of_layers and use_conventional_cell then do not apply.
-        homo_bonds (str): With a core, "alternating" (the grains mirror images with the elements swapped), "none",
-            or an element of the material (the first boundary rich in it, the second in the other).
+            "4|8", "6" for hexagons only, or any sizes whose sum of n - 6 is 0. The grains are then monolayers stacked
+            along x without a gap: direction, gap, miller_indices and number_of_layers must keep their defaults, and
+            max_repetition_int, limit_max_int, return_first_match and use_conventional_cell do not apply.
+        homo_bonds (Optional[str]): With a core, the homo bonds of the built boundary: "alternating" (as many of
+            each element at both boundaries), "none", or an element of the material (the only one at the boundary at
+            x = 0, the other boundary rich in the others); by default whichever ranks first.
         number_of_periods_across (Optional[int]): With a core, repetitions of each grain across the boundary; by
             default the fewest that hold both rebuilt bands.
 
@@ -73,15 +75,17 @@ def create_grain_boundary_linear(
             lists what is), or the material, vectors, homo bonds or periods do not allow one.
     """
     if core is not None:
+        if (direction, gap, miller_indices, number_of_layers) != (AxisEnum.x, 3.0, (0, 0, 1), 1):
+            raise ValueError("With a core, direction, gap, miller_indices and number_of_layers keep their defaults")
         return create_grain_boundary_linear_with_core(
-            material,
-            boundary_vectors,
-            target_angle,
-            angle_tolerance,
-            core,
-            homo_bonds,
-            number_of_periods_across,
-            vacuum,
+            material=material,
+            boundary_vectors=boundary_vectors,
+            target_angle=target_angle,
+            angle_tolerance=angle_tolerance,
+            core=core,
+            homo_bonds=homo_bonds,
+            number_of_periods_across=number_of_periods_across,
+            vacuum=vacuum,
         )
     strained_configs, actual_angle = get_commensurate_strained_configurations(
         material=material,
@@ -107,6 +111,8 @@ def create_grain_boundary_linear(
 
 def get_core_ring_sizes(core: str) -> List[int]:
     """Ring sizes of a core label, "5|7" -> [5, 7]; sizes whose sum of n - 6 is not 0 are a disclination, refused."""
+    if not all(size.isdigit() for size in core.split("|")):
+        raise ValueError(f'Core {core!r} is not ring sizes joined by "|", as "5|7" or "6"')
     sizes = sorted(int(size) for size in core.split("|"))
     if sum(size - HEXAGON_SIZE for size in sizes):
         raise ValueError(f"Core {core} is a disclination, which bends the sheet: the sum of n - 6 must be 0")
@@ -119,17 +125,14 @@ def create_grain_boundary_linear_with_core(
     target_angle: float,
     angle_tolerance: float,
     core: str,
-    homo_bonds: str,
+    homo_bonds: Optional[str],
     number_of_periods_across: Optional[int],
     vacuum: float,
 ) -> MaterialWithBuildMetadata:
-    """
-    The first ranked configuration of GrainBoundaryLinearAnalyzer with the requested core and homo bonds, the second
-    grain rotated by 180 degrees for "alternating" and as given otherwise.
-    """
-    requested = (get_core_ring_sizes(core), homo_bonds)
+    """The first ranked configuration of GrainBoundaryLinearAnalyzer with the requested core and homo bonds."""
+    core_ring_sizes = get_core_ring_sizes(core)
     elements = sorted(set(material.basis.elements.values))
-    if homo_bonds not in [*HomoBondsEnum, *elements]:
+    if homo_bonds not in [None, *HomoBondsEnum, *elements]:
         raise ValueError(f"homo_bonds is alternating, none or an element of the material: {', '.join(elements)}")
     slab = SlabConfiguration.from_parameters(material, (0, 0, 1), 1, vacuum=vacuum)
     analyzer = GrainBoundaryLinearAnalyzer(
@@ -140,10 +143,11 @@ def create_grain_boundary_linear_with_core(
         angle_tolerance=angle_tolerance,
         number_of_periods_across=number_of_periods_across,
     )
-    for configuration in analyzer.get_configurations(rotated=homo_bonds == HomoBondsEnum.alternating):
-        if (configuration.core_ring_sizes, configuration.homo_bonds) == requested:
+    for configuration in analyzer.configurations:
+        if configuration.core_ring_sizes == core_ring_sizes and homo_bonds in (None, configuration.homo_bonds):
             return GrainBoundaryLinearBuilder(build_parameters=analyzer.build_parameters).get_material(configuration)
     achievable = {("|".join(map(str, item.core_ring_sizes)), item.homo_bonds) for item in analyzer.configurations}
     raise ValueError(
-        f"No slide gives core {core} with homo bonds {homo_bonds} at both boundaries; achievable: {sorted(achievable)}"
+        f"No slide gives core {core} with homo bonds {homo_bonds}; achievable: {sorted(achievable)} (an element names "
+        "the boundary at x = 0)"
     )

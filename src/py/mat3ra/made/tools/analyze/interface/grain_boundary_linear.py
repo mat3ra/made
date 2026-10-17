@@ -1,10 +1,10 @@
 """
-Step 1 and the slide choice: two grains of a honeycomb monolayer matched on a boundary line, and the core and homo
-bonds their ring network gives at each candidate slide.
+Matching two grains of a honeycomb monolayer along a boundary line, and the core and homo bonds of their ring network
+at each candidate slide of the second grain along it.
 """
 from functools import cached_property
 from math import ceil, gcd
-from typing import List, Optional, Set, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 from mat3ra.code.array_with_ids import ArrayWithIds
@@ -22,15 +22,14 @@ from ...build.defective_structures.one_dimensional.grain_boundary_linear.configu
     GrainBoundaryLinearConfiguration,
 )
 from ...build.defective_structures.one_dimensional.grain_boundary_linear.enums import HomoBondsEnum
-from ...build_components.operations.core.modifications.reconstruct import RingNetworkReconstruction, wrap_to_cell
 from ...utils import unwrap
+from ..ring_network import RingNetworkAnalyzer
 from ..rings import HEXAGON_SIZE, RingsArrangement, RingsMaterialAnalyzer
+from ..utils import wrap_to_cell
 from .simple import InterfaceAnalyzer
 
 # a grain keeps one row of hexagons, one lattice constant wide, between the rebuilt bands at its two lines
 KEPT_RING_ROW_WIDTH = 1.0  # lattice constants
-# a 60 degree turn of a vector in the 60 degree basis, (n, m) -> (-m, n + m)
-ROTATION_60 = np.array([[0, 1], [-1, 1]])
 
 
 class GrainBoundaryLinearMatchHolder(InMemoryEntityPydantic):
@@ -54,6 +53,15 @@ def get_line_core(arrangements: List[RingsArrangement]) -> Optional[List[int]]:
     return list(cores.pop()) if cores else [HEXAGON_SIZE]
 
 
+def get_arrangement_counts(arrangements: List[RingsArrangement]) -> Tuple[int, int, int]:
+    """Defect rings, homo bonds and pairs of defect rings of one size sharing an edge, over the lines."""
+    return (
+        sum(len(core) for line in arrangements for core in line.cores),
+        sum(sum(line.homo_bonds.values()) for line in arrangements),
+        sum(line.same_size_pairs for line in arrangements),
+    )
+
+
 def get_across_vector(vector: np.ndarray) -> np.ndarray:
     """The shortest lattice vector perpendicular to (n, m), a quarter turn clockwise from it, in the 60 degree basis."""
     across = np.array([vector[0] + 2 * vector[1], -2 * vector[0] - vector[1]])
@@ -62,11 +70,11 @@ def get_across_vector(vector: np.ndarray) -> np.ndarray:
 
 class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     """
-    Matches two grains of a honeycomb monolayer along a boundary line and lists the cores and homo bonds of its ring
-    network (RingNetworkReconstruction) at both lines. The matching vectors are in the literature's 60 degree basis,
-    (3, 1)|(1, 3) the 32.2 degree boundary: given, or the shortest pair of equal length rotated by `target_angle`. Each
-    grain is the rectangular supercell [across, matching vector], repeated `number_of_periods_across` times across, by
-    default the fewest that hold both rebuilt bands.
+    Matches two grains of a honeycomb monolayer along a boundary line and lists the cores and homo bonds of their ring
+    network (RingNetworkAnalyzer) at both lines, the second grain as given and rotated by 180 degrees. The matching
+    vectors are in the literature's 60 degree basis, (3, 1)|(1, 3) at 32.2 degrees: given, or the shortest pair of
+    equal length rotated by `target_angle`. Each grain is the rectangular supercell [across, matching vector], repeated
+    `number_of_periods_across` times across, by default the fewest that hold both rebuilt bands.
     """
 
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None
@@ -142,21 +150,21 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         return self.number_of_periods_across or minimum
 
     @cached_property
-    def symmetric_vectors(self) -> Set[Tuple[int, ...]]:
-        """The first matching vector turned by each symmetry: 60 degrees if both sites hold the same atoms, else 120."""
+    def symmetry_angle(self) -> float:
+        """The smallest turn mapping the monolayer onto itself: 60 degrees if both sites hold one species, else 120."""
         elements = np.array(self.substrate_material.basis.elements.values)
         site_atoms = [sorted(elements[self.sites.atom_site_indices == site]) for site in (0, 1)]
-        steps = range(0, 6, 1 if site_atoms[0] == site_atoms[1] else 2)
-        return {tuple(self.matching_vectors[0] @ np.linalg.matrix_power(ROTATION_60, step)) for step in steps}
+        return 60.0 if site_atoms[0] == site_atoms[1] else 120.0
 
     def get_stack_configuration(self, rotated: bool) -> Optional[GrainBoundaryLinearConfiguration]:
         """
-        The grains stacked, the second as given or rotated by 180 degrees (a binary's elements swapped); None if the two
-        are then turned against each other by a symmetry of the monolayer only.
+        The grains stacked, the second as given or rotated by 180 degrees (a binary's elements swapped), with the angle
+        between them up to a turn of the monolayer onto itself; None if that angle is 0.
         """
         first, second = self.matching_vectors
         second = -second if rotated else second
-        if tuple(second) in self.symmetric_vectors:
+        actual_angle = float(wrap_to_cell(self.match_holder.actual_angle + 180 * rotated, self.symmetry_angle))
+        if np.isclose(actual_angle, 0.0):
             return None
         components = []
         for vector in (first, second):
@@ -169,67 +177,86 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
                 )
             )
         return GrainBoundaryLinearConfiguration(
-            stack_components=components, gaps=ArrayWithIds.from_values([]), actual_angle=self.match_holder.actual_angle
+            stack_components=components, gaps=ArrayWithIds.from_values([]), actual_angle=actual_angle
         )
 
-    def get_candidate_slides(self, reconstruction: RingNetworkReconstruction) -> np.ndarray:
+    def get_network_analyzer(self, configuration: GrainBoundaryLinearConfiguration) -> RingNetworkAnalyzer:
+        return RingNetworkAnalyzer(
+            material=GrainBoundaryLinearBuilder(build_parameters=self.build_parameters).get_material(configuration),
+            supercell_matrices=[unwrap(component.xy_supercell_matrix) for component in configuration.stack_components],
+            band_width=self.build_parameters.band_width,
+        )
+
+    def get_candidate_slides(self, network_analyzer: RingNetworkAnalyzer) -> np.ndarray:
         """
-        Slides at which a hexagon centre of grain 1 lies level with one of grain 0 (four centres can then lie on one
-        circle), and the midpoints between them: such offsets repeat every a^2 / (2 P), lattice dot products being
-        multiples of a^2 / 2.
+        Slides at which a hexagon centre of the second grain lies level with one of the first (four centres can then lie
+        on one circle), and the midpoints between them: such offsets repeat every a^2 / (2 P), lattice dot products
+        being multiples of a^2 / 2. The network can change only where centres are level, so one slide per interval
+        between them stands for it.
         """
-        centers, grains = reconstruction.hexagon_centers
+        centers, grains = network_analyzer.hexagon_centers
         period = self.match_holder.period
         step = np.linalg.norm(self.sites.lattice_vectors[0]) ** 2 / (4 * period)
         offset = (centers[grains == 0][0, 1] - centers[grains == 1][0, 1]) % (2 * step)
         return wrap_to_cell(offset + step * np.arange(round(period / step)), period)
 
-    def get_homo_bonds(self, arrangements: List[RingsArrangement], rotated: bool) -> Optional[str]:
+    def get_registry(self, network_analyzer: RingNetworkAnalyzer, slide: float) -> float:
         """
-        With the rotated second grain, "alternating" if every element has as many homo bonds as the others at both
-        lines; with it as given, "none" without homo bonds, or the element with the most at the first line if the second
-        line has the counts swapped; None otherwise.
+        The slide in terms of the two grains alone: how far the second grain's row of hexagon centres nearest its line
+        lies along the line from the first grain's, modulo the period over which both rows repeat.
+        """
+        centers, grains = network_analyzer.hexagon_centers
+        first_row_centers = [centers[grains == grain][np.argmin(centers[grains == grain, 0])] for grain in (0, 1)]
+        repeats = np.lcm.reduce([gcd(*vector) for vector in self.matching_vectors.tolist()])
+        offset = slide + first_row_centers[1][1] - first_row_centers[0][1]
+        return float(wrap_to_cell(offset, self.match_holder.period / repeats))
+
+    def get_homo_bonds(self, arrangements: List[RingsArrangement]) -> Optional[str]:
+        """
+        The homo bonds of a network: "none" without any, "alternating" with as many of every element at both lines, or
+        the element whose homo bonds alone are at the first line and none at the second; None otherwise.
         """
         elements = sorted(set(self.sites.site_species))
         counts = np.array(
             [[line.homo_bonds.get(f"{element}-{element}", 0) for element in elements] for line in arrangements]
         )
-        if rotated:
-            return HomoBondsEnum.alternating.value if np.all(counts == counts[0, 0]) else None
         if not counts.any():
             return HomoBondsEnum.none.value
-        is_rich = np.array_equal(counts[1], counts[0][::-1]) and counts[0].max() > counts[0].min()
-        return elements[int(np.argmax(counts[0]))] if is_rich else None
+        if np.all(counts == counts[0, 0]):
+            return HomoBondsEnum.alternating.value
+        first_line_elements = np.flatnonzero(counts[0])
+        is_rich = len(first_line_elements) == 1 and counts[1, first_line_elements[0]] == 0
+        return elements[first_line_elements[0]] if is_rich else None
 
-    def get_configurations(self, rotated: bool) -> List[GrainBoundaryLinearConfiguration]:
+    def get_ranked_configurations(self, rotated: bool) -> List[Tuple[tuple, GrainBoundaryLinearConfiguration]]:
         """
-        A configuration per candidate slide with one core and its homo bonds at both lines, the second grain as given or
-        rotated: a unique network first, then the fewest defect rings and homo bonds, then the smallest slide.
+        A configuration per candidate slide with one core at both lines and a homo-bond label, the second grain as given
+        or rotated, with its rank: a unique network first, then the fewest defect rings, homo bonds and pairs of defect
+        rings of one size sharing an edge (a core whose ring sizes alternate was the lower in energy in every MACE
+        comparison with its paired form), then the registry.
         """
         configuration = self.get_stack_configuration(rotated)
         if configuration is None:
             return []
-        reconstruction = RingNetworkReconstruction(
-            material=GrainBoundaryLinearBuilder(build_parameters=self.build_parameters).get_material(configuration),
-            supercell_matrices=[unwrap(component.xy_supercell_matrix) for component in configuration.stack_components],
-            band_width=self.build_parameters.band_width,
-            settling_tolerance=self.build_parameters.settling_tolerance,
-        )
-        ranked = []
-        for slide in self.get_candidate_slides(reconstruction):
-            network = reconstruction.get_network(slide)
-            arrangements = reconstruction.get_line_arrangements(network, slide)
-            core_ring_sizes, homo_bonds = get_line_core(arrangements), self.get_homo_bonds(arrangements, rotated)
-            if core_ring_sizes is not None and homo_bonds is not None:
-                defect_rings = sum(len(core) for line in arrangements for core in line.cores)
-                homo_bond_count = sum(sum(line.homo_bonds.values()) for line in arrangements)
-                update = {"xy_shift": [float(slide), 0.0], "core_ring_sizes": core_ring_sizes, "homo_bonds": homo_bonds}
-                ranked.append(((network.number_of_ties > 0, defect_rings, homo_bond_count, slide), update))
-        return [configuration.model_copy(update=update) for _, update in sorted(ranked, key=lambda item: item[0])]
+        network_analyzer = self.get_network_analyzer(configuration)
+        ranked: List[Tuple[tuple, GrainBoundaryLinearConfiguration]] = []
+        for slide in self.get_candidate_slides(network_analyzer):
+            network = network_analyzer.get_network(slide)
+            arrangements = network_analyzer.get_line_arrangements(network, slide)
+            core_ring_sizes, homo_bonds = get_line_core(arrangements), self.get_homo_bonds(arrangements)
+            if core_ring_sizes is None or homo_bonds is None:
+                continue
+            counts = get_arrangement_counts(arrangements)
+            registry = self.get_registry(network_analyzer, slide)
+            rank = (network.number_of_ties > 0, *counts, registry)
+            update = {"xy_shift": [float(slide), 0.0], "core_ring_sizes": core_ring_sizes, "homo_bonds": homo_bonds}
+            ranked.append((rank, configuration.model_copy(update=update)))
+        return ranked
 
     @cached_property
     def configurations(self) -> List[GrainBoundaryLinearConfiguration]:
-        """The configurations with the second grain as given, then rotated."""
+        """The configurations of both images of the second grain, best ranked first."""
         if self.get_stack_configuration(False) is None and self.get_stack_configuration(True) is None:
             raise ValueError(f"The matching vectors {self.matching_vectors.tolist()} are equivalent to no rotation")
-        return self.get_configurations(False) + self.get_configurations(True)
+        ranked = self.get_ranked_configurations(False) + self.get_ranked_configurations(True)
+        return [configuration for _, configuration in sorted(ranked, key=lambda item: item[0])]

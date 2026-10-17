@@ -1,4 +1,4 @@
-"""Step 5, settling: the rebuilt sites pulled to one bond length by least squares, every other site fixed."""
+"""Settling of a rebuilt ring network: its movable sites pulled to one bond length by least squares, the rest fixed."""
 from functools import cached_property
 from typing import Tuple
 
@@ -7,10 +7,9 @@ from mat3ra.code.entity import InMemoryEntityPydantic
 from scipy.optimize import least_squares
 from scipy.sparse import coo_matrix
 
+from ......analyze.ring_network import BONDS_PER_SITE
 from ......analyze.rings import Bonds
 
-# a site of a ring network is a triangle of ring centres, bonded across its three edges
-BONDS_PER_SITE = 3
 # second-neighbor distances (the angles) weigh a quarter of a bond, so bonds keep their length first; a bond enters
 # twice (once per direction), hence sqrt(2 * 0.25) on the residual
 SECOND_NEIGHBOR_WEIGHT = np.sqrt(0.5)
@@ -52,6 +51,7 @@ class NetworkSettling(InMemoryEntityPydantic):
         return bond_starts[terms], bond_ends[terms], offsets[terms], targets[terms], weights[terms]
 
     def get_distance_residuals(self, coordinates: np.ndarray) -> np.ndarray:
+        """Weighted deviation of each distance term from its target, the movable sites at the given coordinates."""
         bond_starts, bond_ends, offsets, targets, weights = self.distance_terms
         positions = self.positions.copy()
         positions[self.variables] = coordinates.reshape(-1, 2)
@@ -72,6 +72,7 @@ class NetworkSettling(InMemoryEntityPydantic):
 
     @cached_property
     def settled_positions(self) -> np.ndarray:
+        """All positions, the movable ones at the least-squares minimum of the distance residuals."""
         result = least_squares(
             self.get_distance_residuals,
             self.positions[self.variables].ravel(),

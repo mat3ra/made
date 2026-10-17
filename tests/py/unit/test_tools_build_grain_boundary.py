@@ -3,6 +3,7 @@ from collections import Counter
 
 import numpy as np
 import pytest
+from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.interface.grain_boundary import GrainBoundaryPlanarAnalyzer
 from mat3ra.made.tools.analyze.interface.grain_boundary_linear import GrainBoundaryLinearAnalyzer
@@ -26,7 +27,9 @@ from mat3ra.made.tools.build.defective_structures.two_dimensional.grain_boundary
     create_grain_boundary_planar,
 )
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
+from mat3ra.made.tools.convert import to_pymatgen
 from mat3ra.standata.materials import Materials
+from pymatgen.analysis.structure_matcher import StructureMatcher
 
 from .fixtures.bulk import BULK_GRAPHITE, BULK_Si_CONVENTIONAL
 from .fixtures.grain_boundary import (
@@ -169,13 +172,14 @@ def get_line_positions(grain_boundary: Material) -> list:
 @pytest.mark.parametrize(
     "material_config, boundary_vectors, number_of_periods_across, core, homo_bonds, elements, cores, line_homo_bonds",
     [
-        (GRAPHENE_2D, ((2, 1), (1, 2)), None, "5|7", "alternating", {"C": 112}, [[[5, 7]]] * 2, [{}, {}]),
-        (GRAPHENE_2D, ((4, 2), (2, 4)), None, "5|7", "alternating", {"C": 224}, [[[5, 7], [5, 7]]] * 2, [{}, {}]),
-        (GRAPHENE_2D, ((3, 2), (2, 3)), None, "5|7", "alternating", {"C": 152}, [[[5, 7]]] * 2, [{}, {}]),
-        (GRAPHENE_2D, ((5, 4), (4, 5)), None, "5|7", "alternating", {"C": 488}, [[[5, 7]]] * 2, [{}, {}]),
-        (GRAPHENE_2D, ((3, 1), (1, 3)), None, "5|7", "alternating", {"C": 104}, [[[5, 5, 7, 7]]] * 2, [{}, {}]),
-        (GRAPHENE_2D, ((8, 7), (7, 8)), None, "5|7", "alternating", {"C": 1352}, [[[5, 7]]] * 2, [{}, {}]),
-        (GRAPHENE_2D, ((2, 1), (1, 2)), None, "4|8", "alternating", {"C": 112}, [[[4, 8]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((2, 1), (1, 2)), None, "5|7", "none", {"C": 112}, [[[5, 7]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((4, 2), (2, 4)), None, "5|7", "none", {"C": 224}, [[[5, 7], [5, 7]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((3, 2), (2, 3)), None, "5|7", "none", {"C": 152}, [[[5, 7]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((5, 4), (4, 5)), None, "5|7", "none", {"C": 488}, [[[5, 7]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((3, 1), (1, 3)), None, "5|7", "none", {"C": 104}, [[[5, 7, 5, 7]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((1, 3), (3, 1)), None, "5|7", "none", {"C": 104}, [[[5, 7, 5, 7]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((8, 7), (7, 8)), None, "5|7", "none", {"C": 1352}, [[[5, 7]]] * 2, [{}, {}]),
+        (GRAPHENE_2D, ((2, 1), (1, 2)), None, "4|8", "none", {"C": 112}, [[[4, 8]]] * 2, [{}, {}]),
         (
             BORON_NITRIDE_2D,
             ((2, 1), (1, 2)),
@@ -213,7 +217,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "N",
             {"B": 52, "N": 52},
-            [[[5, 5, 7, 7]]] * 2,
+            [[[5, 7, 5, 7]]] * 2,
             [{"N-N": 4}, {"B-B": 4}],
         ),
         (
@@ -223,7 +227,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "alternating",
             {"B": 52, "N": 52},
-            [[[5, 5, 7, 7]]] * 2,
+            [[[5, 7, 5, 7]]] * 2,
             [{"B-B": 1, "N-N": 1}] * 2,
         ),
         (
@@ -233,7 +237,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "alternating",
             {"B": 104, "N": 104},
-            [[[5, 5, 7, 7]]] * 2,
+            [[[5, 7, 5, 7]]] * 2,
             [{"B-B": 1, "N-N": 1}] * 2,
         ),
         (
@@ -246,6 +250,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             [[[5, 7]]] * 2,
             [{"B-B": 4, "N-N": 4}] * 2,
         ),
+        (BORON_NITRIDE_2D, ((2, 1), (1, 2)), None, "4|8", "none", {"B": 56, "N": 56}, [[[4, 8]]] * 2, [{}, {}]),
         (BORON_NITRIDE_2D, ((1, 1), (-1, -1)), None, "4|8", "none", {"B": 20, "N": 20}, [[[4, 8]]] * 2, [{}, {}]),
         (
             BORON_NITRIDE_2D,
@@ -254,7 +259,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "B",
             {"B": 336, "N": 336},
-            [[[5, 5, 7, 7], [5, 7]]] * 2,
+            [[[5, 7], [5, 7, 5, 7]]] * 2,
             [{"B-B": 9}, {"N-N": 9}],
         ),
         (
@@ -264,8 +269,8 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "B",
             {"B": 336, "N": 336},
-            [[[5, 5, 7, 7], [5, 7]]] * 2,
-            [{"B-B": 9}, {"N-N": 9}],
+            [[[5, 7], [5, 7, 5, 7]]] * 2,
+            [{"B-B": 5}, {"N-N": 5}],
         ),
         (
             BORON_NITRIDE_2D,
@@ -274,10 +279,10 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "B",
             {"B": 388, "N": 388},
-            [[[5, 5, 5, 5, 5, 7, 7, 7, 7, 7]]] * 2,
+            [[[5, 7, 5, 7, 5, 7, 5, 7, 5, 7]]] * 2,
             [{"B-B": 10}, {"N-N": 10}],
         ),
-        (BORON_NITRIDE_2D, ((0, 2), (2, 0)), None, "6", "B", {"B": 24, "N": 24}, [[], []], [{"B-B": 4}, {"N-N": 4}]),
+        (BORON_NITRIDE_2D, ((0, 2), (2, 0)), None, "6", "B", {"B": 24, "N": 24}, [[]] * 2, [{"B-B": 4}, {"N-N": 4}]),
         (
             MOLYBDENUM_DISULFIDE_2D,
             ((2, 1), (1, 2)),
@@ -315,7 +320,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "Mo",
             {"Mo": 52, "S": 104},
-            [[[5, 5, 7, 7]]] * 2,
+            [[[5, 7, 5, 7]]] * 2,
             [{"Mo-Mo": 4}, {"S-S": 4}],
         ),
         (
@@ -325,7 +330,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "alternating",
             {"Mo": 52, "S": 104},
-            [[[5, 5, 7, 7]]] * 2,
+            [[[5, 7, 5, 7]]] * 2,
             [{"Mo-Mo": 1, "S-S": 1}] * 2,
         ),
         (
@@ -365,7 +370,7 @@ def get_line_positions(grain_boundary: Material) -> list:
             "5|7",
             "S",
             {"Mo": 364, "S": 728},
-            [[[5, 5, 7, 7]]] * 2,
+            [[[5, 7, 5, 7]]] * 2,
             [{"S-S": 16}, {"Mo-Mo": 16}],
         ),
     ],
@@ -388,12 +393,13 @@ def test_create_grain_boundary_linear_core(
     bond_lengths = np.linalg.norm(rings_analyzer.bonds[2], axis=1) * np.sqrt(3) / material.lattice.a
     configuration = GrainBoundaryLinearConfiguration(**grain_boundary.metadata.build[-1].configuration)
 
-    assert build_time < CORE_BUILD_TIME_LIMIT
     assert dict(Counter(grain_boundary.basis.elements.values)) == elements
     assert [arrangement.cores for arrangement in arrangements] == cores
     assert [arrangement.homo_bonds for arrangement in arrangements] == line_homo_bonds
+    # settled bonds lie within 10 % of the input's: 0.92 to 1.08 of it over the rows
     assert np.all(np.abs(bond_lengths - 1) < 0.1)
     assert_two_entities_deep_almost_equal(GrainBoundaryLinearBuilder().get_material(configuration), grain_boundary)
+    assert build_time < CORE_BUILD_TIME_LIMIT
 
 
 @pytest.mark.parametrize(
@@ -419,35 +425,74 @@ def test_create_grain_boundary_linear_core_structure(
     material_config, boundary_vectors, target_angle, expected_material_config
 ):
     grain_boundary = create_grain_boundary_linear(
-        Material.create(material_config), target_angle=target_angle, boundary_vectors=boundary_vectors, core="5|7"
+        Material.create(material_config),
+        target_angle=target_angle,
+        boundary_vectors=boundary_vectors,
+        core="5|7",
+        homo_bonds="alternating",
     )
     assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
 
 
+# the same h-BN with its basis listed the other way round, or shifted in the plane
 @pytest.mark.parametrize(
-    "material_config, boundary_vectors, target_angle, core, homo_bonds, number_of_periods_across, message",
+    "boundary_vectors, atom_order, shift",
     [
-        (BULK_Si_CONVENTIONAL, ((1, 0), (0, 1)), 0.0, "5|7", "alternating", None, "honeycomb"),
-        (BULK_GRAPHITE, ((2, 1), (1, 2)), 0.0, "5|7", "alternating", None, "honeycomb"),
-        (GRAPHENE_2D, ((2, 1), (1, 2)), 0.0, "3|5", "alternating", None, "disclination"),
-        (BORON_NITRIDE_2D, ((2, 1), (1, 2)), 0.0, "5|7", "C", None, "element of the material: B, N"),
-        (GRAPHENE_2D, ((1, 1), (-1, -1)), 0.0, "5|7", "alternating", None, "equivalent to no rotation"),
-        (BORON_NITRIDE_2D, ((3, 1), (2, 1)), 0.0, "5|7", "N", None, "differ in length"),
-        (BORON_NITRIDE_2D, ((0, 1), (1, 0)), 0.0, "5|7", "N", None, "too short along the boundary"),
-        (BORON_NITRIDE_2D, ((2, 1), (1, 2)), 0.0, "5|7", "none", None, r"achievable: \[\('4\|8', 'N'\)"),
-        (GRAPHENE_2D, ((2, 1), (1, 2)), 0.0, "5|7", "alternating", 1, "number_of_periods_across must be at least 2"),
-        (GRAPHENE_2D, None, 0.0, "5|7", "alternating", None, "rotated by 0.0 degrees"),
+        (((3, 1), (1, 3)), [1, 0], [0.0, 0.0]),
+        (((3, 1), (1, 3)), [0, 1], [0.25, 0.6]),
+        (((5, 4), (4, 5)), [1, 0], [0.0, 0.0]),
     ],
 )
-def test_create_grain_boundary_linear_invalid(
-    material_config, boundary_vectors, target_angle, core, homo_bonds, number_of_periods_across, message
-):
+def test_create_grain_boundary_linear_core_basis_writing(boundary_vectors, atom_order, shift):
+    basis = BORON_NITRIDE_2D["basis"]
+    coordinates = [np.array(basis["coordinates"][index]["value"]) + [*shift, 0.0] for index in atom_order]
+    material = Material.create(
+        {
+            **BORON_NITRIDE_2D,
+            "basis": {
+                **basis,
+                "elements": [basis["elements"][index] for index in atom_order],
+                "coordinates": [{"id": index, "value": value.tolist()} for index, value in enumerate(coordinates)],
+            },
+        }
+    )
+    arguments = {"boundary_vectors": boundary_vectors, "core": "5|7", "homo_bonds": "alternating"}
+    grain_boundary = create_grain_boundary_linear(material, **arguments)
+    expected = create_grain_boundary_linear(Material.create(BORON_NITRIDE_2D), **arguments)
+    # at 0.2 the paired 5-5-7-7 does not match 5-7-5-7; the two writings put the bands 0.2 angstrom apart in the
+    # lattice, so the settled sites differ by up to 0.11 angstrom
+    matcher = StructureMatcher(ltol=0.2, stol=0.2, angle_tol=5, primitive_cell=False, scale=False)
+    assert matcher.fit(to_pymatgen(grain_boundary), to_pymatgen(expected))
+
+
+@pytest.mark.parametrize(
+    "material_config, arguments, message",
+    [
+        (BULK_Si_CONVENTIONAL, {"boundary_vectors": ((1, 0), (0, 1)), "core": "5|7"}, "honeycomb"),
+        (BULK_GRAPHITE, {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7"}, "honeycomb"),
+        (GRAPHENE_2D, {"boundary_vectors": ((2, 1), (1, 2)), "core": "3|5"}, "disclination"),
+        (GRAPHENE_2D, {"boundary_vectors": ((2, 1), (1, 2)), "core": "5-7"}, 'joined by "|"'),
+        (BORON_NITRIDE_2D, {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7", "homo_bonds": "C"}, "B, N"),
+        (GRAPHENE_2D, {"boundary_vectors": ((1, 1), (-1, -1)), "core": "5|7"}, "equivalent to no rotation"),
+        (BORON_NITRIDE_2D, {"boundary_vectors": ((3, 1), (2, 1)), "core": "5|7"}, "differ in length"),
+        (BORON_NITRIDE_2D, {"boundary_vectors": ((0, 1), (1, 0)), "core": "5|7"}, "too short along the boundary"),
+        (
+            BORON_NITRIDE_2D,
+            {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7", "homo_bonds": "none"},
+            r"\('4\|8', 'none'\)",
+        ),
+        (
+            GRAPHENE_2D,
+            {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7", "number_of_periods_across": 1},
+            "at least 2",
+        ),
+        (GRAPHENE_2D, {"core": "5|7"}, "rotated by 0.0 degrees"),
+        (GRAPHENE_2D, {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7", "direction": AxisEnum.y}, "defaults"),
+        (GRAPHENE_2D, {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7", "gap": 10.0}, "defaults"),
+        (GRAPHENE_2D, {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7", "miller_indices": (1, 1, 1)}, "defaults"),
+        (GRAPHENE_2D, {"boundary_vectors": ((2, 1), (1, 2)), "core": "5|7", "number_of_layers": 3}, "defaults"),
+    ],
+)
+def test_create_grain_boundary_linear_invalid(material_config, arguments, message):
     with pytest.raises(ValueError, match=message):
-        create_grain_boundary_linear(
-            Material.create(material_config),
-            target_angle=target_angle,
-            boundary_vectors=boundary_vectors,
-            core=core,
-            homo_bonds=homo_bonds,
-            number_of_periods_across=number_of_periods_across,
-        )
+        create_grain_boundary_linear(Material.create(material_config), **arguments)

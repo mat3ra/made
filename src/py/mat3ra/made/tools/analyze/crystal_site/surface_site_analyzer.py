@@ -8,16 +8,10 @@ from scipy.spatial import Voronoi, cKDTree
 from ...build.processed_structures.two_dimensional.passivation.enums import SurfaceTypesEnum
 from .. import BaseMaterialAnalyzer
 from ..other import get_atom_indices_by_layer
-from ..utils import decorator_perform_operation_in_cartesian_coordinates
+from ..utils import decorator_perform_operation_in_cartesian_coordinates, get_in_plane_periodic_images
 from .enums import SurfaceSiteTypesEnum
 
 FRACTIONAL_DECIMALS = 4
-
-
-def _in_plane_periodic_images(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
-    """The 3x3 in-plane periodic images of `points_xy`, home cell included."""
-    shifts = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
-    return np.vstack([points_xy + i * vectors_2d[0] + j * vectors_2d[1] for i, j in shifts])
 
 
 class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
@@ -96,7 +90,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
 
     @cached_property
     def _surface_voronoi(self) -> Voronoi:
-        return Voronoi(_in_plane_periodic_images(self._layers_xy[0], self._in_plane_vectors))
+        return Voronoi(get_in_plane_periodic_images(self._layers_xy[0], self._in_plane_vectors))
 
     def _bridges(self) -> np.ndarray:
         """Midpoints of natural-neighbour pairs: atoms whose Voronoi cells share a ridge of real
@@ -134,7 +128,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
 
     def _distance_to_points(self, coordinate_xy: np.ndarray, points_xy: np.ndarray) -> float:
         """Distance to the nearest periodic image of any of the points."""
-        return float(cKDTree(_in_plane_periodic_images(points_xy, self._in_plane_vectors)).query(coordinate_xy)[0])
+        return float(cKDTree(get_in_plane_periodic_images(points_xy, self._in_plane_vectors)).query(coordinate_xy)[0])
 
     def get_site_name(self, coordinate: List[float], use_cartesian_coordinates: bool = False) -> Optional[str]:
         """The site a point sits on, within `site_match_tolerance`; None when it is on no site."""
@@ -155,7 +149,7 @@ class SurfaceSiteAnalyzer(BaseMaterialAnalyzer):
         if name not in self._sites_xy:
             raise ValueError(f"No '{name}' site on this surface; present: {sorted(self._sites_xy)}")
         point = self._to_cartesian_xy(coordinate, use_cartesian_coordinates)
-        images = _in_plane_periodic_images(np.array(self._sites_xy[name]), self._in_plane_vectors)
+        images = get_in_plane_periodic_images(np.array(self._sites_xy[name]), self._in_plane_vectors)
         nearest = images[np.argmin(np.linalg.norm(images - point, axis=1))]
         displacement = [float(nearest[0] - point[0]), float(nearest[1] - point[1]), 0.0]
         if use_cartesian_coordinates:
