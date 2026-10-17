@@ -120,17 +120,24 @@ EXPECTED_PROPERTIES_GRAPHENE_7_34: Final = SimpleNamespace(
 
 
 @pytest.mark.parametrize(
-    "material_config, analyzer_params, expected",
+    "material_config, use_conventional_cell, analyzer_params, expected",
     [
         (
             GRAPHENE,
+            True,
             {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "return_first_match": True},
             EXPECTED_PROPERTIES_GRAPHENE_13,
         ),
-        (GRAPHENE, {"target_angle": 7.34, "max_supercell_matrix_int": 8}, EXPECTED_PROPERTIES_GRAPHENE_7_34),
+        (GRAPHENE, True, {"target_angle": 7.34, "max_supercell_matrix_int": 8}, EXPECTED_PROPERTIES_GRAPHENE_7_34),
+        (
+            BULK_GRAPHENE,
+            False,
+            {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "limit_max_int": 6},
+            EXPECTED_PROPERTIES_GRAPHENE_13,
+        ),
     ],
 )
-def test_commensurate_analyzer_functionality(material_config, analyzer_params, expected):
+def test_commensurate_analyzer_functionality(material_config, use_conventional_cell, analyzer_params, expected):
     slab_config = SlabConfiguration.from_parameters(
         material_config,
         miller_indices=(0, 0, 1),
@@ -138,6 +145,7 @@ def test_commensurate_analyzer_functionality(material_config, analyzer_params, e
         vacuum=0.0,
         termination_top_formula=None,
         termination_bottom_formula=None,
+        use_conventional_cell=use_conventional_cell,
     )
 
     analyzer = CommensurateLatticeInterfaceAnalyzer(substrate_slab_configuration=slab_config, **analyzer_params)
