@@ -15,7 +15,10 @@ from .utils import IN_PLANE_IMAGE_SHIFTS, get_in_plane_periodic_images
 
 # the ring of a perfect honeycomb; every other ring is a defect ring
 HEXAGON_SIZE = 6
+# the cell's own images sit in the middle of the in-plane images
 CENTRAL_IMAGE_INDEX = len(IN_PLANE_IMAGE_SHIFTS) // 2
+# bonds and pairs of rings sharing an edge are listed once in each direction
+DIRECTIONS_PER_BOND = 2
 Bonds = Tuple[np.ndarray, np.ndarray, np.ndarray]
 
 
@@ -69,10 +72,12 @@ class RingsAndBonds(InMemoryEntityPydantic):
     cell: np.ndarray
 
     def get_nearest_lines(self, x_values: np.ndarray, line_positions: List[float]) -> np.ndarray:
+        """The line nearest each x."""
         return np.argmin(np.abs(get_line_offsets(x_values, line_positions, self.cell[0])), axis=1)
 
     @cached_property
     def defect_pairs(self) -> np.ndarray:
+        """The pairs of defect rings sharing an edge."""
         is_defect = self.ring_sizes != HEXAGON_SIZE
         return self.ring_pairs[np.all(is_defect[self.ring_pairs], axis=1)]
 
@@ -106,28 +111,30 @@ class RingsAndBonds(InMemoryEntityPydantic):
         """Bonds between sites of one species among the given ones, by species; none in a material of one species."""
         species = self.bond_species[bonds]
         is_homo = (species[:, 0] == species[:, 1]) & (len(set(self.bond_species.ravel())) > 1)
-        return {f"{element}-{element}": count // 2 for element, count in Counter(species[is_homo, 0].tolist()).items()}
+        counts = Counter(species[is_homo, 0].tolist())
+        return {f"{element}-{element}": count // DIRECTIONS_PER_BOND for element, count in counts.items()}
+
+    def get_same_size_pairs(self, is_at_line: np.ndarray) -> int:
+        """Pairs of defect rings of one size sharing an edge, among the rings at a line."""
+        first, second = self.defect_pairs.T
+        is_same_size = (self.ring_sizes[first] == self.ring_sizes[second]) & is_at_line[first]
+        return int(np.sum(is_same_size)) // DIRECTIONS_PER_BOND
+
+    def get_arrangement(self, is_ring_at_line: np.ndarray, is_bond_at_line: np.ndarray) -> RingsArrangement:
+        """The defect-ring clusters, same-size ring pairs and homo bonds of the rings and bonds at one line."""
+        rings = np.flatnonzero((self.ring_sizes != HEXAGON_SIZE) & is_ring_at_line)
+        cores = [self.get_core(rings[self.clusters[rings] == cluster]) for cluster in np.unique(self.clusters[rings])]
+        return RingsArrangement(
+            cores=sorted(cores),
+            same_size_pairs=self.get_same_size_pairs(is_ring_at_line),
+            homo_bonds=self.get_homo_bonds(np.flatnonzero(is_bond_at_line)),
+        )
 
     def get_line_arrangements(self, line_positions: List[float]) -> List[RingsArrangement]:
         """Arrangement nearest each line x = const."""
         ring_lines = self.get_nearest_lines(self.ring_centers[:, 0], line_positions)
         bond_lines = self.get_nearest_lines(self.bond_middle_x, line_positions)
-        pair_sizes = self.ring_sizes[self.defect_pairs]
-        same_size_pair_lines = ring_lines[self.defect_pairs[pair_sizes[:, 0] == pair_sizes[:, 1], 0]]
-        arrangements = []
-        for line in range(len(line_positions)):
-            rings = np.flatnonzero((self.ring_sizes != HEXAGON_SIZE) & (ring_lines == line))
-            cores = [
-                self.get_core(rings[self.clusters[rings] == cluster]) for cluster in np.unique(self.clusters[rings])
-            ]
-            arrangements.append(
-                RingsArrangement(
-                    cores=sorted(cores),
-                    same_size_pairs=int(np.sum(same_size_pair_lines == line)) // 2,
-                    homo_bonds=self.get_homo_bonds(np.flatnonzero(bond_lines == line)),
-                )
-            )
-        return arrangements
+        return [self.get_arrangement(ring_lines == line, bond_lines == line) for line in range(len(line_positions))]
 
 
 class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
@@ -144,10 +151,12 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
 
     @cached_property
     def lattice_vectors(self) -> np.ndarray:
+        """The in-plane lattice vectors of the material (rows)."""
         return np.array(self.material.lattice.vector_arrays)[:2, :2]
 
     @cached_property
     def atom_positions(self) -> np.ndarray:
+        """The in-plane position of each atom."""
         material = self.material.clone()
         material.to_crystal()
         return (np.array(material.basis.coordinates.values)[:, :2]) @ self.lattice_vectors
@@ -158,26 +167,31 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
         neighbors = cKDTree(images).query_ball_point(positions, cutoff)
         first = np.repeat(np.arange(len(positions)), [len(indices) for indices in neighbors])
         image_indices = np.concatenate(neighbors).astype(int)
+        # the images come in blocks of len(positions), one per cell: the position's own copy is in the central block
         keep = image_indices != CENTRAL_IMAGE_INDEX * len(positions) + first
         first, image_indices = first[keep], image_indices[keep]
         return first, image_indices % len(positions), images[image_indices] - positions[first]
 
     @cached_property
     def atom_site_indices(self) -> np.ndarray:
+        """The top-view site of each atom: atoms above one another share one."""
         first, second, _ = self.get_pairs(self.atom_positions, self.site_tolerance)
         graph = coo_matrix((np.ones(len(first)), (first, second)), shape=(len(self.atom_positions),) * 2)
         return connected_components(graph, directed=False)[1]
 
     @cached_property
     def site_first_atoms(self) -> np.ndarray:
+        """The first atom of each site."""
         return np.unique(self.atom_site_indices, return_index=True)[1]
 
     @cached_property
     def site_positions(self) -> np.ndarray:
+        """The in-plane position of each site."""
         return self.atom_positions[self.site_first_atoms]
 
     @cached_property
     def site_species(self) -> np.ndarray:
+        """The species of each site: that of its first atom."""
         return np.array(self.material.basis.elements.values)[self.site_first_atoms]
 
     @cached_property
@@ -225,10 +239,12 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
 
     @cached_property
     def ring_sizes(self) -> np.ndarray:
+        """The number of sites around each ring."""
         return np.array([len(ring) for ring in self.rings])
 
     @cached_property
     def ring_of_bond(self) -> np.ndarray:
+        """The ring each directed bond belongs to, walking around that ring."""
         ring_of_bond = np.empty(len(self.next_bonds), int)
         ring_of_bond[np.concatenate(self.rings)] = np.repeat(np.arange(len(self.rings)), self.ring_sizes)
         return ring_of_bond
@@ -244,6 +260,7 @@ class RingsMaterialAnalyzer(BaseMaterialAnalyzer):
 
     @cached_property
     def rings_and_bonds(self) -> RingsAndBonds:
+        """The rings and bonds of the network, as RingsAndBonds reads them by line."""
         first, second, vectors = self.bonds
         return RingsAndBonds(
             ring_centers=self.ring_centers,

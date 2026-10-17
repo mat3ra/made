@@ -1,4 +1,4 @@
-"""Settling of a rebuilt ring network: its movable sites pulled to one bond length by least squares, the rest fixed."""
+"""Settling, the last step of the reconstruction: the rebuilt sites pulled to one bond length, the rest fixed."""
 from functools import cached_property
 from typing import Tuple
 
@@ -32,6 +32,7 @@ class NetworkSettling(InMemoryEntityPydantic):
 
     @cached_property
     def variables(self) -> np.ndarray:
+        """The movable sites, whose positions are the variables of the fit."""
         return np.where(self.movable)[0]
 
     @cached_property

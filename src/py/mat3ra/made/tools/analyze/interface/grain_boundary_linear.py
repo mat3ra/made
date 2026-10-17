@@ -22,6 +22,9 @@ from ...build.defective_structures.one_dimensional.grain_boundary_linear.configu
     GrainBoundaryLinearConfiguration,
 )
 from ...build.defective_structures.one_dimensional.grain_boundary_linear.enums import HomoBondsEnum
+from ...build.pristine_structures.two_dimensional.slab_strained_supercell.configuration import (
+    SlabStrainedSupercellConfiguration,
+)
 from ...utils import unwrap
 from ..ring_network import RingNetworkAnalyzer
 from ..rings import HEXAGON_SIZE, RingsArrangement, RingsMaterialAnalyzer
@@ -32,6 +35,8 @@ from .simple import InterfaceAnalyzer
 KEPT_RING_ROW_WIDTH = 1.0  # lattice constants
 # the turn mapping a honeycomb's lattice onto itself; a binary's elements map onto themselves every second one
 LATTICE_SYMMETRY_ANGLE = 60.0  # degrees
+HALF_TURN = 180.0  # degrees
+FULL_TURN = 360.0  # degrees
 
 
 class GrainBoundaryLinearMatchHolder(InMemoryEntityPydantic):
@@ -64,6 +69,11 @@ def get_arrangement_counts(arrangements: List[RingsArrangement]) -> Tuple[int, i
     )
 
 
+def get_squared_lengths(vectors: np.ndarray) -> np.ndarray:
+    """Squared length, in squared lattice constants, of each vector (n, m) of the 60 degree basis: n^2 + nm + m^2."""
+    return vectors[..., 0] ** 2 + vectors[..., 0] * vectors[..., 1] + vectors[..., 1] ** 2
+
+
 def get_across_vector(vector: np.ndarray) -> np.ndarray:
     """The shortest lattice vector perpendicular to (n, m), a quarter turn clockwise from it, in the 60 degree basis."""
     across = np.array([vector[0] + 2 * vector[1], -2 * vector[0] - vector[1]])
@@ -89,6 +99,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     @model_validator(mode="after")
     def _validate_honeycomb(self):
+        """Refuses a monolayer that is not a honeycomb: two sites on a lattice of 60 or 120 degrees."""
         first, second = self.sites.lattice_vectors
         is_hexagonal = np.isclose(first @ first, second @ second) and np.isclose(abs(first @ second), first @ first / 2)
         if not is_hexagonal or len(self.sites.site_positions) != 2:
@@ -97,6 +108,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     @cached_property
     def sites(self) -> RingsMaterialAnalyzer:
+        """The top-view sites of the monolayer."""
         return RingsMaterialAnalyzer(material=self.substrate_material)
 
     @cached_property
@@ -109,7 +121,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         """Counterclockwise angle in degrees, in [0, 360), from a vector to each of the others (60 degree basis)."""
         basis = self.chiral_basis @ self.sites.lattice_vectors
         start, ends = vector @ basis, others @ basis
-        return np.degrees(np.arctan2(start[0] * ends[:, 1] - start[1] * ends[:, 0], ends @ start)) % 360
+        return np.degrees(np.arctan2(start[0] * ends[:, 1] - start[1] * ends[:, 0], ends @ start)) % FULL_TURN
 
     @cached_property
     def matching_vectors(self) -> np.ndarray:
@@ -119,19 +131,21 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         values = np.arange(-self.maximum_vector_component, self.maximum_vector_component + 1)
         vectors = np.stack(np.meshgrid(values, values, indexing="ij"), axis=-1).reshape(-1, 2)
         vectors = vectors[np.any(vectors != 0, axis=1)]
-        lengths = vectors[:, 0] ** 2 + vectors[:, 0] * vectors[:, 1] + vectors[:, 1] ** 2
+        lengths = get_squared_lengths(vectors)
         order = np.lexsort((self.get_angles(np.array([1, 0]), vectors), lengths))
         for vector, length in zip(vectors[order], lengths[order]):
             candidates = vectors[(lengths == length) & np.any(vectors != vector, axis=1)]
-            deviations = np.abs((self.get_angles(vector, candidates) - self.target_angle + 180) % 360 - 180)
+            turns = self.get_angles(vector, candidates) - self.target_angle
+            deviations = np.abs((turns + HALF_TURN) % FULL_TURN - HALF_TURN)
             if deviations.min() < self.angle_tolerance:
                 return np.array([vector, candidates[np.argmin(deviations)]])
         raise ValueError(f"No two different lattice vectors of equal length are rotated by {self.target_angle} degrees")
 
     @cached_property
     def match_holder(self) -> GrainBoundaryLinearMatchHolder:
-        (first_n, first_m), (second_n, second_m) = self.matching_vectors
-        if first_n**2 + first_n * first_m + first_m**2 != second_n**2 + second_n * second_m + second_m**2:
+        """The matching vectors in the lattice vectors, the angle between them and their length (the period)."""
+        first_length, second_length = get_squared_lengths(self.matching_vectors)
+        if first_length != second_length:
             raise ValueError(f"The matching vectors {self.matching_vectors.tolist()} differ in length")
         vectors = self.matching_vectors @ self.chiral_basis
         return GrainBoundaryLinearMatchHolder(
@@ -144,6 +158,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     def periods_across(self) -> int:
         """`number_of_periods_across`; by default the fewest for the narrower grain to hold both bands and a row."""
         lattice_constant = np.linalg.norm(self.sites.lattice_vectors[0])
+        # a band at each of its two lines and a row between them
         width = (2 * self.build_parameters.band_width + KEPT_RING_ROW_WIDTH) * lattice_constant
         across = np.array([get_across_vector(vector) for vector in self.matching_vectors]) @ self.chiral_basis
         minimum = ceil(width / np.linalg.norm(across @ self.sites.lattice_vectors, axis=1).min())
@@ -165,23 +180,22 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         monolayer onto itself maps one grain onto the other.
         """
         first, second = self.matching_vectors
-        second = -second if rotated else second
-        angle = self.match_holder.actual_angle + 180 * rotated
+        angle = self.match_holder.actual_angle + HALF_TURN * rotated
         if np.isclose(wrap_to_cell(angle, self.symmetry_angle), 0.0):
             return None
-        actual_angle = float(wrap_to_cell(angle, LATTICE_SYMMETRY_ANGLE))
-        components = []
-        for vector in (first, second):
-            matrix = (np.array([self.periods_across * get_across_vector(vector), vector]) @ self.chiral_basis).tolist()
-            components.append(
-                self.get_component_strained_configuration(
-                    configuration=self.substrate_slab_configuration,
-                    strain_matrix=self._no_strain_matrix,
-                    xy_supercell_matrix=SupercellMatrix2DSchema(root=matrix),
-                )
-            )
         return GrainBoundaryLinearConfiguration(
-            stack_components=components, gaps=ArrayWithIds.from_values([]), actual_angle=actual_angle
+            stack_components=[self.get_grain(first), self.get_grain(-second if rotated else second)],
+            gaps=ArrayWithIds.from_values([]),
+            actual_angle=float(wrap_to_cell(angle, LATTICE_SYMMETRY_ANGLE)),
+        )
+
+    def get_grain(self, vector: np.ndarray) -> SlabStrainedSupercellConfiguration:
+        """One grain: the rectangular supercell [across, vector] of the monolayer, `periods_across` times across."""
+        matrix = (np.array([self.periods_across * get_across_vector(vector), vector]) @ self.chiral_basis).tolist()
+        return self.get_component_strained_configuration(
+            configuration=self.substrate_slab_configuration,
+            strain_matrix=self._no_strain_matrix,
+            xy_supercell_matrix=SupercellMatrix2DSchema(root=matrix),
         )
 
     @cached_property
@@ -190,7 +204,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         Whether the second grain is rotated by 180 degrees, for each orientation of it ranked: as given and rotated; the
         given one only for a one-species honeycomb, which that turn maps onto itself.
         """
-        return (False, True) if 180 % self.symmetry_angle else (False,)
+        return (False, True) if HALF_TURN % self.symmetry_angle else (False,)
 
     @cached_property
     def stack(self) -> RingNetworkAnalyzer:
@@ -212,15 +226,16 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
     def get_candidate_slides(self, network_analyzer: RingNetworkAnalyzer) -> np.ndarray:
         """
         Slides at which a hexagon centre of the second grain lies level with one of the first (four centres can then lie
-        on one circle), and the midpoints between them: such offsets repeat every a^2 / (2 P), lattice dot products
-        being multiples of a^2 / 2. The network can change only where centres are level, so one slide per interval
-        between them stands for it.
+        on one circle), and the midpoints between them. The network can change only where centres are level, so one
+        slide per interval between them stands for it.
         """
         centers, grains = network_analyzer.hexagon_centers
         period = self.match_holder.period
-        step = np.linalg.norm(self.sites.lattice_vectors[0]) ** 2 / (4 * period)
-        offset = (centers[grains == 0][0, 1] - centers[grains == 1][0, 1]) % (2 * step)
-        return wrap_to_cell(offset + step * np.arange(round(period / step)), period)
+        # centres come level every a^2 / (2 P) of slide, the dot products of lattice vectors being multiples of a^2 / 2
+        level_spacing = np.linalg.norm(self.sites.lattice_vectors[0]) ** 2 / (2 * period)
+        offset = (centers[grains == 0][0, 1] - centers[grains == 1][0, 1]) % level_spacing
+        half_spacing = level_spacing / 2
+        return wrap_to_cell(offset + half_spacing * np.arange(round(period / half_spacing)), period)
 
     def get_registry(self, network_analyzer: RingNetworkAnalyzer, slide: float) -> float:
         """
@@ -261,26 +276,31 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         if configuration is None:
             return []
         network_analyzer = self.get_network_analyzer(configuration)
-        ranked: List[Tuple[tuple, GrainBoundaryLinearConfiguration]] = []
-        for slide in self.get_candidate_slides(network_analyzer):
-            network = network_analyzer.get_network(slide)
-            arrangements = network_analyzer.get_line_arrangements(network, slide)
-            core_ring_sizes, homo_bonds = get_line_core(arrangements), self.get_homo_bonds(arrangements)
-            if core_ring_sizes is None or homo_bonds is None:
-                continue
-            counts = get_arrangement_counts(arrangements)
-            registry = self.get_registry(network_analyzer, slide)
-            rank = (network.number_of_ties > 0, *counts, registry)
-            update = {"xy_shift": [float(slide), 0.0], "core_ring_sizes": core_ring_sizes, "homo_bonds": homo_bonds}
-            ranked.append((rank, configuration.model_copy(update=update)))
-        return ranked
+        slides = self.get_candidate_slides(network_analyzer)
+        ranked = [self.get_ranked_configuration(network_analyzer, configuration, slide) for slide in slides]
+        return [item for item in ranked if item is not None]
+
+    def get_ranked_configuration(
+        self, network_analyzer: RingNetworkAnalyzer, configuration: GrainBoundaryLinearConfiguration, slide: float
+    ) -> Optional[Tuple[tuple, GrainBoundaryLinearConfiguration]]:
+        """One slide's configuration and rank, if its network has one core at both lines and a homo-bond label."""
+        network = network_analyzer.get_network(slide)
+        arrangements = network_analyzer.get_line_arrangements(network, slide)
+        core_ring_sizes, homo_bonds = get_line_core(arrangements), self.get_homo_bonds(arrangements)
+        if core_ring_sizes is None or homo_bonds is None:
+            return None
+        rank = (network.has_ties, *get_arrangement_counts(arrangements), self.get_registry(network_analyzer, slide))
+        update = {"xy_shift": [float(slide), 0.0], "core_ring_sizes": core_ring_sizes, "homo_bonds": homo_bonds}
+        return rank, configuration.model_copy(update=update)
 
     @cached_property
     def ranked_as_given(self) -> List[Tuple[tuple, GrainBoundaryLinearConfiguration]]:
+        """The ranked configurations with the second grain as given."""
         return self.get_ranked_configurations(False)
 
     @cached_property
     def ranked_rotated(self) -> List[Tuple[tuple, GrainBoundaryLinearConfiguration]]:
+        """The ranked configurations with the second grain rotated by 180 degrees, if that orientation is ranked."""
         return self.get_ranked_configurations(True) if True in self.images else []
 
     def get_configurations(self, rotated: bool) -> List[GrainBoundaryLinearConfiguration]:
