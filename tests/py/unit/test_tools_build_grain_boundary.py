@@ -41,7 +41,8 @@ from .utils import OSPlatform, assert_two_entities_deep_almost_equal, get_platfo
 GRAPHENE_2D = Materials.get_by_name_and_categories("Graphene", "2D")
 BORON_NITRIDE_2D = Materials.get_by_name_and_categories("Boron_Nitride", "2D")
 MOLYBDENUM_DISULFIDE_2D = Materials.get_by_name_and_categories("Molybdenum_Disulfide", "2D")
-CORE_BUILD_TIME_LIMIT = 5.0  # seconds
+# rows build in up to 5.4 s on a loaded M1 and vary by machine; the regression this guards took 40-60 s
+CORE_BUILD_TIME_LIMIT = 20.0  # seconds
 
 
 @pytest.mark.parametrize(
