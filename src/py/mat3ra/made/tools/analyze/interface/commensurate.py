@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import cached_property
 from typing import List, Optional
 
@@ -82,12 +83,17 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         matrices = create_2d_supercell_matrices(max_supercell_matrix_element_int)
         matrix_ab = np.array([a, b])
         matrix_ab_inverse = np.linalg.inv(matrix_ab)
+        matrix_ab_in_units_of_a = matrix_ab / np.linalg.norm(a)
+        matrices_by_metric = defaultdict(list)
 
         solutions: List[CommensurateLatticeMatchHolder] = []
         match_id = 0
 
-        for index1, matrix1 in enumerate(matrices):
-            for index2, matrix2 in enumerate(matrices[0 : index1 + 1]):
+        for matrix1 in matrices:
+            supercell_vectors = matrix1 @ matrix_ab_in_units_of_a
+            metric = tuple(np.round(supercell_vectors @ supercell_vectors.T, 6).flatten())
+            matrices_by_metric[metric].append(matrix1)
+            for matrix2 in matrices_by_metric[metric]:
                 matrix2_inverse = np.linalg.inv(matrix2)
                 intermediate_product = matrix2_inverse @ matrix1
                 product = matrix_ab_inverse @ intermediate_product @ matrix_ab

@@ -11,6 +11,7 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import Sla
 from unit.fixtures.bulk import BULK_GRAPHENE, BULK_Ge_CONVENTIONAL, BULK_Si_CONVENTIONAL
 
 from .fixtures.monolayer import GRAPHENE
+from .fixtures.slab import SI_SLAB_001_2_ATOMS
 from .utils import assert_two_entities_deep_almost_equal
 
 SUBSTRATE_SI_001: Final = SimpleNamespace(
@@ -105,18 +106,33 @@ def test_interface_analyzer(substrate, film, expected):
 
 
 @pytest.mark.parametrize(
-    "material_config, analyzer_params, expected_matches_len, expected_angle_range",
+    "material_config, analyzer_params, expected_matches_len, expected_angle_range, expected_supercell_matrices",
     [
         (
             GRAPHENE,
             {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "return_first_match": True},
             1,
             (12.5, 13.5),
-        )
+            [[[-5, -2], [-3, -5]], [[-5, -3], [-2, -5]]],
+        ),
+        (
+            GRAPHENE,
+            {"target_angle": 7.34},
+            1,
+            (7.24, 7.44),
+            [[[-9, -4], [-5, -9]], [[-9, -5], [-4, -9]]],
+        ),
+        (
+            SI_SLAB_001_2_ATOMS,
+            {"target_angle": 60.0, "max_supercell_matrix_int": 2, "return_first_match": False},
+            66,
+            (59.9, 60.1),
+            [[[-2, 0], [-2, -2]], [[-2, -2], [0, -2]]],
+        ),
     ],
 )
 def test_commensurate_analyzer_functionality(
-    material_config, analyzer_params, expected_matches_len, expected_angle_range
+    material_config, analyzer_params, expected_matches_len, expected_angle_range, expected_supercell_matrices
 ):
     slab_config = SlabConfiguration.from_parameters(
         material_config,
@@ -133,6 +149,8 @@ def test_commensurate_analyzer_functionality(
 
     match_holders = analyzer.commensurate_lattice_match_holders
     assert len(match_holders) >= expected_matches_len
+    assert match_holders[0].xy_supercell_matrix_substrate == expected_supercell_matrices[0]
+    assert match_holders[0].xy_supercell_matrix_film == expected_supercell_matrices[1]
 
     for match in match_holders:
         assert expected_angle_range[0] <= match.angle <= expected_angle_range[1]
