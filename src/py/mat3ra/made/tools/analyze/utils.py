@@ -8,6 +8,9 @@ from mat3ra.made.material import Material
 if TYPE_CHECKING:
     from .material import MaterialWithCrystalSites
 
+# the cell and its eight neighbors in the plane, ordered so that the cell itself is in the middle
+IN_PLANE_IMAGE_SHIFTS = [(i, j) for i in (-1, 0, 1) for j in (-1, 0, 1)]
+
 
 def decorator_handle_periodic_boundary_conditions(cutoff):
     """
@@ -160,3 +163,14 @@ def minimum_image_distances(frac_coords: np.ndarray, lattice_vectors: np.ndarray
         distances[i, i + 1 :] = dists
         distances[i + 1 :, i] = dists
     return distances
+
+
+def get_in_plane_periodic_images(points_xy: np.ndarray, vectors_2d: np.ndarray) -> np.ndarray:
+    """The 3x3 in-plane periodic images of `points_xy`, home cell included, a block per IN_PLANE_IMAGE_SHIFTS entry."""
+    return np.vstack([points_xy + i * vectors_2d[0] + j * vectors_2d[1] for i, j in IN_PLANE_IMAGE_SHIFTS])
+
+
+def wrap_to_cell(values: np.ndarray, periods) -> np.ndarray:
+    """Values modulo their periods, values within rounding of a period mapped to 0 (one owner per cell edge)."""
+    wrapped = values % periods
+    return np.where(np.isclose(wrapped, periods), 0.0, wrapped)

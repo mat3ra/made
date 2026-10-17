@@ -4,6 +4,7 @@ from .analyze.crystal_site.helpers import get_film_buckling, get_film_site_occup
 from .analyze.crystal_site.surface_site_analyzer import SurfaceSiteAnalyzer
 from .analyze.lattice import get_material_with_conventional_lattice, get_material_with_primitive_lattice
 from .analyze.other import get_atom_indices_by_layer
+from .analyze.rings import RingsMaterialAnalyzer
 
 # Defective Structures
 from .build.compound_pristine_structures.two_dimensional.heterostructure import create_heterostructure
@@ -99,6 +100,7 @@ __all__ = [
     "get_material_with_primitive_lattice",
     "get_material_with_conventional_lattice",
     "SurfaceSiteAnalyzer",
+    "RingsMaterialAnalyzer",
     # Slab and related Functions
     "create_slab",
     "create_slab_if_not",
