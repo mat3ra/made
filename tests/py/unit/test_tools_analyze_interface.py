@@ -105,35 +105,45 @@ def test_interface_analyzer(substrate, film, expected):
     assert np.allclose(film_strained, substrate_2d, atol=1e-10)
 
 
+EXPECTED_PROPERTIES_GRAPHENE_13: Final = SimpleNamespace(
+    number_of_matches=1,
+    angle_range=(12.5, 13.5),
+    substrate_supercell_matrix=[[-5, -2], [-3, -5]],
+    film_supercell_matrix=[[-5, -3], [-2, -5]],
+)
+
+EXPECTED_PROPERTIES_GRAPHENE_7_34: Final = SimpleNamespace(
+    number_of_matches=1,
+    angle_range=(7.24, 7.44),
+    substrate_supercell_matrix=[[-9, -4], [-5, -9]],
+    film_supercell_matrix=[[-9, -5], [-4, -9]],
+)
+
+EXPECTED_PROPERTIES_SI_SLAB_60: Final = SimpleNamespace(
+    number_of_matches=66,
+    angle_range=(59.9, 60.1),
+    substrate_supercell_matrix=[[-2, 0], [-2, -2]],
+    film_supercell_matrix=[[-2, -2], [0, -2]],
+)
+
+
 @pytest.mark.parametrize(
-    "material_config, analyzer_params, expected_matches_len, expected_angle_range, expected_supercell_matrices",
+    "material_config, analyzer_params, expected",
     [
         (
             GRAPHENE,
             {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "return_first_match": True},
-            1,
-            (12.5, 13.5),
-            [[[-5, -2], [-3, -5]], [[-5, -3], [-2, -5]]],
+            EXPECTED_PROPERTIES_GRAPHENE_13,
         ),
-        (
-            GRAPHENE,
-            {"target_angle": 7.34},
-            1,
-            (7.24, 7.44),
-            [[[-9, -4], [-5, -9]], [[-9, -5], [-4, -9]]],
-        ),
+        (GRAPHENE, {"target_angle": 7.34, "max_supercell_matrix_int": 8}, EXPECTED_PROPERTIES_GRAPHENE_7_34),
         (
             SI_SLAB_001_2_ATOMS,
             {"target_angle": 60.0, "max_supercell_matrix_int": 2, "return_first_match": False},
-            66,
-            (59.9, 60.1),
-            [[[-2, 0], [-2, -2]], [[-2, -2], [0, -2]]],
+            EXPECTED_PROPERTIES_SI_SLAB_60,
         ),
     ],
 )
-def test_commensurate_analyzer_functionality(
-    material_config, analyzer_params, expected_matches_len, expected_angle_range, expected_supercell_matrices
-):
+def test_commensurate_analyzer_functionality(material_config, analyzer_params, expected):
     slab_config = SlabConfiguration.from_parameters(
         material_config,
         miller_indices=(0, 0, 1),
@@ -148,13 +158,13 @@ def test_commensurate_analyzer_functionality(
     assert analyzer.substrate_material == analyzer.film_material == analyzer.material
 
     match_holders = analyzer.commensurate_lattice_match_holders
-    assert len(match_holders) >= expected_matches_len
-    assert match_holders[0].xy_supercell_matrix_substrate == expected_supercell_matrices[0]
-    assert match_holders[0].xy_supercell_matrix_film == expected_supercell_matrices[1]
+    assert len(match_holders) == expected.number_of_matches
+    assert match_holders[0].xy_supercell_matrix_substrate == expected.substrate_supercell_matrix
+    assert match_holders[0].xy_supercell_matrix_film == expected.film_supercell_matrix
 
     for match in match_holders:
-        assert expected_angle_range[0] <= match.angle <= expected_angle_range[1]
-        assert expected_angle_range[0] <= match.actual_angle <= expected_angle_range[1]
+        assert expected.angle_range[0] <= match.angle <= expected.angle_range[1]
+        assert expected.angle_range[0] <= match.actual_angle <= expected.angle_range[1]
         assert match.angle == match.actual_angle
         assert isinstance(match.xy_supercell_matrix_film, list)
         assert isinstance(match.xy_supercell_matrix_substrate, list)

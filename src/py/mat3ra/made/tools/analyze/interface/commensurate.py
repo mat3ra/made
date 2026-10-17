@@ -3,6 +3,7 @@ from functools import cached_property
 from typing import List, Optional
 
 import numpy as np
+from mat3ra.code.constants import HASH_TOLERANCE
 from mat3ra.code.entity import InMemoryEntityPydantic
 from mat3ra.esse.models.materials_category_components.entities.auxiliary.two_dimensional.supercell_matrix_2d import (
     SupercellMatrix2DSchema,
@@ -83,6 +84,8 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         matrices = create_2d_supercell_matrices(max_supercell_matrix_element_int)
         matrix_ab = np.array([a, b])
         matrix_ab_inverse = np.linalg.inv(matrix_ab)
+        # A pair can only be a rotation if both supercells have the same metric (Gram matrix); in units of |a| the
+        # metrics of hexagonal and square lattices are half-integers, so rounding does not split equal ones.
         matrix_ab_in_units_of_a = matrix_ab / np.linalg.norm(a)
         matrices_by_metric = defaultdict(list)
 
@@ -91,7 +94,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
 
         for matrix1 in matrices:
             supercell_vectors = matrix1 @ matrix_ab_in_units_of_a
-            metric = tuple(np.round(supercell_vectors @ supercell_vectors.T, 6).flatten())
+            metric = tuple(np.round(supercell_vectors @ supercell_vectors.T, HASH_TOLERANCE).flatten())
             matrices_by_metric[metric].append(matrix1)
             for matrix2 in matrices_by_metric[metric]:
                 matrix2_inverse = np.linalg.inv(matrix2)
