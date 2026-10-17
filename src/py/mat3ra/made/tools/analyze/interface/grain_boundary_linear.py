@@ -160,9 +160,9 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
 
     def get_stack_configuration(self, rotated: bool) -> Optional[GrainBoundaryLinearConfiguration]:
         """
-        The grains stacked, the second as given or rotated by 180 degrees (a binary's elements swapped), with the
-        misorientation of their lattices in [0, 60) degrees (the elements' relation is in homo_bonds); None if a turn
-        of the monolayer onto itself maps one grain onto the other.
+        The grains stacked, the second as given or rotated by 180 degrees (a binary's elements swapped, which its
+        supercell matrix records), with the misorientation of their lattices in [0, 60) degrees; None if a turn of the
+        monolayer onto itself maps one grain onto the other.
         """
         first, second = self.matching_vectors
         second = -second if rotated else second
@@ -236,8 +236,8 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         """
         A configuration per candidate slide with one core at both lines and a homo-bond label, the second grain as given
         or rotated, with its rank: a unique network first, then the fewest defect rings, homo bonds and pairs of defect
-        rings of one size sharing an edge (a core whose ring sizes alternate was the lower in energy in every MACE
-        comparison with its paired form), then the registry.
+        rings of one size sharing an edge (the 5|7 boundaries of Li et al., Nano Lett. 15, 5804 (2015), Fig. 3e-f, are
+        continuous 5-7-5-7 chains), then the registry.
         """
         configuration = self.get_stack_configuration(rotated)
         if configuration is None:
@@ -262,5 +262,7 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         """The configurations of both images of the second grain, best ranked first."""
         if self.get_stack_configuration(False) is None and self.get_stack_configuration(True) is None:
             raise ValueError(f"The matching vectors {self.matching_vectors.tolist()} are equivalent to no rotation")
-        ranked = self.get_ranked_configurations(False) + self.get_ranked_configurations(True)
+        # a 180 degree turn maps a one-species honeycomb onto itself: its rotated second grain repeats the given one
+        images = (False, True) if 180 % self.symmetry_angle else (False,)
+        ranked = [item for rotated in images for item in self.get_ranked_configurations(rotated)]
         return [configuration for _, configuration in sorted(ranked, key=lambda item: item[0])]

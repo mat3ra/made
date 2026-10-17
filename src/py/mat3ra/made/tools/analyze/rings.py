@@ -74,8 +74,11 @@ class RingsAndBonds(InMemoryEntityPydantic):
         return connected_components(graph)[1]
 
     def get_core(self, rings: np.ndarray) -> List[int]:
-        """Sizes of the rings in order along the line, as the least reading of that cyclic sequence."""
-        order = np.argsort(self.ring_centers[rings, 1] % self.cell[1])
+        """
+        Sizes of the rings in order along the line, rings level along it by their position across it, as the least
+        reading of that cyclic sequence.
+        """
+        order = np.lexsort((self.ring_centers[rings, 0], self.ring_centers[rings, 1] % self.cell[1]))
         return get_canonical_sequence(self.ring_sizes[rings][order].tolist())
 
     def get_homo_bonds(self, bonds: np.ndarray) -> Dict[str, int]:

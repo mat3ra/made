@@ -14,6 +14,12 @@ from .....analyze.interface.grain_boundary_linear import GrainBoundaryLinearAnal
 from .....analyze.rings import HEXAGON_SIZE
 from .....build_components import MaterialWithBuildMetadata
 
+# a monolayer stacked along x; the gap applies to the commensurate stacking only
+DEFAULT_DIRECTION = AxisEnum.x
+DEFAULT_GAP = 3.0  # angstrom
+DEFAULT_MILLER_INDICES = (0, 0, 1)
+DEFAULT_NUMBER_OF_LAYERS = 1
+
 
 def create_grain_boundary_linear(
     material: Union[Material, MaterialWithBuildMetadata],
@@ -22,10 +28,10 @@ def create_grain_boundary_linear(
     max_repetition_int: Optional[int] = None,
     limit_max_int: int = 20,
     return_first_match: bool = True,
-    direction: AxisEnum = AxisEnum.x,
-    gap: float = 3.0,
-    miller_indices: Tuple[int, int, int] = (0, 0, 1),
-    number_of_layers: int = 1,
+    direction: AxisEnum = DEFAULT_DIRECTION,
+    gap: float = DEFAULT_GAP,
+    miller_indices: Tuple[int, int, int] = DEFAULT_MILLER_INDICES,
+    number_of_layers: int = DEFAULT_NUMBER_OF_LAYERS,
     vacuum: float = 0.0,
     use_conventional_cell: bool = True,
     boundary_vectors: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = None,
@@ -61,9 +67,10 @@ def create_grain_boundary_linear(
             "4|8", "6" for hexagons only, or any sizes whose sum of n - 6 is 0. The grains are then monolayers stacked
             along x without a gap: direction, gap, miller_indices and number_of_layers must keep their defaults, and
             max_repetition_int, limit_max_int, return_first_match and use_conventional_cell do not apply.
-        homo_bonds (Optional[str]): With a core, the homo bonds of the built boundary: "alternating" (as many of
-            each element at both boundaries), "none", or an element of the material (the only one at the boundary at
-            x = 0, the other boundary rich in the others); by default whichever ranks first.
+        homo_bonds (Optional[str]): With a core, the homo bonds the built boundary has, counted at both lines:
+            "alternating" (as many of each element's at both), "none", or an element of the material (the only one
+            with homo bonds at the boundary at x = 0, none of it at the other); the orientation of the second grain
+            that builds them is chosen to match. By default whichever boundary ranks first.
         number_of_periods_across (Optional[int]): With a core, repetitions of each grain across the boundary; by
             default the fewest that hold both rebuilt bands.
 
@@ -77,7 +84,8 @@ def create_grain_boundary_linear(
             lists what is), or the material, vectors, homo bonds or periods do not allow one.
     """
     if core is not None:
-        if (direction, gap, miller_indices, number_of_layers) != (AxisEnum.x, 3.0, (0, 0, 1), 1):
+        stacking = (AxisEnum(direction), gap, tuple(miller_indices), number_of_layers)
+        if stacking != (DEFAULT_DIRECTION, DEFAULT_GAP, DEFAULT_MILLER_INDICES, DEFAULT_NUMBER_OF_LAYERS):
             raise ValueError("With a core, direction, gap, miller_indices and number_of_layers keep their defaults")
         return create_grain_boundary_linear_with_core(
             material=material,
@@ -136,7 +144,7 @@ def create_grain_boundary_linear_with_core(
     elements = sorted(set(material.basis.elements.values))
     if homo_bonds not in [None, *HomoBondsEnum, *elements]:
         raise ValueError(f"homo_bonds is alternating, none or an element of the material: {', '.join(elements)}")
-    slab = SlabConfiguration.from_parameters(material, (0, 0, 1), 1, vacuum=vacuum)
+    slab = SlabConfiguration.from_parameters(material, DEFAULT_MILLER_INDICES, DEFAULT_NUMBER_OF_LAYERS, vacuum=vacuum)
     analyzer = GrainBoundaryLinearAnalyzer(
         substrate_slab_configuration=slab,
         film_slab_configuration=slab,

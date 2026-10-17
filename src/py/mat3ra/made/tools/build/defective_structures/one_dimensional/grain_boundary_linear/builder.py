@@ -10,7 +10,10 @@ from .build_parameters import GrainBoundaryLinearBuilderParameters
 from .configuration import GrainBoundaryLinearConfiguration
 from ....compound_pristine_structures.two_dimensional.interface import InterfaceBuilder
 from .....build_components import MaterialWithBuildMetadata
-from .....build_components.operations.core.modifications.reconstruct import create_ring_network_reconstruction
+from .....build_components.operations.core.modifications.reconstruct import (
+    RingNetworkReconstructionBuilder,
+    RingNetworkReconstructionConfiguration,
+)
 from .....utils import unwrap
 
 
@@ -28,11 +31,15 @@ class GrainBoundaryLinearBuilder(InterfaceBuilder):
         material = super()._generate(configuration)
         if configuration.core_ring_sizes is None:
             return material
-        return create_ring_network_reconstruction(
+        reconstruction = RingNetworkReconstructionConfiguration(
             material=material,
             supercell_matrices=[unwrap(component.xy_supercell_matrix) for component in configuration.stack_components],
-            build_parameters=cast(GrainBoundaryLinearBuilderParameters, self.build_parameters),
         )
+        # generated, not built: the boundary's history holds its own step only
+        builder = RingNetworkReconstructionBuilder(
+            build_parameters=cast(GrainBoundaryLinearBuilderParameters, self.build_parameters)
+        )
+        return builder._generate(reconstruction)
 
     def get_name_suffix(self, configuration: GrainBoundaryLinearConfiguration) -> str:
         angle_str = f"{configuration.actual_angle:.2f} degrees" if configuration.actual_angle is not None else ""

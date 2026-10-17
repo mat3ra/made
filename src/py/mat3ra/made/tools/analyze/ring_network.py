@@ -13,12 +13,12 @@ from . import BaseMaterialAnalyzer
 from .rings import HEXAGON_SIZE, RingsAndBonds, RingsArrangement, RingsMaterialAnalyzer, get_line_offsets
 from .utils import IN_PLANE_IMAGE_SHIFTS, get_in_plane_periodic_images, wrap_to_cell
 
-# positions this close are one, measured over every candidate slide of the 313 sweep cases. Four centres meant to share
-# a circle miss it by the error of the stacked positions (stored to 1e-9 of the cell vectors; removing it takes the
-# largest miss from 1.9e-6 to 3.3e-7), grown with the circle: up to 1.9e-6 on circles under 10 angstrom and 7.6e-6 on
-# the flat triangles along the outer images, 1.3x below 1e-5. A fourth centre off the circle lies 1.6e-4 or more from
-# it, 1.5e-5 on those flat triangles, 1.5x above. A tie's right-most corners coincide or lie 0.16 apart; stacked sites
-# lie within 3e-8 of a band edge or 2.3e-3 and more from it.
+# positions this close are one, measured over every candidate slide of 313 boundaries of graphene, h-BN and MoS2. Four
+# centres meant to share a circle miss it by the error of the stacked positions (stored to 1e-9 of the cell vectors;
+# removing it takes the largest miss from 1.9e-6 to 3.3e-7), grown with the circle: up to 1.9e-6 on circles under 10
+# angstrom and 7.6e-6 on the flat triangles along the outer images, 1.3x below 1e-5. A fourth centre off the circle lies
+# 1.6e-4 or more from it, 1.5e-5 on those flat triangles, 1.5x above. A tie's right-most corners coincide or lie 0.16
+# apart; stacked sites lie within 3e-8 of a band edge or 2.3e-3 and more from it.
 POSITION_TOLERANCE = 1e-5  # angstrom
 # a site of a ring network is a triangle of ring centres, bonded across its three edges
 BONDS_PER_SITE = 3
