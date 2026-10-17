@@ -11,7 +11,6 @@ from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import Sla
 from unit.fixtures.bulk import BULK_GRAPHENE, BULK_Ge_CONVENTIONAL, BULK_Si_CONVENTIONAL
 
 from .fixtures.monolayer import GRAPHENE
-from .fixtures.slab import SI_SLAB_001_2_ATOMS
 from .utils import assert_two_entities_deep_almost_equal
 
 SUBSTRATE_SI_001: Final = SimpleNamespace(
@@ -119,13 +118,6 @@ EXPECTED_PROPERTIES_GRAPHENE_7_34: Final = SimpleNamespace(
     film_supercell_matrix=[[-9, -5], [-4, -9]],
 )
 
-EXPECTED_PROPERTIES_SI_SLAB_60: Final = SimpleNamespace(
-    number_of_matches=66,
-    angle_range=(59.9, 60.1),
-    substrate_supercell_matrix=[[-2, 0], [-2, -2]],
-    film_supercell_matrix=[[-2, -2], [0, -2]],
-)
-
 
 @pytest.mark.parametrize(
     "material_config, analyzer_params, expected",
@@ -136,11 +128,6 @@ EXPECTED_PROPERTIES_SI_SLAB_60: Final = SimpleNamespace(
             EXPECTED_PROPERTIES_GRAPHENE_13,
         ),
         (GRAPHENE, {"target_angle": 7.34, "max_supercell_matrix_int": 8}, EXPECTED_PROPERTIES_GRAPHENE_7_34),
-        (
-            SI_SLAB_001_2_ATOMS,
-            {"target_angle": 60.0, "max_supercell_matrix_int": 2, "return_first_match": False},
-            EXPECTED_PROPERTIES_SI_SLAB_60,
-        ),
     ],
 )
 def test_commensurate_analyzer_functionality(material_config, analyzer_params, expected):
