@@ -68,7 +68,9 @@ def create_grain_boundary_linear(
             default the fewest that hold both rebuilt bands.
 
     Returns:
-        Material: The grain boundary material.
+        Material: The grain boundary material. With a core it depends on the material only through the matched grains'
+            geometry, not on how the basis is listed or placed, up to which sublattice the slab builder puts at the
+            origin (a choice that listing or shifting a binary's basis can change).
 
     Raises:
         ValueError: If no commensurate lattice matches are found; with a core, if it is not achievable (the message

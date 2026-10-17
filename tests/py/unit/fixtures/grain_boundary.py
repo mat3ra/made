@@ -876,7 +876,7 @@ GRAIN_BOUNDARY_LINEAR_SI = {
 
 
 GRAIN_BOUNDARY_LINEAR_BORON_NITRIDE_5_7 = {
-    "name": "BN(001)-BN(001), Linear Grain Boundary, 92.20 degrees",
+    "name": "BN(001)-BN(001), Linear Grain Boundary, 32.20 degrees",
     "basis": {
         "elements": [
             {"id": 0, "value": "N"},

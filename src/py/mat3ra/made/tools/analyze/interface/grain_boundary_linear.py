@@ -30,6 +30,8 @@ from .simple import InterfaceAnalyzer
 
 # a grain keeps one row of hexagons, one lattice constant wide, between the rebuilt bands at its two lines
 KEPT_RING_ROW_WIDTH = 1.0  # lattice constants
+# the turn mapping a honeycomb's lattice onto itself; a binary's elements map onto themselves every second one
+LATTICE_SYMMETRY_ANGLE = 60.0  # degrees
 
 
 class GrainBoundaryLinearMatchHolder(InMemoryEntityPydantic):
@@ -154,18 +156,20 @@ class GrainBoundaryLinearAnalyzer(InterfaceAnalyzer):
         """The smallest turn mapping the monolayer onto itself: 60 degrees if both sites hold one species, else 120."""
         elements = np.array(self.substrate_material.basis.elements.values)
         site_atoms = [sorted(elements[self.sites.atom_site_indices == site]) for site in (0, 1)]
-        return 60.0 if site_atoms[0] == site_atoms[1] else 120.0
+        return LATTICE_SYMMETRY_ANGLE * (1 if site_atoms[0] == site_atoms[1] else 2)
 
     def get_stack_configuration(self, rotated: bool) -> Optional[GrainBoundaryLinearConfiguration]:
         """
-        The grains stacked, the second as given or rotated by 180 degrees (a binary's elements swapped), with the angle
-        between them up to a turn of the monolayer onto itself; None if that angle is 0.
+        The grains stacked, the second as given or rotated by 180 degrees (a binary's elements swapped), with the
+        misorientation of their lattices in [0, 60) degrees (the elements' relation is in homo_bonds); None if a turn
+        of the monolayer onto itself maps one grain onto the other.
         """
         first, second = self.matching_vectors
         second = -second if rotated else second
-        actual_angle = float(wrap_to_cell(self.match_holder.actual_angle + 180 * rotated, self.symmetry_angle))
-        if np.isclose(actual_angle, 0.0):
+        angle = self.match_holder.actual_angle + 180 * rotated
+        if np.isclose(wrap_to_cell(angle, self.symmetry_angle), 0.0):
             return None
+        actual_angle = float(wrap_to_cell(angle, LATTICE_SYMMETRY_ANGLE))
         components = []
         for vector in (first, second):
             matrix = (np.array([self.periods_across * get_across_vector(vector), vector]) @ self.chiral_basis).tolist()
