@@ -44,9 +44,9 @@ from .utils import OSPlatform, assert_two_entities_deep_almost_equal, get_platfo
 GRAPHENE_2D = Materials.get_by_name_and_categories("Graphene", "2D")
 BORON_NITRIDE_2D = Materials.get_by_name_and_categories("Boron_Nitride", "2D")
 MOLYBDENUM_DISULFIDE_2D = Materials.get_by_name_and_categories("Molybdenum_Disulfide", "2D")
-# three times the slowest row measured, graphene (8, 7)|(7, 8) in 4.8 s on an M1 at load 20-30: CI runners measured
-# 2.9x slower on the same code; the regression it guards took 40-60 s
-CORE_BUILD_TIME_LIMIT = 15.0  # seconds
+# three times the slowest row measured on a CI runner (MoS2 (1,9)|(9,1), 15 s; runners are up to 3.4x slower than an M1
+# at load); the regression it guards, the commensurate matrix search, took 40 s at 13.2 degrees and never finished below 9.4
+CORE_BUILD_TIME_LIMIT = 45.0  # seconds
 
 
 @pytest.mark.parametrize(
