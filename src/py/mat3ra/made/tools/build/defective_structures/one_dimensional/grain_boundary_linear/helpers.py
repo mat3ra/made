@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
@@ -6,7 +6,16 @@ from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
 from mat3ra.made.material import Material
 from .builder import GrainBoundaryLinearBuilder
 from .configuration import GrainBoundaryLinearConfiguration
+from .matching import LATTICE_SYMMETRY_ANGLE, get_grain_supercell_matrices, get_rotation
+from .network import get_monolayer
+from .slides import get_slide
 from ....compound_pristine_structures.two_dimensional.interface import get_commensurate_strained_configurations
+from ....pristine_structures.two_dimensional.slab.builder import SlabBuilder
+from ....pristine_structures.two_dimensional.slab.configuration import SlabConfiguration
+from ....pristine_structures.two_dimensional.slab_strained_supercell.configuration import (
+    SlabStrainedSupercellConfiguration,
+)
+from .....analyze.rings import HEXAGON_SIZE
 from .....build_components import MaterialWithBuildMetadata
 
 
@@ -76,3 +85,62 @@ def create_grain_boundary_linear(
     grain_boundary = builder.get_material(grain_boundary_config)
 
     return grain_boundary
+
+
+def get_core_ring_sizes(core: str) -> List[int]:
+    """Ring sizes of a core, "5|7" -> [5, 7]; sizes whose sum of n - 6 is not 0 make a disclination, refused."""
+    ring_sizes = sorted(int(size) for size in core.split("|"))
+    if sum(size - HEXAGON_SIZE for size in ring_sizes):
+        raise ValueError(f"Core {core} is a disclination, which bends the sheet: the sum of n - 6 must be 0")
+    return ring_sizes
+
+
+def create_grain_boundary_linear_with_core(
+    material: Union[Material, MaterialWithBuildMetadata],
+    boundary_vectors: Tuple[Tuple[int, int], Tuple[int, int]],
+    core: str = "5|7",
+    homo_bonds: Optional[str] = None,
+    number_of_periods_across: int = 1,
+    vacuum: float = 0.0,
+) -> MaterialWithBuildMetadata:
+    """
+    Two grains of a honeycomb monolayer (graphene, h-BN, MoS2) meeting at two lines with the given core.
+
+    Each grain is the rectangular cell along its boundary vector, (n, m) = n a + m b with b 60 degrees from a; the two
+    vectors are of equal length, their angle is the tilt; the second grain is tried as given and turned by 180 degrees:
+
+        (2, 1)|(1, 2)  21.8 degrees        (4, 1)|(1, 4)  38.2
+        (3, 1)|(1, 3)  32.2                (4, 3)|(3, 4)   9.4
+        (3, 2)|(2, 3)  13.2                (5, 4)|(4, 5)   7.3
+        (1, 1)|(1, 1)   0, the second grain turned: a binary's inversion line (4|8 or 6)
+
+    Args:
+        material: The monolayer.
+        boundary_vectors: The vectors of the two grains along the line.
+        core: Ring sizes along both lines, "5|7", "4|8", "6" for hexagons only; their sum of n - 6 must be 0.
+        homo_bonds: Bonds between atoms of one element at the lines: "none", "alternating" (as many of each element's
+            at both), an element (only its at the line x = 0, none at the other); by default any.
+        number_of_periods_across: Repetitions of each grain's cell across the line.
+        vacuum: Vacuum of the monolayer, in angstroms.
+    """
+    core_ring_sizes = get_core_ring_sizes(core)
+    elements = sorted(set(material.basis.elements.values))
+    if homo_bonds not in (None, "none", "alternating", *elements):
+        raise ValueError(f"homo_bonds is none, alternating or an element of the material: {', '.join(elements)}")
+    slab = SlabConfiguration.from_parameters(material, (0, 0, 1), 1, vacuum=vacuum)
+    monolayer = get_monolayer(SlabBuilder().get_material(slab))
+    grain_pairs = get_grain_supercell_matrices(monolayer, boundary_vectors, number_of_periods_across)
+    supercell_matrices, slide = get_slide(monolayer, grain_pairs, core_ring_sizes, homo_bonds)
+    configuration = GrainBoundaryLinearConfiguration(
+        stack_components=[
+            SlabStrainedSupercellConfiguration(
+                stack_components=slab.stack_components, direction=slab.direction, xy_supercell_matrix=matrix
+            )
+            for matrix in supercell_matrices
+        ],
+        xy_shift=[slide, 0.0],
+        actual_angle=get_rotation(monolayer, *boundary_vectors) % LATTICE_SYMMETRY_ANGLE,
+        core_ring_sizes=core_ring_sizes,
+        homo_bonds=homo_bonds,
+    )
+    return GrainBoundaryLinearBuilder().get_material(configuration)
