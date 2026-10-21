@@ -100,7 +100,10 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [f"{round(v, HASH_TOLERANCE) % 1:g}" for v in coord["value"]]
+            rounded = [
+                f"{0 if min(x, 1 - x) < 0.001 * (1 + 1e-12) else round(x, HASH_TOLERANCE):g}"
+                for x in (v % 1 for v in coord["value"])
+            ]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()
