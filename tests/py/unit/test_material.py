@@ -157,6 +157,15 @@ def test_calculate_hash_coordinate_rounding_to_lattice_point(coordinate):
     assert material.hash == Material.create_default().hash
 
 
+@pytest.mark.parametrize("coordinate, rounded_coordinate", [(0.1235, 0.124), (0.9985, 0.998)])
+def test_calculate_hash_coordinate_rounding_half_to_even(coordinate, rounded_coordinate):
+    material = Material.create_default()
+    rounded_material = Material.create_default()
+    material.set_coordinates([[coordinate, 0.0, 0.0], material.basis.coordinates.values[1]])
+    rounded_material.set_coordinates([[rounded_coordinate, 0.0, 0.0], material.basis.coordinates.values[1]])
+    assert material.hash == rounded_material.hash
+
+
 def test_model_dump_includes_hashes():
     material = Material.create_default()
     serialized_material = material.model_dump()

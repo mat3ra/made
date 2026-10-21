@@ -8,6 +8,7 @@ from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
 from mat3ra.esse.models.material import BasisSchema, BasisUnitsEnum
 from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.cell import Cell
+from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
@@ -101,7 +102,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
             rounded = [
-                f"{0 if min(x, 1 - x) < 0.001 * (1 + 1e-12) else round(x, HASH_TOLERANCE):g}"
+                f"{0 if min(x, 1 - x) < 0.001 * (1 + 1e-12) else round_custom(x, HASH_TOLERANCE):g}"
                 for x in (v % 1 for v in coord["value"])
             ]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")

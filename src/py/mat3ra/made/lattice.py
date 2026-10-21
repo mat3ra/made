@@ -10,6 +10,7 @@ from mat3ra.esse.models.properties_directory.structural.lattice import (
     LatticeUnitsSchema,
 )
 from mat3ra.utils.mixins import RoundNumericValuesMixin
+from mat3ra.utils.rounding import round_custom
 from pydantic import BaseModel
 
 from .cell import Cell
@@ -180,7 +181,7 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
         """Mirrors JS Lattice.getHashString(isScaled). Rounds to HASH_TOLERANCE decimal places."""
         scale = self.a if is_scaled else 1
         values = [self.a / scale, self.b / scale, self.c / scale, self.alpha, self.beta, self.gamma]
-        return ";".join(f"{round(v, HASH_TOLERANCE):g}" for v in values) + ";"
+        return ";".join(f"{round_custom(v, HASH_TOLERANCE):.15g}" for v in values) + ";"
 
     def get_scaled_by_matrix(self, matrix: List[List[float]]):
         """
