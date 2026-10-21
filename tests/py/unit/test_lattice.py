@@ -99,5 +99,15 @@ def test_reciprocal_vector_ratios(lattice, expected):
     assert lattice.reciprocal_vector_ratios == expected
 
 
+@pytest.mark.parametrize(
+    "lattice, expected",
+    [
+        (Lattice(a=1234.5678, b=3.1235, c=10.0, gamma=36.3245), "1234.568;3.124;10;90;90;36.324;"),
+    ],
+)
+def test_get_hash_string(lattice, expected):
+    assert lattice.get_hash_string() == expected
+
+
 # to test: create, calculate_vectors, from_vectors, get_lattice_type, clone
 # from_vectors, to_dict, cell, cell_volume, scale_by_matrix, update_from_lattice,
