@@ -154,6 +154,7 @@ def get_rebuilt_network(monolayer: Monolayer, grains: List[Grain]) -> Optional[N
     corners = [[(int(point) % count, IMAGE_SHIFTS[int(point) // count]) for point in simplex] for simplex in simplices]
     # each triangle once: the copy whose least corner lies in the cell itself
     triangles = [triangle for triangle, triangle_corners in enumerate(corners) if min(triangle_corners)[1] == (0, 0)]
+    triangles.sort(key=lambda triangle: sorted(corners[triangle]))
     positions = np.array([get_triangle_center(triangulation, triangle) for triangle in triangles])
     bonds = get_triangle_bonds(triangulation, corners, triangles, positions, get_cell_size(grains))
     if bonds is None:
