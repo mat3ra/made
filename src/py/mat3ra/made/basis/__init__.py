@@ -12,6 +12,9 @@ from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
+# JS Utils.math.mod: a crystal coordinate within 0.001 of a lattice point is 0; mathjs smallerEq adds 1e-12 relative
+LATTICE_POINT_TOLERANCE = 0.001 * (1 + 1e-12)
+
 
 def get_overlapping_coordinates(
     coordinate: List[float],
@@ -94,6 +97,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
         Converts to crystal, applies mod 1 to bring coords into [0,1), builds sorted atom strings.
+        Values within LATTICE_POINT_TOLERANCE of a lattice point become 0, the rest round half-to-even,
+        as JS Utils.math.mod and Utils.math.roundCustom do.
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
@@ -101,10 +106,9 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [
-                f"{0 if min(x, 1 - x) < 0.001 * (1 + 1e-12) else round_custom(x, HASH_TOLERANCE):g}"
-                for x in (v % 1 for v in coord["value"])
-            ]
+            wrapped = np.mod(coord["value"], 1)
+            wrapped[np.minimum(wrapped, 1 - wrapped) < LATTICE_POINT_TOLERANCE] = 0
+            rounded = [f"{round_custom(value, HASH_TOLERANCE):g}" for value in wrapped]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()
