@@ -6,6 +6,7 @@ import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.interface import InterfaceAnalyzer
 from mat3ra.made.tools.analyze.interface.commensurate import CommensurateLatticeInterfaceAnalyzer
+from mat3ra.made.tools.analyze.interface.enums import angle_to_supercell_matrix_values_for_hex
 from mat3ra.made.tools.analyze.interface.utils import calculate_interfacial_distance_from_rdf
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab import SlabConfiguration
 from unit.fixtures.bulk import BULK_GRAPHENE, BULK_Ge_CONVENTIONAL, BULK_Si_CONVENTIONAL
@@ -187,6 +188,24 @@ def test_commensurate_analyzer_functionality(material_config, use_conventional_c
         # Test negative match ID
         with pytest.raises(ValueError, match="Match ID .* out of range"):
             analyzer.get_strained_configuration_by_match_id(-1)
+
+
+COINCIDENCE_LATTICE_TEST_CASES = [
+    (GRAPHENE, entry["angle"], entry["xy_supercell"]) for entry in angle_to_supercell_matrix_values_for_hex
+] + [(BULK_Si_CONVENTIONAL, 36.8698976458, [[2, 1], [-1, 2]])]
+
+
+@pytest.mark.parametrize("material_config, target_angle, expected_supercell_matrix", COINCIDENCE_LATTICE_TEST_CASES)
+def test_commensurate_lattice_match_holders(material_config, target_angle, expected_supercell_matrix):
+    slab_config = SlabConfiguration.from_parameters(material_config, (0, 0, 1), number_of_layers=1, vacuum=0.0)
+    analyzer = CommensurateLatticeInterfaceAnalyzer(
+        substrate_slab_configuration=slab_config, target_angle=target_angle, angle_tolerance=1e-3
+    )
+    match = analyzer.commensurate_lattice_match_holders[0]
+    assert abs(match.angle - target_angle) < analyzer.angle_tolerance
+    assert round(abs(np.linalg.det(match.xy_supercell_matrix_substrate))) == round(
+        abs(np.linalg.det(expected_supercell_matrix))
+    )
 
 
 @pytest.mark.parametrize("substrate, film, expected_n, expected_m", OPTIMAL_SUPERCELL_TEST_CASES)

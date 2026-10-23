@@ -1,6 +1,5 @@
-from collections import defaultdict
 from functools import cached_property
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 from mat3ra.code.constants import HASH_TOLERANCE
@@ -8,12 +7,10 @@ from mat3ra.code.entity import InMemoryEntityPydantic
 from mat3ra.esse.models.materials_category_components.entities.auxiliary.two_dimensional.supercell_matrix_2d import (
     SupercellMatrix2DSchema,
 )
-from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from pydantic import model_validator
 
-from ....utils import create_2d_supercell_matrices, get_angle_from_rotation_matrix_2d
-from .enums import angle_to_supercell_matrix_values_for_hex
+from ....utils import get_angle_from_rotation_matrix_2d
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 
@@ -37,7 +34,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         target_angle (float): The target twist angle, in degrees.
         angle_tolerance (float): Tolerance for matching angles, in degrees.
         max_supercell_matrix_int (Optional[int]): Maximum integer for supercell matrix elements.
-        limit_max_int (int): Limit for maximum integer to search for supercell matrices.
+        limit_max_int (int): Largest integer coordinate of the lattice vectors searched for the coincidence lattice.
         return_first_match (bool): If True, returns only the first match found (to speed up the process).
 
     This class generates strained configurations for both substrate and film based on the commensurate matches found.
@@ -47,7 +44,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
     target_angle: float = 0.0
     angle_tolerance: float = 0.1
     max_supercell_matrix_int: Optional[int] = None
-    limit_max_int: int = 50
+    limit_max_int: int = 82
     return_first_match: bool = True
 
     @model_validator(mode="before")
@@ -64,74 +61,87 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
     def material(self) -> Material:
         return self.substrate_material
 
-    def _get_initial_guess_for_max_int(self, material: Material, target_angle: float) -> int:
-        if material.lattice.type == Lattice.__types__.HEX:
-            xy_supercell_matrix_for_closest_angle = min(
-                angle_to_supercell_matrix_values_for_hex, key=lambda x: abs(x["angle"] - target_angle)
-            )
-            return max(abs(x) for row in xy_supercell_matrix_for_closest_angle["xy_supercell"] for x in row)
-        return 1
+    @staticmethod
+    def _get_lattice_vectors(matrix_ab: np.ndarray, max_int: int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Lattice vectors with integer coordinates up to max_int: the coordinates, the Cartesian vectors and their
+        squared lengths in units of |a|², rounded so that equal lengths compare equal.
+        """
+        steps = np.arange(-max_int, max_int + 1)
+        integer_vectors = np.stack(np.meshgrid(steps, steps, indexing="ij"), axis=-1).reshape(-1, 2)
+        integer_vectors = integer_vectors[np.any(integer_vectors != 0, axis=1)]
+        vectors = integer_vectors @ matrix_ab
+        squared_lengths = np.round((vectors**2).sum(axis=1) / (matrix_ab[0] @ matrix_ab[0]), HASH_TOLERANCE)
+        return integer_vectors, vectors, squared_lengths
 
-    def _generate_commensurate_lattices(
-        self,
-        material: Material,
-        target_angle: float,
-        max_supercell_matrix_element_int: int,
-    ) -> List[CommensurateLatticeMatchHolder]:
-        a = material.lattice.vector_arrays[0][:2]
-        b = material.lattice.vector_arrays[1][:2]
+    def _get_candidate_angles(self, vectors: np.ndarray, squared_lengths: np.ndarray) -> np.ndarray:
+        """
+        Rotation angles between lattice vectors of equal length (a vector and itself give 0), within angle_tolerance
+        of target_angle, once each.
+        """
+        order = np.argsort(squared_lengths, kind="stable")
+        polar_angles = np.degrees(np.arctan2(vectors[order, 1], vectors[order, 0]))
+        sorted_lengths = squared_lengths[order]
+        differences = [np.zeros(1)]
+        for shift in range(1, np.unique(squared_lengths, return_counts=True)[1].max()):
+            same_length = sorted_lengths[shift:] == sorted_lengths[:-shift]
+            difference = polar_angles[shift:][same_length] - polar_angles[:-shift][same_length]
+            differences += [difference, -difference]
+        angles = np.concatenate(differences)
+        angles = angles[np.abs(angles - self.target_angle) < self.angle_tolerance]
+        return angles[np.unique(np.round(angles, HASH_TOLERANCE), return_index=True)[1]]
 
-        matrices = create_2d_supercell_matrices(max_supercell_matrix_element_int)
-        matrix_ab = np.array([a, b])
-        matrix_ab_inverse = np.linalg.inv(matrix_ab)
-        # A pair can only be a rotation if both supercells have the same metric (Gram matrix); in units of |a| the
-        # metrics of hexagonal and square lattices are half-integers, so rounding does not split equal ones.
-        matrix_ab_in_units_of_a = matrix_ab / np.linalg.norm(a)
-        matrices_by_metric = defaultdict(list)
-
-        solutions: List[CommensurateLatticeMatchHolder] = []
-        match_id = 0
-
-        for matrix1 in matrices:
-            supercell_vectors = matrix1 @ matrix_ab_in_units_of_a
-            metric = tuple(np.round(supercell_vectors @ supercell_vectors.T, HASH_TOLERANCE).flatten())
-            matrices_by_metric[metric].append(matrix1)
-            for matrix2 in matrices_by_metric[metric]:
-                matrix2_inverse = np.linalg.inv(matrix2)
-                intermediate_product = matrix2_inverse @ matrix1
-                product = matrix_ab_inverse @ intermediate_product @ matrix_ab
-                angle = get_angle_from_rotation_matrix_2d(product)
-
-                if angle is not None and np.abs(angle - target_angle) < self.angle_tolerance:
-                    solutions.append(
-                        CommensurateLatticeMatchHolder(
-                            match_id=match_id,
-                            angle=angle,
-                            actual_angle=angle,
-                            xy_supercell_matrix_substrate=matrix1.tolist(),
-                            xy_supercell_matrix_film=matrix2.tolist(),
-                        )
-                    )
-                    match_id += 1
-
-                    if self.return_first_match:
-                        return solutions
-
-        return solutions
+    @staticmethod
+    def _get_coincidence_cell(
+        angle: float,
+        matrix_ab: np.ndarray,
+        integer_vectors: np.ndarray,
+        vectors: np.ndarray,
+        squared_lengths: np.ndarray,
+    ) -> Optional[Tuple[float, np.ndarray, np.ndarray]]:
+        """
+        The two shortest right-handed vectors shared by the lattice and its copy rotated by angle (the substrate
+        supercell rows) and their coordinates in the rotated copy (the film supercell rows), with the rotation angle;
+        None if fewer than two, or if the pair is not a rotation by get_angle_from_rotation_matrix_2d.
+        """
+        cosine, sine = np.cos(np.radians(angle)), np.sin(np.radians(angle))
+        images = vectors @ np.array([[cosine, sine], [-sine, cosine]]) @ np.linalg.inv(matrix_ab)
+        coincident = np.all(np.abs(images - np.round(images)) < 10**-HASH_TOLERANCE, axis=1)
+        substrate, film = integer_vectors[coincident], np.round(images[coincident]).astype(int)
+        lengths = squared_lengths[coincident]
+        first = np.argmin(lengths)
+        right_handed = substrate[first, 0] * substrate[:, 1] - substrate[first, 1] * substrate[:, 0] > 0
+        if not right_handed.any():
+            return None
+        cell = [first, np.flatnonzero(right_handed)[np.argmin(lengths[right_handed])]]
+        product = np.linalg.inv(matrix_ab) @ (np.linalg.inv(film[cell]) @ substrate[cell]) @ matrix_ab
+        rotation_angle = get_angle_from_rotation_matrix_2d(product)
+        return None if rotation_angle is None else (rotation_angle, substrate[cell], film[cell])
 
     @cached_property
     def commensurate_lattice_match_holders(self) -> List[CommensurateLatticeMatchHolder]:
-        max_int = self.max_supercell_matrix_int or self._get_initial_guess_for_max_int(self.material, self.target_angle)
-
-        commensurate_lattice_matches: List[CommensurateLatticeMatchHolder] = []
-
-        while not commensurate_lattice_matches and max_int < self.limit_max_int:
-            commensurate_lattice_matches = self._generate_commensurate_lattices(
-                self.material, self.target_angle, max_int
+        matrix_ab = np.array(self.material.lattice.vector_arrays)[:2, :2]
+        integer_vectors, vectors, squared_lengths = self._get_lattice_vectors(matrix_ab, self.limit_max_int)
+        matches = []
+        for candidate_angle in self._get_candidate_angles(vectors, squared_lengths):
+            cell = self._get_coincidence_cell(candidate_angle, matrix_ab, integer_vectors, vectors, squared_lengths)
+            if cell is None:
+                continue
+            angle_difference = abs((cell[0] - self.target_angle + 180) % 360 - 180)
+            if angle_difference < self.angle_tolerance:
+                matches.append((round(abs(np.linalg.det(cell[1]))), angle_difference, cell))
+        matches.sort(key=lambda match: match[:2])
+        holders = [
+            CommensurateLatticeMatchHolder(
+                match_id=match_id,
+                angle=angle,
+                actual_angle=angle,
+                xy_supercell_matrix_substrate=substrate.tolist(),
+                xy_supercell_matrix_film=film.tolist(),
             )
-            max_int += 1
-
-        return commensurate_lattice_matches
+            for match_id, (_, _, (angle, substrate, film)) in enumerate(matches)
+        ]
+        return holders[:1] if self.return_first_match else holders
 
     def get_strained_configuration_by_match_id(self, match_id: int) -> MatchedSubstrateFilmConfigurationHolder:
         match_holders = self.commensurate_lattice_match_holders

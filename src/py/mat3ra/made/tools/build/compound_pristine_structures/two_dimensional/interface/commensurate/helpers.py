@@ -82,7 +82,7 @@ def create_interface_commensurate(
     target_angle: float = 0.0,
     angle_tolerance: float = 0.1,
     max_repetition_int: Optional[int] = None,
-    limit_max_int: int = 20,
+    limit_max_int: int = 82,
     return_first_match: bool = True,
     direction: AxisEnum = AxisEnum.z,
     gap: float = 3.0,
