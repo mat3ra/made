@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 from mat3ra.esse.models.core.abstract.vector_2d import Vector2dSchema
@@ -54,3 +54,18 @@ def get_global_gcd(A: SupercellMatrix2DSchema, B: SupercellMatrix2DSchema) -> in
     # flatten all entries, compute gcd over them
     vals = np.hstack((A.ravel(), B.ravel())).astype(int)
     return reduce(np.gcd, vals.tolist())
+
+
+def get_integer_vectors_in_box(max_int: int) -> np.ndarray:
+    """Nonzero integer vectors (i, j) with |i| and |j| up to max_int, i outer and j inner."""
+    steps = range(-max_int, max_int + 1)
+    return np.array([(i, j) for i in steps for j in steps if (i, j) != (0, 0)])
+
+
+def get_shortest_right_handed_pair(vectors: np.ndarray, lengths: np.ndarray) -> Optional[List[int]]:
+    """Indices of the shortest vector and of the shortest vector to its left (positive cross product), or None."""
+    first = np.argmin(lengths)
+    to_the_left = vectors[first, 0] * vectors[:, 1] - vectors[first, 1] * vectors[:, 0] > 0
+    if not to_the_left.any():
+        return None
+    return [int(first), int(np.flatnonzero(to_the_left)[np.argmin(lengths[to_the_left])])]
