@@ -193,8 +193,8 @@ def test_commensurate_analyzer_functionality(material_config, use_conventional_c
 COINCIDENCE_LATTICE_TEST_CASES = [
     (GRAPHENE, entry["angle"], entry["xy_supercell"]) for entry in angle_to_supercell_matrix_values_for_hex
 ] + [
-    (GRAPHENE, -21.7867892983, [[1, 2], [-2, 3]]),
-    (GRAPHENE, 81.7867892983, [[1, 2], [-2, 3]]),
+    (GRAPHENE, 180 - 1.05012087979, [[31, 32], [-32, 63]]),
+    (GRAPHENE, 60 - 0.987430297814, [[33, 34], [-34, 67]]),
     (BULK_Si_CONVENTIONAL, 36.8698976458, [[2, 1], [-1, 2]]),
 ]
 
