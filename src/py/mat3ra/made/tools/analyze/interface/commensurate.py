@@ -80,35 +80,34 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         vectors = self.integer_vectors @ self.matrix_ab
         return np.round((vectors**2).sum(axis=1) / (self.matrix_ab[0] @ self.matrix_ab[0]), HASH_TOLERANCE)
 
-    def _polar_angles_grouped_by_length(self) -> List[np.ndarray]:
+    def _get_polar_angles_grouped_by_length(self) -> List[np.ndarray]:
         """Polar angles of the supercell vectors in degrees, one array per vector length."""
-        order = np.argsort(self.squared_lengths)
-        vectors = self.integer_vectors[order] @ self.matrix_ab
+        vectors = self.integer_vectors @ self.matrix_ab
         polar_angles = np.degrees(np.arctan2(vectors[:, 1], vectors[:, 0]))
-        return np.split(polar_angles, np.flatnonzero(np.diff(self.squared_lengths[order])) + 1)
+        return [polar_angles[self.squared_lengths == length] for length in np.unique(self.squared_lengths)]
 
     def _get_candidate_angles(self) -> np.ndarray:
-        """Angles between supercell vectors of equal length, 0 included, within angle_tolerance of target_angle."""
-        groups = self._polar_angles_grouped_by_length()
-        angles = np.concatenate([np.zeros(1)] + [(group[:, None] - group[None, :]).ravel() for group in groups])
+        """Angles between supercell vectors of equal length (0 for each vector with itself), within angle_tolerance."""
+        groups = self._get_polar_angles_grouped_by_length()
+        angles = np.concatenate([np.subtract.outer(group, group).ravel() for group in groups])
         angles = angles[np.abs(angles - self.target_angle) < self.angle_tolerance]
         _, first_of_each_angle = np.unique(np.round(angles, HASH_TOLERANCE), return_index=True)
         return angles[first_of_each_angle]
 
-    def _rotation_in_lattice_coordinates(self, angle: float) -> np.ndarray:
+    def _get_rotation_in_lattice_coordinates(self, angle: float) -> np.ndarray:
         """The rotation by angle, acting on row vectors of lattice coordinates."""
         cosine, sine = np.cos(np.radians(angle)), np.sin(np.radians(angle))
         return self.matrix_ab @ np.array([[cosine, sine], [-sine, cosine]]) @ np.linalg.inv(self.matrix_ab)
 
-    def _coincident_vectors(self, angle: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_coincident_vectors(self, angle: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Supercell vectors whose rotated image is a lattice vector: the vectors, the images and their lengths."""
-        images = self.integer_vectors @ self._rotation_in_lattice_coordinates(angle)
+        images = self.integer_vectors @ self._get_rotation_in_lattice_coordinates(angle)
         shared = np.all(np.abs(images - np.round(images)) < 10**-HASH_TOLERANCE, axis=1)
         return self.integer_vectors[shared], np.round(images[shared]).astype(int), self.squared_lengths[shared]
 
     def _get_match(self, angle: float) -> Optional[CommensurateLatticeMatchHolder]:
         """The smallest coincidence cell of the rotation by angle, if get_angle_from_rotation_matrix_2d accepts it."""
-        substrate_vectors, film_vectors, lengths = self._coincident_vectors(angle)
+        substrate_vectors, film_vectors, lengths = self._get_coincident_vectors(angle)
         pair = get_shortest_right_handed_pair(substrate_vectors, lengths)
         if pair is None:
             return None
