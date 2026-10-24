@@ -38,7 +38,7 @@ def get_commensurate_strained_configurations(
         target_angle (float): The target twist angle in degrees.
         angle_tolerance (float): Tolerance for matching angles in degrees.
         max_repetition_int (Optional[int]): Maximum integer for supercell matrix elements.
-        limit_max_int (int): Limit for maximum integer to search for supercell matrices.
+        limit_max_int (int): Largest integer coordinate of the supercell vectors searched if max_repetition_int is None.
         return_first_match (bool): Whether to return the first match or all matches.
         miller_indices (Tuple[int, int, int]): Miller indices for the slab surface.
         number_of_layers (int): Number of atomic layers in the slab.
@@ -82,7 +82,7 @@ def create_interface_commensurate(
     target_angle: float = 0.0,
     angle_tolerance: float = 0.1,
     max_repetition_int: Optional[int] = None,
-    limit_max_int: int = 20,
+    limit_max_int: int = 82,
     return_first_match: bool = True,
     direction: AxisEnum = AxisEnum.z,
     gap: float = 3.0,
@@ -108,7 +108,7 @@ def create_interface_commensurate(
         target_angle (float): The target twist angle in degrees.
         angle_tolerance (float): Tolerance for matching angles in degrees.
         max_repetition_int (Optional[int]): Maximum integer for supercell matrix elements.
-        limit_max_int (int): Limit for maximum integer to search for supercell matrices.
+        limit_max_int (int): Largest integer coordinate of the supercell vectors searched if max_repetition_int is None.
         return_first_match (bool): Whether to return the first match or all matches.
         direction (AxisEnum): Direction along which to stack components (x, y, or z).
         gap (float): The gap between the two phases in Angstroms.
