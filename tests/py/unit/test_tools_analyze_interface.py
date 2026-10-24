@@ -129,7 +129,7 @@ EXPECTED_PROPERTIES_GRAPHENE_7_34: Final = SimpleNamespace(
             {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "return_first_match": True},
             EXPECTED_PROPERTIES_GRAPHENE_13,
         ),
-        (GRAPHENE, True, {"target_angle": 7.34, "max_supercell_matrix_int": 8}, EXPECTED_PROPERTIES_GRAPHENE_7_34),
+        (GRAPHENE, True, {"target_angle": 7.34, "max_supercell_matrix_int": 9}, EXPECTED_PROPERTIES_GRAPHENE_7_34),
         (
             BULK_GRAPHENE,
             False,
@@ -192,7 +192,11 @@ def test_commensurate_analyzer_functionality(material_config, use_conventional_c
 
 COINCIDENCE_LATTICE_TEST_CASES = [
     (GRAPHENE, entry["angle"], entry["xy_supercell"]) for entry in angle_to_supercell_matrix_values_for_hex
-] + [(BULK_Si_CONVENTIONAL, 36.8698976458, [[2, 1], [-1, 2]])]
+] + [
+    (GRAPHENE, -21.7867892983, [[1, 2], [-2, 3]]),
+    (GRAPHENE, 81.7867892983, [[1, 2], [-2, 3]]),
+    (BULK_Si_CONVENTIONAL, 36.8698976458, [[2, 1], [-1, 2]]),
+]
 
 
 @pytest.mark.parametrize("material_config, target_angle, expected_supercell_matrix", COINCIDENCE_LATTICE_TEST_CASES)
