@@ -126,14 +126,14 @@ EXPECTED_PROPERTIES_GRAPHENE_7_34: Final = SimpleNamespace(
         (
             GRAPHENE,
             True,
-            {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "return_first_match": True},
+            {"target_angle": 13.0, "angle_tolerance": 0.5, "return_first_match": True},
             EXPECTED_PROPERTIES_GRAPHENE_13,
         ),
         (GRAPHENE, True, {"target_angle": 7.34, "max_supercell_matrix_int": 9}, EXPECTED_PROPERTIES_GRAPHENE_7_34),
         (
             BULK_GRAPHENE,
             False,
-            {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "limit_max_int": 6},
+            {"target_angle": 13.0, "angle_tolerance": 0.5, "max_supercell_matrix_int": 5, "return_first_match": False},
             EXPECTED_PROPERTIES_GRAPHENE_13,
         ),
     ],
@@ -207,9 +207,7 @@ def test_commensurate_lattice_match_holders(material_config, target_angle, expec
     )
     match = analyzer.commensurate_lattice_match_holders[0]
     assert abs(match.angle - target_angle) < analyzer.angle_tolerance
-    assert round(abs(np.linalg.det(match.xy_supercell_matrix_substrate))) == round(
-        abs(np.linalg.det(expected_supercell_matrix))
-    )
+    assert round(np.linalg.det(match.xy_supercell_matrix_substrate)) == round(np.linalg.det(expected_supercell_matrix))
 
 
 @pytest.mark.parametrize("substrate, film, expected_n, expected_m", OPTIMAL_SUPERCELL_TEST_CASES)

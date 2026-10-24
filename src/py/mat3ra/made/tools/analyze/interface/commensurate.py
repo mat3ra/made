@@ -35,7 +35,8 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
 
     For commensurate lattice bilayer materials where film and substrate are the same material,
     this analyzer finds commensurate supercells at a target twist angle: the coincidence cells whose twist is within
-    angle_tolerance of target_angle, smallest cell first; lower the search box or angle_tolerance to bound the size.
+    angle_tolerance of target_angle, smallest cell first; lower max_supercell_matrix_int or angle_tolerance to bound
+    the size.
 
     Attributes:
         target_angle (float): The target twist angle, in degrees.
