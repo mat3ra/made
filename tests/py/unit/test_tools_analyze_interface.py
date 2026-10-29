@@ -201,6 +201,9 @@ COINCIDENCE_LATTICE_TEST_CASES = [
 
 @pytest.mark.parametrize("material_config, target_angle, expected_supercell_matrix", COINCIDENCE_LATTICE_TEST_CASES)
 def test_commensurate_lattice_match_holders(material_config, target_angle, expected_supercell_matrix):
+    """
+    The smallest coincidence cell at each target angle has the expected determinant.
+    """
     slab_config = SlabConfiguration.from_parameters(material_config, (0, 0, 1), number_of_layers=1, vacuum=0.0)
     analyzer = CommensurateLatticeInterfaceAnalyzer(
         substrate_slab_configuration=slab_config, target_angle=target_angle, angle_tolerance=1e-3
@@ -212,7 +215,9 @@ def test_commensurate_lattice_match_holders(material_config, target_angle, expec
 
 @pytest.mark.parametrize("substrate, film, expected_n, expected_m", OPTIMAL_SUPERCELL_TEST_CASES)
 def test_optimal_supercell_functions(substrate, film, expected_n, expected_m):
-    """Test the optimal supercell functions with Si/Ge fixtures."""
+    """
+    Test the optimal supercell functions with Si/Ge fixtures.
+    """
     substrate_slab_config = SlabConfiguration.from_parameters(
         substrate.bulk_config,
         substrate.miller_indices,
@@ -251,7 +256,9 @@ def test_optimal_supercell_functions(substrate, film, expected_n, expected_m):
     ],
 )
 def test_calculate_interfacial_distance_from_rdf(substrate_config, film_config, expected_distance_range):
-    """Test RDF-based interfacial distance calculation with different material types."""
+    """
+    Test RDF-based interfacial distance calculation with different material types.
+    """
     substrate_material = Material.create(substrate_config)
     film_material = Material.create(film_config)
 

@@ -67,27 +67,38 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
 
     @cached_property
     def matrix_ab(self) -> np.ndarray:
+        """
+        The in-plane lattice vectors a and b as rows, in Angstroms.
+        """
         return np.array(self.material.lattice.vector_arrays)[:2, :2]
 
     @cached_property
     def integer_vectors(self) -> np.ndarray:
-        """Integer coordinates of the supercell vectors searched, up to max_supercell_matrix_int, else limit_max_int."""
+        """
+        Integer coordinates of the supercell vectors searched, up to max_supercell_matrix_int, else limit_max_int.
+        """
         return get_integer_vectors_in_box(self.max_supercell_matrix_int or self.limit_max_int)
 
     @cached_property
     def squared_lengths(self) -> np.ndarray:
-        """Squared lengths of the supercell vectors in units of |a|², rounded so that equal lengths compare equal."""
+        """
+        Squared lengths of the supercell vectors in units of |a|², rounded so that equal lengths compare equal.
+        """
         vectors = self.integer_vectors @ self.matrix_ab
         return np.round((vectors**2).sum(axis=1) / (self.matrix_ab[0] @ self.matrix_ab[0]), HASH_TOLERANCE)
 
     def _get_polar_angles_grouped_by_length(self) -> List[np.ndarray]:
-        """Polar angles of the supercell vectors in degrees, one array per vector length."""
+        """
+        Polar angles of the supercell vectors in degrees, one array per vector length.
+        """
         vectors = self.integer_vectors @ self.matrix_ab
         polar_angles = np.degrees(np.arctan2(vectors[:, 1], vectors[:, 0]))
         return [polar_angles[self.squared_lengths == length] for length in np.unique(self.squared_lengths)]
 
     def _get_candidate_angles(self) -> np.ndarray:
-        """Angles between supercell vectors of equal length (0 for each vector with itself), within angle_tolerance."""
+        """
+        Angles between supercell vectors of equal length (0 for each vector with itself), within angle_tolerance.
+        """
         groups = self._get_polar_angles_grouped_by_length()
         angles = np.concatenate([np.subtract.outer(group, group).ravel() for group in groups])
         angles = angles[np.abs(angles - self.target_angle) < self.angle_tolerance]
@@ -95,18 +106,24 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         return angles[first_of_each_angle]
 
     def _get_rotation_in_lattice_coordinates(self, angle: float) -> np.ndarray:
-        """The rotation by angle, acting on row vectors of lattice coordinates."""
+        """
+        The rotation by angle, acting on row vectors of lattice coordinates.
+        """
         cosine, sine = np.cos(np.radians(angle)), np.sin(np.radians(angle))
         return self.matrix_ab @ np.array([[cosine, sine], [-sine, cosine]]) @ np.linalg.inv(self.matrix_ab)
 
     def _get_coincident_vectors(self, angle: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Supercell vectors whose rotated image is a lattice vector: the vectors, the images and their lengths."""
+        """
+        Supercell vectors whose rotated image is a lattice vector: the vectors, the images and their lengths.
+        """
         images = self.integer_vectors @ self._get_rotation_in_lattice_coordinates(angle)
         shared = np.all(np.abs(images - np.round(images)) < 10**-HASH_TOLERANCE, axis=1)
         return self.integer_vectors[shared], np.round(images[shared]).astype(int), self.squared_lengths[shared]
 
     def _get_match(self, angle: float) -> Optional[CommensurateLatticeMatchHolder]:
-        """The smallest coincidence cell of the rotation by angle, if get_angle_from_rotation_matrix_2d accepts it."""
+        """
+        The smallest coincidence cell of the rotation by angle, if get_angle_from_rotation_matrix_2d accepts it.
+        """
         substrate_vectors, film_vectors, lengths = self._get_coincident_vectors(angle)
         pair = get_shortest_right_handed_pair(substrate_vectors, lengths)
         if pair is None:
@@ -126,6 +143,9 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
 
     @cached_property
     def commensurate_lattice_match_holders(self) -> List[CommensurateLatticeMatchHolder]:
+        """
+        The coincidence cells within angle_tolerance of target_angle, smallest cell first.
+        """
         holders = [holder for holder in map(self._get_match, self._get_candidate_angles()) if holder is not None]
         holders.sort(key=lambda holder: round(np.linalg.det(holder.xy_supercell_matrix_substrate)))
         for match_id, holder in enumerate(holders):

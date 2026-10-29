@@ -57,14 +57,18 @@ def get_global_gcd(A: SupercellMatrix2DSchema, B: SupercellMatrix2DSchema) -> in
 
 
 def get_integer_vectors_in_box(max_int: int) -> np.ndarray:
-    """Nonzero integer vectors (i, j) with |i| and |j| up to max_int, i outer and j inner."""
+    """
+    Nonzero integer vectors (i, j) with |i| and |j| up to max_int, i outer and j inner.
+    """
     # This order decides ties between equally short vectors in get_shortest_right_handed_pair.
     steps = range(-max_int, max_int + 1)
     return np.array([(i, j) for i in steps for j in steps if (i, j) != (0, 0)])
 
 
 def get_shortest_right_handed_pair(vectors: np.ndarray, lengths: np.ndarray) -> Optional[List[int]]:
-    """Indices of the shortest vector and of the shortest one right-handed with it (positive cross product), or None."""
+    """
+    Indices of the shortest vector and of the shortest one right-handed with it (positive cross product), or None.
+    """
     first = np.argmin(lengths)
     right_handed = vectors[first, 0] * vectors[:, 1] - vectors[first, 1] * vectors[:, 0] > 0
     if not right_handed.any():
