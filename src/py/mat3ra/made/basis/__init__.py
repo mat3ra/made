@@ -94,9 +94,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def hash_string(self) -> str:
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
-        Converts to crystal, applies mod 1 to bring coords into [0,1), builds sorted atom strings.
-        Values within 0.001 of a lattice point become 0, the rest round half-to-even, as JS Utils.math.mod and
-        Utils.math.roundCustom do.
+        Converts to crystal, applies mod and round_custom to each coordinate (JS Utils.math.mod, Utils.math.roundCustom),
+        builds sorted atom strings.
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
