@@ -42,7 +42,6 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         return_first_match (bool): If True, returns only the first match found (to speed up the process).
 
     This class generates strained configurations for both substrate and film based on the commensurate matches found.
-
     """
 
     target_angle: float = 0.0

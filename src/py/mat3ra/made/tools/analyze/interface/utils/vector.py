@@ -24,6 +24,7 @@ def align_first_vector_to_x_2d_right_handed(vectors: List[Vector2dSchema]):
     """
     Rotates a set of 2D lattice vectors so that the first vector is aligned with the x-axis,
     and makes the cell right-handed.
+
     vectors: (2, 2) array
     Returns: rotated (2, 2) array
     """
