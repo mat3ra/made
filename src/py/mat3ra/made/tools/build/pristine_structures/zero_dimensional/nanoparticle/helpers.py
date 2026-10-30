@@ -12,6 +12,7 @@ from . import (
 from .analyzer import NanoparticleMaterialAnalyzer
 from mat3ra.made.tools.build.pristine_structures.two_dimensional.slab.helpers import create_slab
 from ....defective_structures.two_dimensional.island.helpers import CoordinateConditionType
+from .....analyze.lattice import get_material_with_conventional_lattice
 from .....analyze.other import get_closest_site_id_from_coordinate
 from .....build_components import MaterialWithBuildMetadata
 from .....build_components.entities.auxiliary.zero_dimensional.void_region.configuration import VoidRegionConfiguration
@@ -99,7 +100,7 @@ def create_nanoparticle_by_shape(
 
     # TODO: should done in analyzer
     element = crystal.basis.elements.values[0]
-    lattice_constant = crystal.lattice.a
+    lattice_constant = get_material_with_conventional_lattice(crystal).lattice.a
 
     return create_nanoparticle_by_shape_from_element(
         element=element, shape=shape, lattice_constant=lattice_constant, parameters=parameters
