@@ -57,9 +57,9 @@ def get_global_gcd(A: SupercellMatrix2DSchema, B: SupercellMatrix2DSchema) -> in
     return reduce(np.gcd, vals.tolist())
 
 
-def get_integer_vectors_in_box(max_int: int) -> np.ndarray:
+def get_integer_coordinates_up_to(max_int: int) -> np.ndarray:
     """
-    Nonzero integer vectors (i, j) with |i| and |j| up to max_int, i outer and j inner.
+    The nonzero integer coordinates (i, j) with |i| and |j| up to max_int, i outer and j inner.
     """
     # This order decides ties between equally short vectors in get_shortest_right_handed_pair.
     steps = range(-max_int, max_int + 1)

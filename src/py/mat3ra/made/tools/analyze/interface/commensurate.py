@@ -13,7 +13,7 @@ from pydantic import model_validator
 from ....utils import get_angle_from_rotation_matrix_2d
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
-from .utils.vector import get_integer_vectors_in_box, get_shortest_right_handed_pair
+from .utils.vector import get_integer_coordinates_up_to, get_shortest_right_handed_pair
 
 
 class CommensurateLatticeMatchHolder(InMemoryEntityPydantic):
@@ -29,9 +29,12 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
     Interface analyzer using commensurate lattice matching for commensurate lattice interfaces.
 
     For commensurate lattice bilayer materials where film and substrate are the same material,
-    this analyzer finds commensurate supercells at a target twist angle: the coincidence cells whose twist is within
-    angle_tolerance of target_angle, smallest cell first; lower max_supercell_matrix_int or angle_tolerance to bound
-    the size.
+    this analyzer finds the supercells shared by both layers at a target twist angle, smallest first:
+    1. List the supercell vectors i·a + j·b with |i| and |j| up to max_supercell_matrix_int (else limit_max_int).
+    2. Every two supercell vectors of equal length give a candidate twist angle; keep those within angle_tolerance.
+    3. For a candidate twist, keep the supercell vectors whose twisted copy is also a lattice vector (shared by both).
+    4. The two shortest shared vectors form the smallest common supercell; it is accepted only if
+       get_angle_from_rotation_matrix_2d confirms the twist.
 
     Attributes:
         target_angle (float): The target twist angle, in degrees.
@@ -65,87 +68,98 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         return self.substrate_material
 
     @cached_property
-    def matrix_ab(self) -> np.ndarray:
+    def lattice_vectors_2d(self) -> np.ndarray:
         """
         The in-plane lattice vectors a and b as rows, in Angstroms.
         """
         return np.array(self.material.lattice.vector_arrays)[:2, :2]
 
     @cached_property
-    def integer_vectors(self) -> np.ndarray:
+    def supercell_vector_coordinates(self) -> np.ndarray:
         """
-        Integer coordinates of the supercell vectors searched, up to max_supercell_matrix_int, else limit_max_int.
+        The (i, j) of each supercell vector i·a + j·b searched, up to max_supercell_matrix_int, else limit_max_int.
         """
-        return get_integer_vectors_in_box(self.max_supercell_matrix_int or self.limit_max_int)
+        return get_integer_coordinates_up_to(self.max_supercell_matrix_int or self.limit_max_int)
 
     @cached_property
-    def squared_lengths(self) -> np.ndarray:
+    def supercell_vector_lengths_squared(self) -> np.ndarray:
         """
-        Squared lengths of the supercell vectors in units of |a|², rounded so that equal lengths compare equal.
+        The squared length of each supercell vector in units of |a|², rounded so that equal lengths compare equal.
         """
-        vectors = self.integer_vectors @ self.matrix_ab
-        return np.round((vectors**2).sum(axis=1) / (self.matrix_ab[0] @ self.matrix_ab[0]), HASH_TOLERANCE)
+        supercell_vectors = self.supercell_vector_coordinates @ self.lattice_vectors_2d
+        a_length_squared = self.lattice_vectors_2d[0] @ self.lattice_vectors_2d[0]
+        return np.round((supercell_vectors**2).sum(axis=1) / a_length_squared, HASH_TOLERANCE)
 
-    def _get_polar_angles_grouped_by_length(self) -> List[np.ndarray]:
+    def _get_directions_by_length(self) -> List[np.ndarray]:
         """
-        Polar angles of the supercell vectors in degrees, one array per vector length.
+        The direction of each supercell vector (its polar angle, in degrees), one array per vector length.
         """
-        vectors = self.integer_vectors @ self.matrix_ab
-        polar_angles = np.degrees(np.arctan2(vectors[:, 1], vectors[:, 0]))
-        return [polar_angles[self.squared_lengths == length] for length in np.unique(self.squared_lengths)]
+        supercell_vectors = self.supercell_vector_coordinates @ self.lattice_vectors_2d
+        directions = np.degrees(np.arctan2(supercell_vectors[:, 1], supercell_vectors[:, 0]))
+        lengths = self.supercell_vector_lengths_squared
+        return [directions[lengths == length] for length in np.unique(lengths)]
 
-    def _get_candidate_angles(self) -> np.ndarray:
+    def _get_candidate_twist_angles(self) -> np.ndarray:
         """
-        Angles between supercell vectors of equal length (0 for each vector with itself), within angle_tolerance.
+        The twist angles between supercell vectors of equal length (0 for each vector with itself), within tolerance.
         """
-        groups = self._get_polar_angles_grouped_by_length()
-        angles = np.concatenate([np.subtract.outer(group, group).ravel() for group in groups])
+        directions_by_length = self._get_directions_by_length()
+        angles = np.concatenate(
+            [np.subtract.outer(directions, directions).ravel() for directions in directions_by_length]
+        )
         angles = angles[np.abs(angles - self.target_angle) < self.angle_tolerance]
         _, first_of_each_angle = np.unique(np.round(angles, HASH_TOLERANCE), return_index=True)
         return angles[first_of_each_angle]
 
-    def _get_rotation_in_lattice_coordinates(self, angle: float) -> np.ndarray:
+    def _get_twist_in_lattice_coordinates(self, angle: float) -> np.ndarray:
         """
-        The rotation by angle, acting on row vectors of lattice coordinates.
+        The twist by angle as a matrix acting on (i, j) coordinates written as rows.
         """
         cosine, sine = np.cos(np.radians(angle)), np.sin(np.radians(angle))
-        return self.matrix_ab @ np.array([[cosine, sine], [-sine, cosine]]) @ np.linalg.inv(self.matrix_ab)
+        rotation = np.array([[cosine, sine], [-sine, cosine]])
+        return self.lattice_vectors_2d @ rotation @ np.linalg.inv(self.lattice_vectors_2d)
 
-    def _get_coincident_vectors(self, angle: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _get_shared_supercell_vectors(self, angle: float) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Supercell vectors whose rotated image is a lattice vector: the vectors, the images and their lengths.
+        The supercell vectors whose twisted copy is also a lattice vector: their (i, j), the copy's (i, j), lengths.
         """
-        images = self.integer_vectors @ self._get_rotation_in_lattice_coordinates(angle)
-        shared = np.all(np.abs(images - np.round(images)) < 10**-HASH_TOLERANCE, axis=1)
-        return self.integer_vectors[shared], np.round(images[shared]).astype(int), self.squared_lengths[shared]
+        twisted_coordinates = self.supercell_vector_coordinates @ self._get_twist_in_lattice_coordinates(angle)
+        is_shared = np.all(np.abs(twisted_coordinates - np.round(twisted_coordinates)) < 10**-HASH_TOLERANCE, axis=1)
+        return (
+            self.supercell_vector_coordinates[is_shared],
+            np.round(twisted_coordinates[is_shared]).astype(int),
+            self.supercell_vector_lengths_squared[is_shared],
+        )
 
-    def _get_match(self, angle: float) -> Optional[CommensurateLatticeMatchHolder]:
+    def _get_smallest_shared_supercell(self, angle: float) -> Optional[CommensurateLatticeMatchHolder]:
         """
-        The smallest coincidence cell of the rotation by angle, if get_angle_from_rotation_matrix_2d accepts it.
+        The smallest supercell shared by both layers at this twist, if get_angle_from_rotation_matrix_2d confirms it.
         """
-        substrate_vectors, film_vectors, lengths = self._get_coincident_vectors(angle)
-        pair = get_shortest_right_handed_pair(substrate_vectors, lengths)
+        substrate_coordinates, film_coordinates, lengths = self._get_shared_supercell_vectors(angle)
+        pair = get_shortest_right_handed_pair(substrate_coordinates, lengths)
         if pair is None:
             return None
-        substrate, film = substrate_vectors[pair], film_vectors[pair]
-        product = np.linalg.inv(self.matrix_ab) @ (np.linalg.inv(film) @ substrate) @ self.matrix_ab
-        rotation_angle = get_angle_from_rotation_matrix_2d(product)
-        if rotation_angle is None:
+        substrate_matrix, film_matrix = substrate_coordinates[pair], film_coordinates[pair]
+        lattice_vectors_2d = self.lattice_vectors_2d
+        twist = np.linalg.inv(lattice_vectors_2d) @ (np.linalg.inv(film_matrix) @ substrate_matrix) @ lattice_vectors_2d
+        twist_angle = get_angle_from_rotation_matrix_2d(twist)
+        if twist_angle is None:
             return None
         return CommensurateLatticeMatchHolder(
             match_id=0,
-            angle=rotation_angle,
-            actual_angle=rotation_angle,
-            xy_supercell_matrix_substrate=substrate.tolist(),
-            xy_supercell_matrix_film=film.tolist(),
+            angle=twist_angle,
+            actual_angle=twist_angle,
+            xy_supercell_matrix_substrate=substrate_matrix.tolist(),
+            xy_supercell_matrix_film=film_matrix.tolist(),
         )
 
     @cached_property
     def commensurate_lattice_match_holders(self) -> List[CommensurateLatticeMatchHolder]:
         """
-        The coincidence cells within angle_tolerance of target_angle, smallest cell first.
+        The supercells shared by both layers within angle_tolerance of target_angle, smallest first.
         """
-        holders = [holder for holder in map(self._get_match, self._get_candidate_angles()) if holder is not None]
+        candidates = map(self._get_smallest_shared_supercell, self._get_candidate_twist_angles())
+        holders = [holder for holder in candidates if holder is not None]
         holders.sort(key=lambda holder: round(np.linalg.det(holder.xy_supercell_matrix_substrate)))
         for match_id, holder in enumerate(holders):
             holder.match_id = match_id
