@@ -94,7 +94,7 @@ def create_nanoparticle_by_shape(
     """
     Create a nanoparticle from a crystal material by specifying its shape and parameters.
 
-    Provide the crystal which first element nad lattice constant will be used to create the nanoparticle.
+    The crystal's first element and the lattice constant `a` of its conventional cell are used.
 
     """
 
