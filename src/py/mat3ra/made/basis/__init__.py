@@ -8,7 +8,6 @@ from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
 from mat3ra.esse.models.material import BasisSchema, BasisUnitsEnum
 from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.cell import Cell
-from mat3ra.utils.math import mod
 from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
@@ -94,8 +93,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def hash_string(self) -> str:
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
-        Converts to crystal, applies mod and round_custom to each coordinate (JS Utils.math.mod, Utils.math.roundCustom),
-        builds sorted atom strings.
+        Converts to crystal, wraps each coordinate into [0, 1), rounds it with round_custom and wraps again,
+        as JS getAsSortedString does, then builds sorted atom strings.
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
@@ -103,7 +102,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [f"{round_custom(mod(value), HASH_TOLERANCE):g}" for value in coord["value"]]
+            rounded = [f"{round_custom(value % 1, HASH_TOLERANCE) % 1:g}" for value in coord["value"]]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()

@@ -152,7 +152,15 @@ def test_calculate_hash_feo_standata():
 
 @pytest.mark.parametrize(
     "coordinate, equivalent_coordinate",
-    [(0.999998, 0.0), (-1e-06, 0.0), (0.001, 0.0), (0.999, 0.0), (0.5015, 0.502)],
+    [
+        (0.999998, 0.0),
+        (-1e-06, 0.0),
+        (0.0004, 0.0),
+        (0.0006, 0.0014),
+        (0.9996, 0.0),
+        (0.5015, 0.502),
+        (-0.9985, 0.001),
+    ],
 )
 def test_calculate_hash_as_js(coordinate, equivalent_coordinate):
     material, reference = Material.create_default(), Material.create_default()
