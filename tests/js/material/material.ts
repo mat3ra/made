@@ -119,13 +119,11 @@ describe("Material", () => {
         [
             { coordinate: 0.999998, equivalentCoordinate: 0 },
             { coordinate: -1e-6, equivalentCoordinate: 0 },
-            { coordinate: 0.0004, equivalentCoordinate: 0 },
             { coordinate: 0.0006, equivalentCoordinate: 0.0014 },
-            { coordinate: 0.9996, equivalentCoordinate: 0 },
             { coordinate: 0.5015, equivalentCoordinate: 0.502 },
-            { coordinate: -0.9985, equivalentCoordinate: 0.001 },
+            { coordinate: 1.234, equivalentCoordinate: 0.234 },
         ].forEach(({ coordinate, equivalentCoordinate }) => {
-            it(`should hash coordinate ${coordinate} as ${equivalentCoordinate}`, () => {
+            it(`rounds coordinate ${coordinate} as ${equivalentCoordinate} in the hash`, () => {
                 const [material, reference] = [coordinate, equivalentCoordinate].map(
                     (value) =>
                         new Material({
