@@ -190,12 +190,16 @@ def test_commensurate_analyzer_functionality(material_config, use_conventional_c
             analyzer.get_strained_configuration_by_match_id(-1)
 
 
+HEX_TABLE_ENTRY_1_05_DEGREES = angle_to_supercell_matrix_values_for_hex[31]
+HEX_TABLE_ENTRY_0_99_DEGREES = angle_to_supercell_matrix_values_for_hex[33]
+SQUARE_TWIST_ANGLE_SIGMA_5 = np.degrees(2 * np.arctan(1 / 3))
+
 COINCIDENCE_LATTICE_TEST_CASES = [
     (GRAPHENE, entry["angle"], entry["xy_supercell"]) for entry in angle_to_supercell_matrix_values_for_hex
 ] + [
-    (GRAPHENE, 180 - 1.05012087979, [[31, 32], [-32, 63]]),
-    (GRAPHENE, 60 - 0.987430297814, [[33, 34], [-34, 67]]),
-    (BULK_Si_CONVENTIONAL, 36.8698976458, [[2, 1], [-1, 2]]),
+    (GRAPHENE, 180 - HEX_TABLE_ENTRY_1_05_DEGREES["angle"], HEX_TABLE_ENTRY_1_05_DEGREES["xy_supercell"]),
+    (GRAPHENE, 60 - HEX_TABLE_ENTRY_0_99_DEGREES["angle"], HEX_TABLE_ENTRY_0_99_DEGREES["xy_supercell"]),
+    (BULK_Si_CONVENTIONAL, SQUARE_TWIST_ANGLE_SIGMA_5, [[2, 1], [-1, 2]]),
 ]
 
 

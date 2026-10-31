@@ -37,9 +37,11 @@ def create_grain_boundary_linear(
         material (Material): The material to create the grain boundary from.
         target_angle (float): The target twist angle in degrees.
         angle_tolerance (float): Tolerance for matching angles in degrees.
-        max_repetition_int (Optional[int]): Maximum integer for supercell matrix elements.
-        limit_max_int (int): Largest integer coordinate of the supercell vectors searched if max_repetition_int is None.
-        return_first_match (bool): Whether to return the first match or all matches.
+        max_repetition_int (Optional[int]): Size limit, if given: the largest |i| and |j| of the supercell
+            vectors i·a + j·b searched.
+        limit_max_int (int): Size limit if max_repetition_int is None: the largest |i| and |j| of the supercell
+            vectors i·a + j·b searched.
+        return_first_match (bool): If True, keeps only the smallest supercell.
         direction (AxisEnum): Direction along which to stack components (x or y).
         gap (float): The gap between the two phases in Angstroms.
         miller_indices (Tuple[int, int, int]): Miller indices for the slab surface.
