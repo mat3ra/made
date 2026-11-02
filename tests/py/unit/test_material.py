@@ -150,11 +150,15 @@ def test_calculate_hash_feo_standata():
     assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
-@pytest.mark.parametrize("coordinate", [0.999998, -1e-06])
-def test_calculate_hash_coordinate_rounding_to_lattice_point(coordinate):
-    material = Material.create_default()
-    material.set_coordinates([[coordinate, 0.0, 0.0], material.basis.coordinates.values[1]])
-    assert material.hash == Material.create_default().hash
+@pytest.mark.parametrize(
+    "coordinate, equivalent_coordinate",
+    [(0.999998, 0.0), (-1e-06, 0.0), (0.0006, 0.0014), (0.5015, 0.502), (1.234, 0.234)],
+)
+def test_calculate_hash_coordinate_rounding(coordinate, equivalent_coordinate):
+    material, reference = Material.create_default(), Material.create_default()
+    material.set_coordinates([[coordinate, 0.0, 0.0], [0.25, 0.25, 0.25]])
+    reference.set_coordinates([[equivalent_coordinate, 0.0, 0.0], [0.25, 0.25, 0.25]])
+    assert material.hash == reference.hash
 
 
 def test_model_dump_includes_hashes():

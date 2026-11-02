@@ -398,13 +398,12 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      */
     getAsSortedString(): string {
         const clsInstance = this.clone();
-        clsInstance.toStandardRepresentation();
         const standardRep = clsInstance.elementsAndCoordinatesAndLabelsArray.map((entry) => {
             const element = entry[0];
             const coordinate = entry[1];
             const atomicLabel = entry[2];
             const toleratedCoordinate = coordinate.map((x) =>
-                Utils.math.roundCustom(x, HASH_TOLERANCE),
+                Utils.math.mod(Utils.math.roundCustom(Utils.math.mod(x, 0), HASH_TOLERANCE), 0),
             );
             return `${element}${atomicLabel} ${toleratedCoordinate.join()}`;
         });

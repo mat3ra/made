@@ -180,7 +180,7 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
         """Mirrors JS Lattice.getHashString(isScaled). Rounds to HASH_TOLERANCE decimal places."""
         scale = self.a if is_scaled else 1
         values = [self.a / scale, self.b / scale, self.c / scale, self.alpha, self.beta, self.gamma]
-        return ";".join(f"{round(v, HASH_TOLERANCE):g}" for v in values) + ";"
+        return ";".join(f"{value:.15g}" for value in self.round_array_or_number(values, HASH_TOLERANCE)) + ";"
 
     def get_scaled_by_matrix(self, matrix: List[List[float]]):
         """
