@@ -93,8 +93,9 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def hash_string(self) -> str:
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
-        Converts to crystal, wraps each coordinate into [0, 1), rounds it with round_custom and wraps again,
-        as JS getAsSortedString does, then builds sorted atom strings.
+        Converts to crystal, takes each coordinate as stored (wrapped into [0, 1), rounded to the coordinates'
+        precision), rounds it with round_custom and wraps again, as JS getAsSortedString does, then builds sorted
+        atom strings.
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
@@ -102,7 +103,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            rounded = [f"{round_custom(value % 1, HASH_TOLERANCE) % 1:g}" for value in coord["value"]]
+            stored = self.coordinates.round_array_or_number([value % 1 for value in coord["value"]])
+            rounded = [f"{round_custom(value, HASH_TOLERANCE) % 1:g}" for value in stored]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()

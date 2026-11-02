@@ -145,6 +145,7 @@ describe("Material", () => {
             { coordinate: [0.999, -0.999, 1.0], standardCoordinate: [0.999, 0.001, 0] },
             { coordinate: [0.0006, 0, 0], standardCoordinate: [0.0006, 0, 0] },
             { coordinate: [0.9996, 0, 0], standardCoordinate: [0.9996, 0, 0] },
+            { coordinate: [-2.0005, 0, 0], standardCoordinate: [0.9995, 0, 0] },
         ].forEach(({ coordinate, standardCoordinate }) => {
             it(`stores coordinate ${coordinate} as ${standardCoordinate} with the same hash`, () => {
                 const material = new Material({
