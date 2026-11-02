@@ -86,9 +86,10 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         Each candidate supercell vector as (i, j): i steps along a plus j steps along b, up to the size limit.
         """
         size_limit = self.max_supercell_matrix_int or self.limit_max_int
-        steps = range(-size_limit, size_limit + 1)
-        # This order (i outer, both from -size_limit) decides which of several equally short vectors comes first.
-        return np.array([(i, j) for i in steps for j in steps if (i, j) != (0, 0)])
+        # Nearest zero first (0, 1, -1, 2, -2, ...), j outer: of several equally short vectors the plainest comes first,
+        # so a 0° twist gives the identity.
+        steps = sorted(range(-size_limit, size_limit + 1), key=lambda step: (abs(step), step < 0))
+        return np.array([(i, j) for j in steps for i in steps if (i, j) != (0, 0)])
 
     @cached_property
     def supercell_vectors(self) -> np.ndarray:

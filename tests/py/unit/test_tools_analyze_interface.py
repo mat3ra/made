@@ -108,15 +108,15 @@ def test_interface_analyzer(substrate, film, expected):
 EXPECTED_PROPERTIES_GRAPHENE_13: Final = SimpleNamespace(
     number_of_matches=1,
     angle_range=(12.5, 13.5),
-    substrate_supercell_matrix=[[-5, -2], [-3, -5]],
-    film_supercell_matrix=[[-5, -3], [-2, -5]],
+    substrate_supercell_matrix=[[5, 2], [-2, 3]],
+    film_supercell_matrix=[[5, 3], [-3, 2]],
 )
 
 EXPECTED_PROPERTIES_GRAPHENE_7_34: Final = SimpleNamespace(
     number_of_matches=1,
     angle_range=(7.24, 7.44),
-    substrate_supercell_matrix=[[-9, -4], [-5, -9]],
-    film_supercell_matrix=[[-9, -5], [-4, -9]],
+    substrate_supercell_matrix=[[9, 4], [-4, 5]],
+    film_supercell_matrix=[[9, 5], [-5, 4]],
 )
 
 
