@@ -141,6 +141,29 @@ describe("Material", () => {
             });
         });
 
+        [
+            { coordinate: [0.999, -0.999, 1.0], standardCoordinate: [0.999, 0.001, 0] },
+            { coordinate: [0.0006, 0, 0], standardCoordinate: [0.0006, 0, 0] },
+            { coordinate: [0.9996, 0, 0], standardCoordinate: [0.9996, 0, 0] },
+        ].forEach(({ coordinate, standardCoordinate }) => {
+            it(`stores coordinate ${coordinate} as ${standardCoordinate} with the same hash`, () => {
+                const material = new Material({
+                    ...Silicon,
+                    basis: {
+                        ...Silicon.basis,
+                        coordinates: [
+                            { id: 0, value: coordinate as [number, number, number] },
+                            Silicon.basis.coordinates[1],
+                        ],
+                    },
+                });
+                const standardBasis = material.getBasis().standardRepresentation;
+                const stored = new Material({ ...Silicon, basis: standardBasis });
+                expect(standardBasis.coordinates[0].value).to.deep.equal(standardCoordinate);
+                expect(stored.calculateHash()).to.equal(material.calculateHash());
+            });
+        });
+
         it("stores InChI hash for non-periodic materials when InChI is present", () => {
             // MD5 of the InChI string — same contract as web-app MolView upload.
             const inchi =

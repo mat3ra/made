@@ -258,7 +258,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     toStandardRepresentation() {
         this.toCrystal();
         this._coordinates.mapArrayInPlace(
-            (point) => point.map((x) => Utils.math.mod(x)) as Coordinate3DSchema,
+            (point) => point.map((x) => Utils.math.mod(x, 0)) as Coordinate3DSchema,
         );
     }
 
