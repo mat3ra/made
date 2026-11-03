@@ -4,6 +4,7 @@ import { Utils } from "@mat3ra/utils";
 import lodash from "lodash";
 
 import { Lattice } from "../lattice";
+import { BrillouinZoneFace, computeBrillouinZone } from "./brillouin_zone";
 import { paths } from "./paths";
 import { symmetryPoints } from "./symmetry_points";
 
@@ -94,6 +95,20 @@ export class ReciprocalLattice extends Lattice {
      */
     get symmetryPoints(): SymmetryPoint[] {
         return symmetryPoints(this);
+    }
+
+    /**
+     * Get the first Brillouin zone — the Wigner-Seitz cell of the reciprocal lattice — as a
+     * list of polygonal faces, ready to be projected and drawn.
+     *
+     * The zone follows from this lattice's own vectors rather than from its Bravais type, so
+     * materials sharing a type but differing in axial ratios (a bulk crystal and a slab with
+     * vacuum padding, say) yield correctly differing zones.
+     *
+     * @return {BrillouinZoneFace[] | null} null for a degenerate lattice.
+     */
+    get brillouinZone(): BrillouinZoneFace[] | null {
+        return computeBrillouinZone(this.reciprocalVectors);
     }
 
     /**
