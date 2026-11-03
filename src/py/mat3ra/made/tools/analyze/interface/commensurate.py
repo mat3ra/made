@@ -11,12 +11,18 @@ from mat3ra.made.material import Material
 from pydantic import model_validator
 
 from ....utils import get_angle_from_rotation_matrix_2d
+from .enums import angle_to_supercell_matrix_values_for_hex
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
 
 # Lengths, angles and steps are compared to 3 decimals, as material hashes are; near-hexagonal cells such as
 # Standata h-BN (b = a + 1e-6) then still group as hexagonal.
 COINCIDENCE_DECIMALS = HASH_TOLERANCE
+
+# The largest step any tabulated twist angle needs (the Twister table, enums.py).
+MAX_SUPERCELL_STEPS = max(
+    abs(step) for entry in angle_to_supercell_matrix_values_for_hex for row in entry["xy_supercell"] for step in row
+)
 
 
 class CommensurateLatticeMatchHolder(InMemoryEntityPydantic):
@@ -44,10 +50,8 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
     Attributes:
         target_angle (float): The target twist angle, in degrees.
         angle_tolerance (float): Tolerance for matching angles, in degrees.
-        max_supercell_matrix_int (Optional[int]): Size limit, if given: the largest |i| and |j| of the supercell
-            vectors i·a + j·b searched.
-        limit_max_int (int): Size limit if max_supercell_matrix_int is None: the largest |i| and |j| of the
-            supercell vectors i·a + j·b searched.
+        max_supercell_matrix_int (int): Size limit: the largest |i| and |j| of the supercell vectors i·a + j·b
+            searched; by default the largest step any tabulated twist angle needs.
         return_first_match (bool): If True, keeps only the smallest supercell.
 
     This class generates strained configurations for both substrate and film based on the commensurate matches found.
@@ -55,8 +59,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
 
     target_angle: float = 0.0
     angle_tolerance: float = 0.1
-    max_supercell_matrix_int: Optional[int] = None
-    limit_max_int: int = 82  # the Twister table's smallest angle (0.82°, enums.py) needs |i| and |j| up to 81
+    max_supercell_matrix_int: int = MAX_SUPERCELL_STEPS
     return_first_match: bool = True
 
     @model_validator(mode="before")
@@ -85,7 +88,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         """
         Each candidate supercell vector as (i, j): i steps along a plus j steps along b, up to the size limit.
         """
-        size_limit = self.max_supercell_matrix_int or self.limit_max_int
+        size_limit = self.max_supercell_matrix_int
         # Nearest zero first (0, 1, -1, 2, -2, ...), j outer: of several equally short vectors the plainest comes first,
         # so a 0° twist gives the identity.
         steps = sorted(range(-size_limit, size_limit + 1), key=lambda step: (abs(step), step < 0))
