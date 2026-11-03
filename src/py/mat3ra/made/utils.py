@@ -34,32 +34,6 @@ def get_center_of_coordinates(coordinates: List[List[float]]) -> List[float]:
     return np.mean(np.array(coordinates), axis=0).tolist()
 
 
-def create_2d_supercell_matrices(max_search: int) -> List[np.ndarray]:
-    """
-    Create a list of 2D supercell matrices within a maximum search range.
-
-    Filtering conditions:
-    - Non-zero area constraint
-    - Positive determinant (to exclude mirroring transformations)
-
-    Args:
-        max_search: The maximum search range.
-    Returns:
-        List[np.ndarray]: The list of supercell matrices.
-    """
-    matrices = []
-    for s11 in range(-max_search, max_search + 1):
-        for s12 in range(-max_search, max_search + 1):
-            for s21 in range(-max_search, max_search + 1):
-                for s22 in range(-max_search, max_search + 1):
-                    matrix = np.array([[s11, s12], [s21, s22]])
-                    determinant = np.linalg.det(matrix)
-                    if determinant == 0 or determinant < 0:
-                        continue
-                    matrices.append(matrix)
-    return matrices
-
-
 def get_angle_from_rotation_matrix_2d(
     matrix: np.ndarray, zero_tolerance: float = 1e-6, round_digits: int = 3
 ) -> Union[float, None]:

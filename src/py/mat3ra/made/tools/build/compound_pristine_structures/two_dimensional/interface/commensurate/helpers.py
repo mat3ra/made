@@ -19,7 +19,6 @@ def get_commensurate_strained_configurations(
     target_angle: float,
     angle_tolerance: float,
     max_repetition_int: Optional[int],
-    limit_max_int: int,
     return_first_match: bool,
     miller_indices: Tuple[int, int, int],
     number_of_layers: int,
@@ -37,13 +36,13 @@ def get_commensurate_strained_configurations(
         material (Material): The material to create configurations from.
         target_angle (float): The target twist angle in degrees.
         angle_tolerance (float): Tolerance for matching angles in degrees.
-        max_repetition_int (Optional[int]): Maximum integer for supercell matrix elements.
-        limit_max_int (int): Limit for maximum integer to search for supercell matrices.
-        return_first_match (bool): Whether to return the first match or all matches.
+        max_repetition_int (Optional[int]): Size limit: the largest |i| and |j| of the supercell vectors i·a + j·b
+            searched; None keeps the analyzer's default.
+        return_first_match (bool): If True, keeps only the smallest supercell.
         miller_indices (Tuple[int, int, int]): Miller indices for the slab surface.
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
-        match_id (int): ID of the match to use (0 for first match).
+        match_id (int): Index into the matches, smallest first; above 0 needs return_first_match=False.
 
     Returns:
         Tuple[List[SlabStrainedSupercellConfiguration], float]:
@@ -63,9 +62,9 @@ def get_commensurate_strained_configurations(
         substrate_slab_configuration=slab_config,
         target_angle=target_angle,
         angle_tolerance=angle_tolerance,
-        max_supercell_matrix_int=max_repetition_int,
-        limit_max_int=limit_max_int,
         return_first_match=return_first_match,
+        # The analyzer's default size limit applies unless one is given.
+        **({} if max_repetition_int is None else {"max_supercell_matrix_int": max_repetition_int}),
     )
 
     match_holders = analyzer.commensurate_lattice_match_holders
@@ -82,7 +81,6 @@ def create_interface_commensurate(
     target_angle: float = 0.0,
     angle_tolerance: float = 0.1,
     max_repetition_int: Optional[int] = None,
-    limit_max_int: int = 20,
     return_first_match: bool = True,
     direction: AxisEnum = AxisEnum.z,
     gap: float = 3.0,
@@ -107,15 +105,15 @@ def create_interface_commensurate(
         material (Material): The material to create the interface from.
         target_angle (float): The target twist angle in degrees.
         angle_tolerance (float): Tolerance for matching angles in degrees.
-        max_repetition_int (Optional[int]): Maximum integer for supercell matrix elements.
-        limit_max_int (int): Limit for maximum integer to search for supercell matrices.
-        return_first_match (bool): Whether to return the first match or all matches.
+        max_repetition_int (Optional[int]): Size limit: the largest |i| and |j| of the supercell vectors i·a + j·b
+            searched; None keeps the analyzer's default.
+        return_first_match (bool): If True, keeps only the smallest supercell.
         direction (AxisEnum): Direction along which to stack components (x, y, or z).
         gap (float): The gap between the two phases in Angstroms.
         miller_indices (Tuple[int, int, int]): Miller indices for the slab surface.
         number_of_layers (int): Number of atomic layers in the slab.
         vacuum (float): Size of the vacuum layer in Angstroms.
-        match_id (int): ID of the match to use (0 for first match).
+        match_id (int): Index into the matches, smallest first; above 0 needs return_first_match=False.
         use_conventional_cell (bool): Whether to use the conventional cell for the material.
         remove_overlapping_atoms (bool): Whether to resolve overlapping atoms in the interface after creation.
         tolerance_for_overlap (float): Tolerance for resolving overlapping atoms, in Angstroms.
@@ -130,7 +128,6 @@ def create_interface_commensurate(
         target_angle=target_angle,
         angle_tolerance=angle_tolerance,
         max_repetition_int=max_repetition_int,
-        limit_max_int=limit_max_int,
         return_first_match=return_first_match,
         miller_indices=miller_indices,
         number_of_layers=number_of_layers,
