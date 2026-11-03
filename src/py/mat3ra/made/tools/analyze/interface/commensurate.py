@@ -11,18 +11,8 @@ from mat3ra.made.material import Material
 from pydantic import model_validator
 
 from ....utils import get_angle_from_rotation_matrix_2d
-from .enums import angle_to_supercell_matrix_values_for_hex
 from .simple import InterfaceAnalyzer
 from .utils.holders import MatchedSubstrateFilmConfigurationHolder
-
-# Lengths, angles and steps are compared to 3 decimals, as material hashes are; near-hexagonal cells such as
-# Standata h-BN (b = a + 1e-6) then still group as hexagonal.
-COINCIDENCE_DECIMALS = HASH_TOLERANCE
-
-# The largest step any tabulated twist angle needs (the Twister table, enums.py).
-MAX_SUPERCELL_STEPS = max(
-    abs(step) for entry in angle_to_supercell_matrix_values_for_hex for row in entry["xy_supercell"] for step in row
-)
 
 
 class CommensurateLatticeMatchHolder(InMemoryEntityPydantic):
@@ -51,7 +41,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         target_angle (float): The target twist angle, in degrees.
         angle_tolerance (float): Tolerance for matching angles, in degrees.
         max_supercell_matrix_int (int): Size limit: the largest |i| and |j| of the supercell vectors i·a + j·b
-            searched; by default the largest step any tabulated twist angle needs.
+            searched.
         return_first_match (bool): If True, keeps only the smallest supercell.
 
     This class generates strained configurations for both substrate and film based on the commensurate matches found.
@@ -59,7 +49,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
 
     target_angle: float = 0.0
     angle_tolerance: float = 0.1
-    max_supercell_matrix_int: int = MAX_SUPERCELL_STEPS
+    max_supercell_matrix_int: int = 100
     return_first_match: bool = True
 
     @model_validator(mode="before")
@@ -107,7 +97,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         The squared length of each supercell vector in units of |a|², rounded so that equal lengths compare equal.
         """
         a_length_squared = self.lattice_vectors_2d[0] @ self.lattice_vectors_2d[0]
-        return np.round((self.supercell_vectors**2).sum(axis=1) / a_length_squared, COINCIDENCE_DECIMALS)
+        return np.round((self.supercell_vectors**2).sum(axis=1) / a_length_squared, HASH_TOLERANCE)
 
     def _get_directions_by_length(self) -> List[np.ndarray]:
         """
@@ -128,7 +118,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         angles = np.concatenate(differences)
         angles = angles[np.abs(angles - self.target_angle) < self.angle_tolerance]
         # One unrounded angle per rounded value: a rounded angle would miss shared vectors in large supercells.
-        _, first_of_each_angle = np.unique(np.round(angles, COINCIDENCE_DECIMALS), return_index=True)
+        _, first_of_each_angle = np.unique(np.round(angles, HASH_TOLERANCE), return_index=True)
         return angles[first_of_each_angle]
 
     def _get_twist_for_steps(self, angle: float) -> np.ndarray:
@@ -144,7 +134,7 @@ class CommensurateLatticeInterfaceAnalyzer(InterfaceAnalyzer):
         Whether each supercell vector's twisted copy is also a lattice vector (whole steps), that is, shared by both.
         """
         twisted_steps = self.supercell_vector_steps @ twist
-        return np.all(np.abs(twisted_steps - np.round(twisted_steps)) < 10**-COINCIDENCE_DECIMALS, axis=1)
+        return np.all(np.abs(twisted_steps - np.round(twisted_steps)) < 10**-HASH_TOLERANCE, axis=1)
 
     def _get_two_shortest_shared_vectors(self, is_shared: np.ndarray) -> Optional[np.ndarray]:
         """

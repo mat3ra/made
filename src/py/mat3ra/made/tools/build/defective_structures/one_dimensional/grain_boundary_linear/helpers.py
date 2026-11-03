@@ -37,7 +37,7 @@ def create_grain_boundary_linear(
         target_angle (float): The target twist angle in degrees.
         angle_tolerance (float): Tolerance for matching angles in degrees.
         max_repetition_int (Optional[int]): Size limit: the largest |i| and |j| of the supercell vectors i·a + j·b
-            searched; None keeps the analyzer's default, the largest step any tabulated twist angle needs.
+            searched; None keeps the analyzer's default.
         return_first_match (bool): If True, keeps only the smallest supercell.
         direction (AxisEnum): Direction along which to stack components (x or y).
         gap (float): The gap between the two phases in Angstroms.
