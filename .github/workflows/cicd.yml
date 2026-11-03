@@ -127,7 +127,7 @@ jobs:
       - run-py-linter
       # Wait for JS publish step to publish the new tag
       - publish-js-package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: (github.repository != 'Exabyte-io/template-definitions-js-py') && (github.ref_name == 'main')
 
     steps:
