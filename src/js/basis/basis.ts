@@ -258,7 +258,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     toStandardRepresentation() {
         this.toCrystal();
         this._coordinates.mapArrayInPlace(
-            (point) => point.map((x) => Utils.math.mod(x)) as Coordinate3DSchema,
+            (point) => point.map((x) => Utils.math.mod(x, 0)) as Coordinate3DSchema,
         );
     }
 
@@ -397,13 +397,13 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      * This guarantees the independence from the order in the elements array.
      */
     getAsSortedString(): string {
-        const clsInstance = this.clone();
-        const standardRep = clsInstance.elementsAndCoordinatesAndLabelsArray.map((entry) => {
+        const storedBasis = new Basis(this.clone().standardRepresentation);
+        const standardRep = storedBasis.elementsAndCoordinatesAndLabelsArray.map((entry) => {
             const element = entry[0];
             const coordinate = entry[1];
             const atomicLabel = entry[2];
             const toleratedCoordinate = coordinate.map((x) =>
-                Utils.math.mod(Utils.math.roundCustom(Utils.math.mod(x, 0), HASH_TOLERANCE), 0),
+                Utils.math.mod(Utils.math.roundCustom(x, HASH_TOLERANCE), 0),
             );
             return `${element}${atomicLabel} ${toleratedCoordinate.join()}`;
         });
