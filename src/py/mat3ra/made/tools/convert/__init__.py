@@ -179,7 +179,7 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
         material_config = material_or_material_data.to_dict()
     else:
         material_config = material_or_material_data
-    structure = to_pymatgen(material_config)
+    structure = to_pymatgen(material_or_material_data)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     atomic_labels = material_config["basis"].get("labels", [])

@@ -1,4 +1,6 @@
 import copy
+import hashlib
+import json
 from functools import partialmethod
 
 import numpy as np
@@ -56,10 +58,10 @@ def init_with_nudged_oriented_unit_cell(generator, *args, steps=0, **kwargs):
 
 
 def get_stored_form(material):
-    """The material's basis in the standard representation, its lattice and its hash."""
+    """The material's basis in the standard representation and its lattice, as JSON at full precision."""
     basis = material.basis.clone()
     basis.to_standard_representation()
-    return basis.to_dict(), material.lattice.to_dict(), material.hash
+    return json.dumps([basis.to_dict(), material.lattice.to_dict()], sort_keys=True)
 
 
 def create_interface_on_substrate(film, **parameters):
@@ -68,35 +70,37 @@ def create_interface_on_substrate(film, **parameters):
 
 
 @pytest.mark.parametrize(
-    "builder, material_config, parameters, expected_hash",
+    "builder, material_config, parameters, expected_digest",
     [
         # The cut of monoclinic HfO2 (001) fell on the cell boundary: 17 layers natively, 16 in Pyodide.
-        (create_slab, BULK_Hf2O_MCL, SLAB_PARAMETERS, "28e7d4d495308e68076eb118b6d26cbb"),
-        (create_interface_on_substrate, GRAPHENE, INTERFACE_PARAMETERS, "49ab604d97b82ccf4d950be87b9f4ef5"),
+        (create_slab, BULK_Hf2O_MCL, SLAB_PARAMETERS, "c70def306899ad6db4f2e5ecac0242d9"),
+        (create_interface_on_substrate, GRAPHENE, INTERFACE_PARAMETERS, "ec51be25bafb9878cdec7b8bb55d7816"),
     ],
 )
 @pytest.mark.parametrize("steps", ULP_STEPS)
-def test_build_with_nudged_oriented_unit_cell(builder, material_config, parameters, expected_hash, steps, monkeypatch):
+def test_build_with_nudged_oriented_unit_cell(
+    builder, material_config, parameters, expected_digest, steps, monkeypatch
+):
     stored_form = get_stored_form(builder(Material.create(material_config), **parameters))
     monkeypatch.setattr(
         PymatgenSlabGenerator, "__init__", partialmethod(init_with_nudged_oriented_unit_cell, steps=steps)
     )
     assert get_stored_form(builder(get_material_with_shifted_origin(material_config), **parameters)) == stored_form
-    assert stored_form[2] == expected_hash
+    assert hashlib.md5(stored_form.encode()).hexdigest() == expected_digest
 
 
 @pytest.mark.parametrize(
-    "builder, material_config, parameters, expected_hash",
+    "builder, material_config, parameters, expected_digest",
     [
         (
             create_defect_point_interstitial,
             BULK_Si_PRIMITIVE,
             INTERSTITIAL_PARAMETERS,
-            "d147560ab2bcc45c196a82ea967131f0",
+            "46eb92e4ae20a5eb5baa04044bfe6b0f",
         ),
     ],
 )
-def test_build_with_shifted_origin(builder, material_config, parameters, expected_hash):
+def test_build_with_shifted_origin(builder, material_config, parameters, expected_digest):
     stored_form = get_stored_form(builder(Material.create(material_config), **parameters))
     assert get_stored_form(builder(get_material_with_shifted_origin(material_config), **parameters)) == stored_form
-    assert stored_form[2] == expected_hash
+    assert hashlib.md5(stored_form.encode()).hexdigest() == expected_digest
