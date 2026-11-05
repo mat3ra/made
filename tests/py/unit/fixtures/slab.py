@@ -615,3 +615,55 @@ SLAB_SrTiO3_011_TERMINATION_O2_BOTTOM = {
         "type": "TRI",
     },
 }
+
+# The slabs of BULK_Si_PRIMITIVE: its conventional cell has the origin on an atom (BULK_Si_CONVENTIONAL_FROM_PRIMITIVE).
+
+SI_CONVENTIONAL_SLAB_001_FROM_PRIMITIVE: Dict[str, Any] = {
+    **SI_CONVENTIONAL_SLAB_001,
+    "basis": {
+        **SI_CONVENTIONAL_SLAB_001["basis"],
+        "coordinates": [
+            {"id": 0, "value": [0.0, 0.0, 0.257353832]},
+            {"id": 1, "value": [0.25, 0.75, 0.17156945]},
+            {"id": 2, "value": [0.0, 0.5, 0.085785068]},
+            {"id": 3, "value": [0.25, 0.25, 6.86e-07]},
+            {"id": 4, "value": [0.5, 0.0, 0.085785068]},
+            {"id": 5, "value": [0.75, 0.75, 6.86e-07]},
+            {"id": 6, "value": [0.5, 0.5, 0.257353832]},
+            {"id": 7, "value": [0.75, 0.25, 0.17156945]},
+            {"id": 8, "value": [0.0, 0.0, 0.600491359]},
+            {"id": 9, "value": [0.25, 0.75, 0.514706977]},
+            {"id": 10, "value": [0.0, 0.5, 0.428922596]},
+            {"id": 11, "value": [0.25, 0.25, 0.343138214]},
+            {"id": 12, "value": [0.5, 0.0, 0.428922596]},
+            {"id": 13, "value": [0.75, 0.75, 0.343138214]},
+            {"id": 14, "value": [0.5, 0.5, 0.600491359]},
+            {"id": 15, "value": [0.75, 0.25, 0.514706977]},
+        ],
+    },
+}
+
+SLAB_SI_CONVENTIONAL_001_NO_VACUUM_FROM_PRIMITIVE: Dict[str, Any] = {
+    **SLAB_SI_CONVENTIONAL_001_NO_VACUUM,
+    "basis": {
+        **SLAB_SI_CONVENTIONAL_001_NO_VACUUM["basis"],
+        "coordinates": [
+            {"id": 0, "value": [0.0, 0.0, 0.375001]},
+            {"id": 1, "value": [0.25, 0.75, 0.250001]},
+            {"id": 2, "value": [0.0, 0.5, 0.125001]},
+            {"id": 3, "value": [0.25, 0.25, 1e-06]},
+            {"id": 4, "value": [0.5, 0.0, 0.125001]},
+            {"id": 5, "value": [0.75, 0.75, 1e-06]},
+            {"id": 6, "value": [0.5, 0.5, 0.375001]},
+            {"id": 7, "value": [0.75, 0.25, 0.250001]},
+            {"id": 8, "value": [0.0, 0.0, 0.875001]},
+            {"id": 9, "value": [0.25, 0.75, 0.750001]},
+            {"id": 10, "value": [0.0, 0.5, 0.625001]},
+            {"id": 11, "value": [0.25, 0.25, 0.500001]},
+            {"id": 12, "value": [0.5, 0.0, 0.625001]},
+            {"id": 13, "value": [0.75, 0.75, 0.500001]},
+            {"id": 14, "value": [0.5, 0.5, 0.875001]},
+            {"id": 15, "value": [0.75, 0.25, 0.750001]},
+        ],
+    },
+}

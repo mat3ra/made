@@ -161,6 +161,15 @@ def test_calculate_hash_coordinate_rounding(coordinate, equivalent_coordinate):
     assert material.hash == reference.hash
 
 
+@pytest.mark.parametrize(
+    "coordinate, standard_coordinate",
+    [([-1e-10, -0.0, 1.0], [0.0, 0.0, 0.0]), ([0.9999999996, -0.3, 1.234], [0.0, 0.7, 0.234])],
+)
+def test_to_standard_coordinate(coordinate, standard_coordinate):
+    assert str(Coordinates.to_standard_coordinate(coordinate)) == str(standard_coordinate)
+    assert str(Coordinates.to_standard_coordinate(standard_coordinate)) == str(standard_coordinate)
+
+
 def test_model_dump_includes_hashes():
     material = Material.create_default()
     serialized_material = material.model_dump()

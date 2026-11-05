@@ -37,6 +37,22 @@ GRAPHENE_NICKEL_INTERFACE_TOP_HCP = {
     },
 }
 
+# The same interface in the 60-degree cell, as the ZSL builder returns it.
+GRAPHENE_NICKEL_INTERFACE_TOP_HCP_60_DEGREE_CELL = {
+    **GRAPHENE_NICKEL_INTERFACE_TOP_HCP,
+    "basis": {
+        **GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"],
+        "coordinates": [
+            {"id": 0, "value": [0, 0, 3.03e-7]},
+            {"id": 1, "value": [0.666666667, 0.666666667, 0.100960811]},
+            {"id": 2, "value": [0.333333333, 0.333333333, 0.201921319]},
+            {"id": 3, "value": [0.333333333, 0.333333333, 0.351561882]},
+            {"id": 4, "value": [0.666666667, 0.666666667, 0.351561882]},
+        ],
+    },
+    "lattice": {**GRAPHENE_NICKEL_INTERFACE_TOP_HCP["lattice"], "gamma": 60},
+}
+
 # This configuration is used for testing purposes, specifically for the GitHub Workflow.
 GRAPHENE_NICKEL_INTERFACE_TOP_HCP_GH_WF = {
     "name": "C(001)-Ni(111), Interface, Strain 25.629pct",

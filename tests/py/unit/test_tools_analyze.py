@@ -22,7 +22,6 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
 )
 from mat3ra.made.tools.build_components.operations.core.combinations.enums import AdatomPlacementMethodEnum
 from unit.fixtures.nanoribbon.nanoribbon import GRAPHENE_ZIGZAG_NANORIBBON
-from unit.utils import OSPlatform, get_platform_specific_value
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
 from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
@@ -88,7 +87,7 @@ def test_radial_distribution_function(material_config, rdf_params, expected_firs
     assert np.isclose(rdf.first_peak_distance, expected_first_peak_distance, atol=0.1)
 
 
-VORONOI_SITE_EXPECTED = {OSPlatform.DARWIN: [0.625, 0.625, 0.125], OSPlatform.OTHER: [0.5, 0.5, 0.5]}
+VORONOI_SITE_EXPECTED = [0.125, 0.625, 0.625]
 
 
 @pytest.mark.parametrize(
@@ -106,7 +105,6 @@ def test_crystal_site_analyzer(placement_method, coordinate, expected_coordinate
     if placement_method == AtomPlacementMethodEnum.VORONOI_SITE:
         analyzer = VoronoiCrystalSiteAnalyzer(material=crystal, coordinate=coordinate)
         final_coordinate = analyzer.voronoi_site_coordinate
-        expected_coordinate = get_platform_specific_value(expected_coordinate)
     else:
         analyzer = CrystalSiteAnalyzer(material=crystal, coordinate=coordinate)
         if placement_method == AtomPlacementMethodEnum.EXACT_COORDINATE:
@@ -118,13 +116,7 @@ def test_crystal_site_analyzer(placement_method, coordinate, expected_coordinate
         else:
             raise ValueError(f"Unknown method: {placement_method}")
 
-    if placement_method == AtomPlacementMethodEnum.VORONOI_SITE:
-        allowed_coords = [[0.625, 0.625, 0.125], [0.625, 0.625, 0.625], [0.5, 0.5, 0.5]]
-        assert any(
-            np.allclose(final_coordinate, allowed, atol=COMPARISON_PRECISION) for allowed in allowed_coords
-        ), f"Voronoi coordinate {final_coordinate} not in allowed list"
-    else:
-        assert np.allclose(final_coordinate, expected_coordinate, atol=COMPARISON_PRECISION)
+    assert np.allclose(final_coordinate, expected_coordinate, atol=COMPARISON_PRECISION)
 
 
 @pytest.mark.parametrize(

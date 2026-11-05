@@ -2,6 +2,8 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
+from mat3ra.made.basis.coordinates import Coordinates
+from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.utils import map_array_to_array_with_id_value, map_array_with_id_value_to_array
 from mat3ra.utils import remove_comments_from_source_code
@@ -38,32 +40,20 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     if isinstance(material_or_material_data, Material):
         material_data = material_or_material_data.to_dict()
 
-    lattice_params = material_data["lattice"]
-    lattice = PymatgenLattice.from_parameters(
-        a=lattice_params["a"],
-        b=lattice_params["b"],
-        c=lattice_params["c"],
-        alpha=lattice_params["alpha"],
-        beta=lattice_params["beta"],
-        gamma=lattice_params["gamma"],
-    )
+    lattice = PymatgenLattice(Lattice(**material_data["lattice"]).vector_arrays_rounded)
 
     basis = material_data["basis"]
     elements = [element["value"] for element in basis["elements"]]
-    coordinates = [coord["value"] for coord in basis["coordinates"]]
+    coordinates = [Coordinates.to_standard_coordinate(coord["value"]) for coord in basis["coordinates"]]
     labels_data = basis.get("labels", []) or []
     labels = [label["value"] for label in labels_data]
-    # Assuming that the basis units are fractional since it's a crystal basis
-    coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
 
     if "labels" in inspect.signature(PymatgenStructure.__init__).parameters:
-        structure = PymatgenStructure(
-            lattice, elements, coordinates, coords_are_cartesian=coords_are_cartesian, labels=labels
-        )
+        structure = PymatgenStructure(lattice, elements, coordinates, labels=labels)
     else:
         # Passing labels does not work for pymatgen `2023.6.23` supporting py3.8
         print(f"labels: {labels}. Not passing labels to pymatgen.")
-        structure = PymatgenStructure(lattice, elements, coordinates, coords_are_cartesian=coords_are_cartesian)
+        structure = PymatgenStructure(lattice, elements, coordinates)
 
     return structure
 

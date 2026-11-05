@@ -6,7 +6,6 @@ from mat3ra.made.tools.analyze.lattice_swap_analyzer import MaterialLatticeSwapA
 from .fixtures.interface.gaas_dia import (
     GALLIUM_ARSENIDE_DIAMOND_INTERFACE,
     GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE,
-    GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE_GH_WF,
 )
 from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP_GH_WF
 from .fixtures.slab import SLAB_SrTiO3_011_TERMINATION_O2, SLAB_SrTiO3_011_TERMINATION_SrTiO
@@ -43,11 +42,8 @@ def test_flip_detection_between_materials(original_material_config, another_mate
     [
         (
             GALLIUM_ARSENIDE_DIAMOND_INTERFACE,
-            {OSPlatform.DARWIN: True, OSPlatform.OTHER: True},
-            {
-                OSPlatform.DARWIN: GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE,
-                OSPlatform.OTHER: GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE_GH_WF,
-            },
+            True,
+            GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE,
             False,
         ),
         (
@@ -74,7 +70,6 @@ def test_swap_detection(original_material_config, expected_swapped, expected_pri
     corrected_primitive_material = analyzer.get_corrected_material(original_material)
 
     if expected_primitive is not None:
-        expected_primitive_material = get_platform_specific_value(expected_primitive)
-        assert_interfaces_almost_equal(corrected_primitive_material, expected_primitive_material)
+        assert_interfaces_almost_equal(corrected_primitive_material, expected_primitive)
     else:
         assert_interfaces_almost_equal(corrected_primitive_material, original_material)

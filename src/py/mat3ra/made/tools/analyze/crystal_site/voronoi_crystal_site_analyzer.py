@@ -1,8 +1,11 @@
 from typing import List
 
+from mat3ra.code.constants import Tolerance
+from mat3ra.made.basis.coordinates import Coordinates
+
 from ...convert import to_pymatgen
 from ...third_party import PymatgenVoronoiInterstitialGenerator
-from ...utils import get_distance_between_coordinates
+from ...utils import get_periodic_distances_to_point, select_index_by_value
 from .crystal_site_analyzer import CrystalSiteAnalyzer
 
 
@@ -39,9 +42,7 @@ class VoronoiCrystalSiteAnalyzer(CrystalSiteAnalyzer):
         if not interstitials:
             raise ValueError("No Voronoi interstitial sites found.")
 
-        closest_interstitial = min(
-            interstitials,
-            key=lambda interstitial: get_distance_between_coordinates(interstitial.site.frac_coords, self.coordinate),
-        )
-
-        return closest_interstitial.site.frac_coords.tolist()
+        sites = [site for interstitial in interstitials for site in interstitial.equivalent_sites]
+        coordinates = [Coordinates.to_standard_coordinate(site.frac_coords) for site in sites]
+        distances = get_periodic_distances_to_point(self.material.lattice.vector_arrays, coordinates, self.coordinate)
+        return coordinates[select_index_by_value(distances, Tolerance.lengthAngstrom, coordinates)]

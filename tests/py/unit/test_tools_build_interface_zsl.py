@@ -20,13 +20,10 @@ from mat3ra.made.tools.build_components.entities.core.two_dimensional.vacuum.con
 from mat3ra.standata.materials import Materials
 
 from .fixtures.bulk import BULK_Ni_PRIMITIVE
-from .fixtures.interface.gr_ni_111_top_hcp import (
-    GRAPHENE_NICKEL_INTERFACE_TOP_HCP,
-    GRAPHENE_NICKEL_INTERFACE_TOP_HCP_GH_WF,
-)
-from .fixtures.interface.zsl import DIAMOND_GaAs_INTERFACE, DIAMOND_GaAs_INTERFACE_GH
+from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP_60_DEGREE_CELL
+from .fixtures.interface.zsl import DIAMOND_GaAs_INTERFACE
 from .fixtures.monolayer import GRAPHENE
-from .utils import OSPlatform, assert_interfaces_almost_equal, get_platform_specific_value
+from .utils import assert_interfaces_almost_equal
 
 GRAPHENE_NICKEL_TEST_CASE = (
     SimpleNamespace(
@@ -44,10 +41,7 @@ GRAPHENE_NICKEL_TEST_CASE = (
     3.0,  # gap between graphene and nickel
     10.0,  # vacuum
     90,  # max area
-    {
-        OSPlatform.DARWIN: GRAPHENE_NICKEL_INTERFACE_TOP_HCP,
-        OSPlatform.OTHER: GRAPHENE_NICKEL_INTERFACE_TOP_HCP_GH_WF,
-    },
+    GRAPHENE_NICKEL_INTERFACE_TOP_HCP_60_DEGREE_CELL,
 )
 
 BULK_DIAMOND = Materials.get_by_name_first_match("Diamond")
@@ -69,10 +63,7 @@ DIAMOND_GAAS_CSL_TEST_CASE = (
     1.5,  # gap between diamond and gaas
     10.0,  # vacuum
     70.0,  # max area
-    {
-        OSPlatform.DARWIN: DIAMOND_GaAs_INTERFACE,
-        OSPlatform.OTHER: DIAMOND_GaAs_INTERFACE_GH,
-    },
+    DIAMOND_GaAs_INTERFACE,
 )
 
 
@@ -187,7 +178,7 @@ def test_zsl_interface_builder(substrate, film, gap, vacuum, max_area, expected_
 
     # remove metadata
     interface.metadata.build = []
-    expected_interface = Material.create(get_platform_specific_value(expected_interface))
+    expected_interface = Material.create(expected_interface)
 
     assert interface.basis.number_of_atoms == expected_interface.basis.number_of_atoms
 
@@ -217,7 +208,6 @@ def test_create_zsl_interface(substrate, film, gap, vacuum, max_area, expected_i
         reduce_result_cell_to_primitive=True,
     )
     interface.metadata.build = []
-    expected_interface = get_platform_specific_value(expected_interface)
     assert_interfaces_almost_equal(interface, expected_interface)
 
 
@@ -259,5 +249,4 @@ def test_create_zsl_interface_between_slabs(substrate, film, gap, vacuum, max_ar
         reduce_result_cell=False,
         reduce_result_cell_to_primitive=True,
     )
-    expected_interface = get_platform_specific_value(expected_interface)
     assert_interfaces_almost_equal(interface, expected_interface)

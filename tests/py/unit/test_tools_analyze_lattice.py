@@ -2,25 +2,27 @@ import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.analyze.lattice import LatticeMaterialAnalyzer, get_lattice_type
 
-from .fixtures.bulk import BULK_GRAPHITE, BULK_Hf2O_MCL, BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE, BULK_Si_PRIMITIVIZED
+from .fixtures.bulk import (
+    BULK_GRAPHITE,
+    BULK_Hf2O_MCL,
+    BULK_Si_CONVENTIONAL,
+    BULK_Si_CONVENTIONAL_FROM_PRIMITIVE,
+    BULK_Si_PRIMITIVE,
+    BULK_Si_PRIMITIVIZED,
+    BULK_Si_PRIMITIVIZED_FROM_PRIMITIVE,
+)
 from .fixtures.interface.gaas_dia import (
     GALLIUM_ARSENIDE_DIAMOND_INTERFACE,
     GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE,
-    GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE_GH_WF,
 )
 from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
-from .utils import (
-    OSPlatform,
-    assert_interfaces_almost_equal,
-    assert_two_entities_deep_almost_equal,
-    get_platform_specific_value,
-)
+from .utils import assert_interfaces_almost_equal, assert_two_entities_deep_almost_equal
 
 
 @pytest.mark.parametrize(
     "material_config, expected_conventional_material_config, expected_primitive_material_config",
     [
-        (BULK_Si_PRIMITIVE, BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVIZED),
+        (BULK_Si_PRIMITIVE, BULK_Si_CONVENTIONAL_FROM_PRIMITIVE, BULK_Si_PRIMITIVIZED_FROM_PRIMITIVE),
         (BULK_Si_CONVENTIONAL, BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVIZED),
     ],
 )
@@ -42,10 +44,7 @@ def test_get_primitive_lattice(
         (
             GALLIUM_ARSENIDE_DIAMOND_INTERFACE,
             True,
-            {
-                OSPlatform.DARWIN: GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE,
-                OSPlatform.OTHER: GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE_GH_WF,
-            },
+            GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE,
         ),
     ],
 )
@@ -55,8 +54,7 @@ def test_get_primitive_lattice_standard(material_config, keep_orientation, expec
     corrected_primitive_material = analyzer.get_material_with_primitive_lattice_standard(
         keep_orientation=keep_orientation
     )
-    expected_primitive_material = get_platform_specific_value(expected_primitive)
-    assert_interfaces_almost_equal(corrected_primitive_material, expected_primitive_material)
+    assert_interfaces_almost_equal(corrected_primitive_material, expected_primitive)
 
 
 @pytest.mark.parametrize(

@@ -64,8 +64,8 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
             max_angle_tol=self.max_angle_tol,
         )
 
-        film_vectors = self.film_slab.lattice.vector_arrays[0:2]
-        substrate_vectors = self.substrate_slab.lattice.vector_arrays[0:2]
+        film_vectors = self.film_slab.lattice.vector_arrays_rounded[0:2]
+        substrate_vectors = self.substrate_slab.lattice.vector_arrays_rounded[0:2]
 
         zsl_matches_pymatgen = list(
             zsl_generator(
@@ -108,8 +108,8 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
         return unique_matches
 
     def convert_generated_match_to_match_holder(self, match_id: int, match_pymatgen) -> Optional[ZSLMatchHolder]:
-        film_slab_vectors = np.array(self.film_slab.lattice.vector_arrays[0:2])[:, :2]
-        substrate_slab_vectors = np.array(self.substrate_slab.lattice.vector_arrays[0:2])[:, :2]
+        film_slab_vectors = np.array(self.film_slab.lattice.vector_arrays_rounded[0:2])[:, :2]
+        substrate_slab_vectors = np.array(self.substrate_slab.lattice.vector_arrays_rounded[0:2])[:, :2]
 
         pymatgen_film_sl_vectors = match_pymatgen.film_sl_vectors[:, :2]
         pymatgen_substrate_sl_vectors = match_pymatgen.substrate_sl_vectors[:, :2]

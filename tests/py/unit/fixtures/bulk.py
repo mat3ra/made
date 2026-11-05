@@ -96,6 +96,27 @@ BULK_Si_CONVENTIONAL: Dict[str, Any] = {
     "metadata": {"boundaryConditions": {"type": "pbc", "offset": 0}},
 }
 
+# The primitive cell of BULK_Si_PRIMITIVE is its own basis.
+BULK_Si_PRIMITIVIZED_FROM_PRIMITIVE: Dict[str, Any] = {**BULK_Si_PRIMITIVIZED, "basis": BULK_Si_PRIMITIVE["basis"]}
+
+# The conventional cell of BULK_Si_PRIMITIVE: the same crystal as BULK_Si_CONVENTIONAL, with the origin on an atom.
+BULK_Si_CONVENTIONAL_FROM_PRIMITIVE: Dict[str, Any] = {
+    **BULK_Si_CONVENTIONAL,
+    "basis": {
+        **BULK_Si_CONVENTIONAL["basis"],
+        "coordinates": [
+            {"id": 0, "value": [0.0, 0.0, 0.0]},
+            {"id": 1, "value": [0.25, 0.75, 0.75]},
+            {"id": 2, "value": [0.0, 0.5, 0.5]},
+            {"id": 3, "value": [0.25, 0.25, 0.25]},
+            {"id": 4, "value": [0.5, 0.0, 0.5]},
+            {"id": 5, "value": [0.75, 0.75, 0.25]},
+            {"id": 6, "value": [0.5, 0.5, 0.0]},
+            {"id": 7, "value": [0.75, 0.25, 0.75]},
+        ],
+    },
+}
+
 BULK_Si_CONVENTIONAL_FILTERED: Dict[str, Any] = {
     "name": "Si",
     "basis": {

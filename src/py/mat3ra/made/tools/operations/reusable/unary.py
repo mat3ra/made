@@ -20,8 +20,8 @@ def transform_material_by_matrix(material: Material, matrix: np.ndarray) -> Mate
     current_lattice_vectors = np.array(material.lattice.vector_arrays)
     current_coordinates = material.basis.coordinates.values
 
-    new_lattice_vectors = (matrix @ current_lattice_vectors.T).tolist()
-    new_coordinates = (np.linalg.inv(matrix) @ np.array(current_coordinates).T).T.tolist()
+    new_lattice_vectors = (matrix @ current_lattice_vectors).tolist()
+    new_coordinates = (np.array(current_coordinates) @ np.linalg.inv(matrix)).tolist()
 
     transformed_material = material.clone()
     transformed_material.set_lattice_vectors_from_array(new_lattice_vectors)

@@ -1,6 +1,7 @@
 // @ts-ignore
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
+import { math } from "@mat3ra/code/dist/js/math";
 import {
     BaseInMemoryEntitySchema,
     BasisSchema,
@@ -257,8 +258,10 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
 
     toStandardRepresentation() {
         this.toCrystal();
+        const { precision, roundingMethod } = this._coordinates.roundingOptions;
+        const round = (x: number) => math.roundCustom(x, precision, roundingMethod);
         this._coordinates.mapArrayInPlace(
-            (point) => point.map((x) => Utils.math.mod(x, 0)) as Coordinate3DSchema,
+            (point) => point.map((x) => round(Utils.math.mod(round(x), 0))) as Coordinate3DSchema,
         );
     }
 

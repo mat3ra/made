@@ -61,6 +61,29 @@ jobs:
           unit-test-directory: tests/py/unit
           bot-ssh-key: ${{ secrets.BOT_GITHUB_KEY }}
 
+  run-py-tests-pyodide:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          lfs: true
+
+      - name: Run the nudged-build tests in Pyodide 0.24.1, the JupyterLite runtime
+        env:
+          SETUPTOOLS_SCM_PRETEND_VERSION: 0.0.0
+          WHEELS_URL: https://media.githubusercontent.com/media/mat3ra/api-examples/main/packages
+        run: |
+          WHEELS="$RUNNER_TEMP/wheels"
+          for wheel in pymatgen-2024.4.13 spglib-2.0.2 ruamel.yaml-0.17.32 pydantic_core-2.18.2 pydantic-2.7.1; do
+            curl -sSfL --create-dirs -o "$WHEELS/$wheel-py3-none-any.whl" "$WHEELS_URL/$wheel-py3-none-any.whl"
+          done
+          python3 -m pip wheel --no-deps -w "$WHEELS" .
+          npm install --prefix "$RUNNER_TEMP/pyodide" pyodide@0.24.1
+          cp scripts/run-pytest-in-pyodide.mjs "$RUNNER_TEMP/pyodide/"
+          node "$RUNNER_TEMP/pyodide/run-pytest-in-pyodide.mjs" "$PWD" "$WHEELS" tests/py/unit/test_nudged_builds.py
+
   run-js-tests:
     runs-on: ubuntu-latest
     strategy:

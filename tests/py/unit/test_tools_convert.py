@@ -33,6 +33,19 @@ direct
    0.2500000000000000    0.2500000000000000    0.2500000000000000 Si
 """
 
+# to_poscar writes the lattice vectors as stored, rounded to 9 decimals.
+POSCAR_CONTENT_STORED = """Si2
+1.0
+   3.3489202360000001    0.0000000000000000    1.9335000000000000
+   1.1163067449999999    3.1573922780000001    1.9335000000000000
+   0.0000000000000000    0.0000000000000000    3.8670000000000000
+Si
+2
+direct
+   0.0000000000000000    0.0000000000000000    0.0000000000000000 Si
+   0.2500000000000000    0.2500000000000000    0.2500000000000000 Si
+"""
+
 
 @pytest.mark.parametrize(
     "material_config, expected_lattice_params, expected_species, expected_frac_coords",
@@ -78,7 +91,7 @@ def test_from_pymatgen():
 def test_to_poscar():
     material = Material.create_default()
     poscar = to_poscar(material)
-    assert poscar == POSCAR_CONTENT
+    assert poscar == POSCAR_CONTENT_STORED
 
 
 def test_from_poscar():
