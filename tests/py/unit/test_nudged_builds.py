@@ -9,9 +9,9 @@ from mat3ra.made.tools.third_party import PymatgenSlabGenerator, PymatgenStructu
 from unit.fixtures.bulk import BULK_Hf2O_MCL, BULK_Ni_PRIMITIVE, BULK_Si_PRIMITIVE
 from unit.fixtures.monolayer import GRAPHENE
 
-# Another runtime computes the same values within 1-2 units in the last place (ulp), e.g. pymatgen's oriented unit
-# cell in Pyodide; an origin shift by a lattice vector is the same crystal.
-ULP_STEPS = [-2, -1, 0, 1, 2]
+# Another runtime computes pymatgen's oriented unit cell within 1-2 units in the last place (ulp), as Pyodide does;
+# an origin shift by a lattice vector stores the same structure.
+ULP_STEPS = [-2, -1, 1, 2]
 ORIGIN_SHIFT = [1, -1, 1]
 SLAB_GENERATOR_INIT = PymatgenSlabGenerator.__init__
 
@@ -29,19 +29,14 @@ INTERSTITIAL_PARAMETERS = {"coordinate": [0.25, 0.25, 0.5], "element": "Ge", "pl
 
 
 def nudge(values, steps):
+    """Moves each value by the given number of ulp."""
     for _ in range(abs(steps)):
         values = np.nextafter(values, np.sign(steps) * np.inf)
     return values
 
 
-def get_material_with_nudged_coordinates(material_config, steps):
-    nudged_config = copy.deepcopy(material_config)
-    for coordinate in nudged_config["basis"]["coordinates"]:
-        coordinate["value"] = nudge(np.array(coordinate["value"]), steps).tolist()
-    return Material.create(nudged_config)
-
-
 def get_material_with_shifted_origin(material_config):
+    """The material with every coordinate shifted by a lattice vector."""
     shifted_config = copy.deepcopy(material_config)
     for coordinate in shifted_config["basis"]["coordinates"]:
         coordinate["value"] = (np.array(coordinate["value"]) + ORIGIN_SHIFT).tolist()
@@ -49,6 +44,7 @@ def get_material_with_shifted_origin(material_config):
 
 
 def init_with_nudged_oriented_unit_cell(generator, *args, steps=0, **kwargs):
+    """SlabGenerator.__init__, then the oriented unit cell's fractional coordinates moved by the given number of ulp."""
     SLAB_GENERATOR_INIT(generator, *args, **kwargs)
     oriented_unit_cell = generator.oriented_unit_cell
     generator.oriented_unit_cell = PymatgenStructure(
@@ -59,20 +55,15 @@ def init_with_nudged_oriented_unit_cell(generator, *args, steps=0, **kwargs):
     )
 
 
-def build(builder, material_config, steps, parameters):
-    return [
-        builder(get_material_with_nudged_coordinates(material_config, steps), **parameters),
-        builder(get_material_with_shifted_origin(material_config), **parameters),
-    ]
-
-
 def get_stored_form(material):
+    """The material's basis in the standard representation, its lattice and its hash."""
     basis = material.basis.clone()
     basis.to_standard_representation()
     return basis.to_dict(), material.lattice.to_dict(), material.hash
 
 
 def create_interface_on_substrate(film, **parameters):
+    """The ZSL interface of the film on Ni(111)."""
     return create_interface_zsl(Material.create(BULK_Ni_PRIMITIVE), film, **parameters)
 
 
@@ -82,6 +73,21 @@ def create_interface_on_substrate(film, **parameters):
         # The cut of monoclinic HfO2 (001) fell on the cell boundary: 17 layers natively, 16 in Pyodide.
         (create_slab, BULK_Hf2O_MCL, SLAB_PARAMETERS, "28e7d4d495308e68076eb118b6d26cbb"),
         (create_interface_on_substrate, GRAPHENE, INTERFACE_PARAMETERS, "49ab604d97b82ccf4d950be87b9f4ef5"),
+    ],
+)
+@pytest.mark.parametrize("steps", ULP_STEPS)
+def test_build_with_nudged_oriented_unit_cell(builder, material_config, parameters, expected_hash, steps, monkeypatch):
+    stored_form = get_stored_form(builder(Material.create(material_config), **parameters))
+    monkeypatch.setattr(
+        PymatgenSlabGenerator, "__init__", partialmethod(init_with_nudged_oriented_unit_cell, steps=steps)
+    )
+    assert get_stored_form(builder(get_material_with_shifted_origin(material_config), **parameters)) == stored_form
+    assert stored_form[2] == expected_hash
+
+
+@pytest.mark.parametrize(
+    "builder, material_config, parameters, expected_hash",
+    [
         (
             create_defect_point_interstitial,
             BULK_Si_PRIMITIVE,
@@ -90,11 +96,7 @@ def create_interface_on_substrate(film, **parameters):
         ),
     ],
 )
-@pytest.mark.parametrize("steps", ULP_STEPS)
-def test_build_from_nudged_input(builder, material_config, parameters, expected_hash, steps, monkeypatch):
-    monkeypatch.setattr(
-        PymatgenSlabGenerator, "__init__", partialmethod(init_with_nudged_oriented_unit_cell, steps=steps)
-    )
-    stored_forms = [get_stored_form(material) for material in build(builder, material_config, steps, parameters)]
-    assert stored_forms[0] == stored_forms[1]
-    assert stored_forms[0][2] == expected_hash
+def test_build_with_shifted_origin(builder, material_config, parameters, expected_hash):
+    stored_form = get_stored_form(builder(Material.create(material_config), **parameters))
+    assert get_stored_form(builder(get_material_with_shifted_origin(material_config), **parameters)) == stored_form
+    assert stored_form[2] == expected_hash

@@ -136,24 +136,14 @@ def get_distance_between_coordinates(coordinate1: List[float], coordinate2: List
     return float(np.linalg.norm(np.array(coordinate1) - np.array(coordinate2)))
 
 
-def get_periodic_distances_to_point(
-    vector_arrays: List[List[float]], crystal_coordinates: List[List[float]], crystal_point: List[float]
-) -> np.ndarray:
-    """
-    Cartesian distance from each crystal coordinate to the nearest periodic image of the point.
-    """
-    differences = np.array(crystal_coordinates) - np.array(crystal_point)
-    return np.linalg.norm((differences - np.round(differences)) @ np.array(vector_arrays), axis=1)
-
-
-def select_index_by_value(values: List[float], tolerance: float, keys: Optional[List[Any]] = None) -> int:
+def select_index_by_value(values: List[float], tolerance: float, keys: List[Any]) -> int:
     """
     Index of the smallest value. Values within tolerance of it tie; a tie goes to the smallest key, then to the
     lowest index, so float noise in the values does not decide the choice.
     """
     values = np.array(values)
     candidates = np.flatnonzero(values <= values.min() + tolerance)
-    return int(min(candidates, key=lambda index: (keys[index] if keys is not None else 0, index)))
+    return int(min(candidates, key=lambda index: (keys[index], index)))
 
 
 def get_norm(vector: List[float]) -> float:

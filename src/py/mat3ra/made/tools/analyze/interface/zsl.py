@@ -186,16 +186,6 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
         return film_supercell_matrix, substrate_supercell_matrix, area
 
     def _calculate_strain(self, film_sl_supercell_vectors, substrate_sl_supercell_vectors):
-        film_det = np.linalg.det(film_sl_supercell_vectors)
-        substrate_det = np.linalg.det(substrate_sl_supercell_vectors)
-
-        # Handle cases where lattices match but are oriented in opposite directions (e.g., 180° rotation).
-        # This keeps the right-handed system for the strain calculation.
-        # The strain calculation uses vector magnitudes, so we need consistent orientation to avoid artificial strain
-        if (film_det > 0) != (substrate_det > 0):
-            film_sl_supercell_vectors = film_sl_supercell_vectors.copy()
-            film_sl_supercell_vectors[1] = -film_sl_supercell_vectors[1]
-
         real_strain_matrix = np.linalg.solve(film_sl_supercell_vectors, substrate_sl_supercell_vectors)
         real_strain_matrix = convert_2x2_to_3x3(real_strain_matrix.tolist())
         strain_percentage = self.calculate_total_strain_percentage(real_strain_matrix)

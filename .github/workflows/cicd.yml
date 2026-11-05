@@ -73,16 +73,11 @@ jobs:
       - name: Run the nudged-build tests in Pyodide 0.24.1, the JupyterLite runtime
         env:
           SETUPTOOLS_SCM_PRETEND_VERSION: 0.0.0
-          WHEELS_URL: https://media.githubusercontent.com/media/mat3ra/api-examples/main/packages
         run: |
-          WHEELS="$RUNNER_TEMP/wheels"
-          for wheel in pymatgen-2024.4.13 spglib-2.0.2 ruamel.yaml-0.17.32 pydantic_core-2.18.2 pydantic-2.7.1; do
-            curl -sSfL --create-dirs -o "$WHEELS/$wheel-py3-none-any.whl" "$WHEELS_URL/$wheel-py3-none-any.whl"
-          done
-          python3 -m pip wheel --no-deps -w "$WHEELS" .
+          python3 -m pip wheel --no-deps -w "$RUNNER_TEMP/wheels" .
           npm install --prefix "$RUNNER_TEMP/pyodide" pyodide@0.24.1
           cp scripts/run-pytest-in-pyodide.mjs "$RUNNER_TEMP/pyodide/"
-          node "$RUNNER_TEMP/pyodide/run-pytest-in-pyodide.mjs" "$PWD" "$WHEELS" tests/py/unit/test_nudged_builds.py
+          node "$RUNNER_TEMP/pyodide/run-pytest-in-pyodide.mjs" "$PWD" "$RUNNER_TEMP/wheels" tests/py/unit/test_nudged_builds.py
 
   run-js-tests:
     runs-on: ubuntu-latest
@@ -120,6 +115,7 @@ jobs:
     needs:
       - run-js-tests
       - run-py-tests
+      - run-py-tests-pyodide
       - run-py-linter
     runs-on: ubuntu-latest
     if: (github.repository != 'Exabyte-io/template-definitions-js-py') && (github.ref_name == 'main')
@@ -147,6 +143,7 @@ jobs:
     needs:
       - run-js-tests
       - run-py-tests
+      - run-py-tests-pyodide
       - run-py-linter
       # Wait for JS publish step to publish the new tag
       - publish-js-package

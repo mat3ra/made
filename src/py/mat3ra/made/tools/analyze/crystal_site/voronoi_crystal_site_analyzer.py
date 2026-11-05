@@ -5,7 +5,7 @@ from mat3ra.made.basis.coordinates import Coordinates
 
 from ...convert import to_pymatgen
 from ...third_party import PymatgenVoronoiInterstitialGenerator
-from ...utils import get_periodic_distances_to_point, select_index_by_value
+from ...utils import select_index_by_value
 from .crystal_site_analyzer import CrystalSiteAnalyzer
 
 
@@ -44,5 +44,5 @@ class VoronoiCrystalSiteAnalyzer(CrystalSiteAnalyzer):
 
         sites = [site for interstitial in interstitials for site in interstitial.equivalent_sites]
         coordinates = [Coordinates.to_standard_coordinate(site.frac_coords) for site in sites]
-        distances = get_periodic_distances_to_point(self.material.lattice.vector_arrays, coordinates, self.coordinate)
+        distances = pymatgen_structure.lattice.get_all_distances(coordinates, [self.coordinate])[:, 0]
         return coordinates[select_index_by_value(distances, Tolerance.lengthAngstrom, coordinates)]

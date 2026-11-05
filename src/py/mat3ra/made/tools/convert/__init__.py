@@ -2,8 +2,6 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
-from mat3ra.made.basis.coordinates import Coordinates
-from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.utils import map_array_to_array_with_id_value, map_array_with_id_value_to_array
 from mat3ra.utils import remove_comments_from_source_code
@@ -18,6 +16,8 @@ from ..third_party import (
     PymatgenStructure,
 )
 from .utils import (
+    LATTICE_ANGLES_PRECISION,
+    LATTICE_LENGTHS_PRECISION,
     calculate_padded_cell_simple_cubic,
     extract_labels_from_pymatgen_structure,
     extract_metadata_from_pymatgen_structure,
@@ -35,18 +35,14 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     Returns:
         Structure: A pymatgen Structure object.
     """
-    material_data = material_or_material_data
+    material = Material.create_from_config_or_class_instance(material_or_material_data)
+    lattice = PymatgenLattice(material.lattice.vector_arrays_rounded)
 
-    if isinstance(material_or_material_data, Material):
-        material_data = material_or_material_data.to_dict()
-
-    lattice = PymatgenLattice(Lattice(**material_data["lattice"]).vector_arrays_rounded)
-
-    basis = material_data["basis"]
-    elements = [element["value"] for element in basis["elements"]]
-    coordinates = [Coordinates.to_standard_coordinate(coord["value"]) for coord in basis["coordinates"]]
-    labels_data = basis.get("labels", []) or []
-    labels = [label["value"] for label in labels_data]
+    basis = material.basis.clone()
+    basis.to_standard_representation()
+    elements = basis.elements.values
+    coordinates = basis.coordinates.values
+    labels = basis.labels.values
 
     if "labels" in inspect.signature(PymatgenStructure.__init__).parameters:
         structure = PymatgenStructure(lattice, elements, coordinates, labels=labels)
@@ -81,12 +77,12 @@ def from_pymatgen(structure: Union[PymatgenStructure, PymatgenInterface]) -> Dic
     }
 
     lattice = {
-        "a": __round__(structure.lattice.a),
-        "b": __round__(structure.lattice.b),
-        "c": __round__(structure.lattice.c),
-        "alpha": __round__(structure.lattice.alpha),
-        "beta": __round__(structure.lattice.beta),
-        "gamma": __round__(structure.lattice.gamma),
+        "a": __round__(structure.lattice.a, LATTICE_LENGTHS_PRECISION),
+        "b": __round__(structure.lattice.b, LATTICE_LENGTHS_PRECISION),
+        "c": __round__(structure.lattice.c, LATTICE_LENGTHS_PRECISION),
+        "alpha": __round__(structure.lattice.alpha, LATTICE_ANGLES_PRECISION),
+        "beta": __round__(structure.lattice.beta, LATTICE_ANGLES_PRECISION),
+        "gamma": __round__(structure.lattice.gamma, LATTICE_ANGLES_PRECISION),
         "units": {"length": "angstrom", "angle": "degree"},
         "type": "TRI",
         "vectors": {

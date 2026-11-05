@@ -17,6 +17,8 @@ with open(_CONSTANTS_FILE) as _f:
 DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE = _CONSTANTS["molecule"]["nonPeriodicMinimumLatticeSize"]
 DIATOMIC_LATTICE_PADDING_FACTOR = _CONSTANTS["molecule"]["diatomicLatticePaddingFactor"]
 MOLECULAR_LATTICE_PADDING_FACTOR = _CONSTANTS["molecule"]["molecularLatticePaddingFactor"]
+LATTICE_LENGTHS_PRECISION = _CONSTANTS["precision"]["latticeLengths"]
+LATTICE_ANGLES_PRECISION = _CONSTANTS["precision"]["latticeAngles"]
 
 
 def _get_non_periodic_lattice_padding_factor(max_distance: float, min_distance: float) -> float:

@@ -32,6 +32,15 @@ BULK_Si_PRIMITIVE: Dict[str, Any] = {
     },
 }
 
+BULK_Si_PRIMITIVE_CARTESIAN: Dict[str, Any] = {
+    **BULK_Si_PRIMITIVE,
+    "basis": {
+        **BULK_Si_PRIMITIVE["basis"],
+        "coordinates": [{"id": 0, "value": [0.0, 0.0, 0.0]}, {"id": 1, "value": [1.116306745, 0.78934807, 1.9335]}],
+        "units": "cartesian",
+    },
+}
+
 BULK_Si_PRIMITIVIZED = {
     "metadata": {"build": [], "boundaryConditions": {"type": "pbc", "offset": 0}},
     "name": "Si2",

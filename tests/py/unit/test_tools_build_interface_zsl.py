@@ -20,7 +20,7 @@ from mat3ra.made.tools.build_components.entities.core.two_dimensional.vacuum.con
 from mat3ra.standata.materials import Materials
 
 from .fixtures.bulk import BULK_Ni_PRIMITIVE
-from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP_60_DEGREE_CELL
+from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
 from .fixtures.interface.zsl import DIAMOND_GaAs_INTERFACE
 from .fixtures.monolayer import GRAPHENE
 from .utils import assert_interfaces_almost_equal
@@ -41,7 +41,7 @@ GRAPHENE_NICKEL_TEST_CASE = (
     3.0,  # gap between graphene and nickel
     10.0,  # vacuum
     90,  # max area
-    GRAPHENE_NICKEL_INTERFACE_TOP_HCP_60_DEGREE_CELL,
+    GRAPHENE_NICKEL_INTERFACE_TOP_HCP,
 )
 
 BULK_DIAMOND = Materials.get_by_name_first_match("Diamond")

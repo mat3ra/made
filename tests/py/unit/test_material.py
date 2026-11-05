@@ -166,6 +166,7 @@ def test_calculate_hash_coordinate_rounding(coordinate, equivalent_coordinate):
     [([-1e-10, -0.0, 1.0], [0.0, 0.0, 0.0]), ([0.9999999996, -0.3, 1.234], [0.0, 0.7, 0.234])],
 )
 def test_to_standard_coordinate(coordinate, standard_coordinate):
+    # Compared as strings: -0.0 == 0.0 is true, but the stored text differs.
     assert str(Coordinates.to_standard_coordinate(coordinate)) == str(standard_coordinate)
     assert str(Coordinates.to_standard_coordinate(standard_coordinate)) == str(standard_coordinate)
 

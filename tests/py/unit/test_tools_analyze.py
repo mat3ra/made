@@ -21,6 +21,7 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
     AtomPlacementMethodEnum,
 )
 from mat3ra.made.tools.build_components.operations.core.combinations.enums import AdatomPlacementMethodEnum
+from mat3ra.made.tools.utils import select_index_by_value
 from unit.fixtures.nanoribbon.nanoribbon import GRAPHENE_ZIGZAG_NANORIBBON
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
@@ -97,6 +98,7 @@ VORONOI_SITE_EXPECTED = [0.125, 0.625, 0.625]
         (AtomPlacementMethodEnum.CLOSEST_SITE, [0.25, 0.25, 0.5], [0.25, 0.25, 0.25]),
         (AtomPlacementMethodEnum.EQUIDISTANT, [0.5432, 0.5123, 0.5], [0.58333, 0.58333, 0.25]),
         (AtomPlacementMethodEnum.VORONOI_SITE, [0.25, 0.25, 0.5], VORONOI_SITE_EXPECTED),
+        (AtomPlacementMethodEnum.VORONOI_SITE, [0.488, 0.213, 0.133], [0.625, 0.625, 0.625]),
     ],
 )
 def test_crystal_site_analyzer(placement_method, coordinate, expected_coordinate):
@@ -117,6 +119,17 @@ def test_crystal_site_analyzer(placement_method, coordinate, expected_coordinate
             raise ValueError(f"Unknown method: {placement_method}")
 
     assert np.allclose(final_coordinate, expected_coordinate, atol=COMPARISON_PRECISION)
+
+
+@pytest.mark.parametrize(
+    "values, tolerance, keys, expected_index",
+    [
+        ([1.0, 1.0005, 2.0], 0.001, [[0.5, 0.0, 0.0], [0.25, 0.0, 0.0], [0.0, 0.0, 0.0]], 1),
+        ([1.0, 1.002, 2.0], 0.001, [[0.5, 0.0, 0.0], [0.25, 0.0, 0.0], [0.0, 0.0, 0.0]], 0),
+    ],
+)
+def test_select_index_by_value(values, tolerance, keys, expected_index):
+    assert select_index_by_value(values, tolerance, keys) == expected_index
 
 
 @pytest.mark.parametrize(
