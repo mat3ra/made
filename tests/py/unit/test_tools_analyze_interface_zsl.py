@@ -142,7 +142,7 @@ def test_zsl_interface_analyzer(substrate, film, zsl_params, expected_matches_mi
                 vacuum=0.0,
             ),
             {"max_area": 90.0, "max_area_ratio_tol": 0.1, "max_length_tol": 0.1, "max_angle_tol": 0.1},
-            28,
+            4,
             {"strain_percentage": 0.475, "match_id": 0},
         ),
     ],

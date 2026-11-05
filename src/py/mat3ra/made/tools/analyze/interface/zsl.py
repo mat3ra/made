@@ -137,8 +137,10 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
         ):
             return None
 
+        # The supercells are built with the first vector along x, right-handed, as made stores every lattice.
         real_strain_matrix, strain_percentage = self._calculate_strain(
-            film_sl_supercell_vectors, substrate_sl_supercell_vectors
+            align_first_vector_to_x_2d_right_handed(film_sl_supercell_vectors),
+            align_first_vector_to_x_2d_right_handed(substrate_sl_supercell_vectors),
         )
 
         return ZSLMatchHolder(
@@ -152,12 +154,9 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
 
     def _get_sl_vectors_for_supercell_calculation(self, pymatgen_film_sl_vectors, pymatgen_substrate_sl_vectors):
         """
-        Determine which superlattice vectors to use for supercell matrix calculation.
-
-        Calculating the supercell transformation matrix requires that corresponding
-        superlattice vectors of film and substrate are colinear. Non-colinear vectors
-        cannot be used to derive a valid integer transformation matrix from original to supercell.
-        While diagonal matrices can be used, and can give smaller area match, so they should be preserved.
+        Pymatgen's superlattice vectors, if corresponding film and substrate vectors are colinear once each set is
+        aligned to x. They are integer combinations of the slab vectors, so the supercell matrices come from them
+        unrotated: a rotated set gives non-integer matrices.
         """
         pymatgen_substrate_sl_vectors_aligned = align_first_vector_to_x_2d_right_handed(pymatgen_substrate_sl_vectors)
         pymatgen_film_sl_vectors_aligned = align_first_vector_to_x_2d_right_handed(pymatgen_film_sl_vectors)
@@ -167,22 +166,15 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
 
         if not (a_colinear and b_colinear):
             return None, None
-
-        is_film_diag = np.allclose(pymatgen_film_sl_vectors_aligned, np.diag(np.diag(pymatgen_film_sl_vectors_aligned)))
-        is_substrate_diag = np.allclose(
-            pymatgen_substrate_sl_vectors_aligned, np.diag(np.diag(pymatgen_substrate_sl_vectors_aligned))
-        )
-
-        if is_film_diag and is_substrate_diag:
-            return pymatgen_film_sl_vectors, pymatgen_substrate_sl_vectors
-        else:
-            return pymatgen_film_sl_vectors_aligned, pymatgen_substrate_sl_vectors_aligned
+        return pymatgen_film_sl_vectors, pymatgen_substrate_sl_vectors
 
     def _calculate_and_reduce_supercell_matrices(
         self, film_slab_vectors, substrate_slab_vectors, film_sl_vectors, substrate_sl_vectors, match_area
     ):
-        film_supercell_matrix = np.rint(np.linalg.solve(film_slab_vectors, film_sl_vectors)).astype(int)
-        substrate_supercell_matrix = np.rint(np.linalg.solve(substrate_slab_vectors, substrate_sl_vectors)).astype(int)
+        # The supercell matrix M has M @ slab_vectors = sl_vectors (vectors as rows).
+        film_supercell_matrix = np.rint(np.linalg.solve(film_slab_vectors.T, film_sl_vectors.T).T).astype(int)
+        substrate_supercell_matrix = np.rint(np.linalg.solve(substrate_slab_vectors.T, substrate_sl_vectors.T).T)
+        substrate_supercell_matrix = substrate_supercell_matrix.astype(int)
 
         area = match_area
         if self.reduce_result_cell:

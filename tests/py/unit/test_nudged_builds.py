@@ -81,7 +81,7 @@ def create_interface_on_substrate(film, **parameters):
     [
         # The cut of monoclinic HfO2 (001) fell on the cell boundary: 17 layers natively, 16 in Pyodide.
         (create_slab, BULK_Hf2O_MCL, SLAB_PARAMETERS, "28e7d4d495308e68076eb118b6d26cbb"),
-        (create_interface_on_substrate, GRAPHENE, INTERFACE_PARAMETERS, "e1af20b86cde077ba9ce1af983805372"),
+        (create_interface_on_substrate, GRAPHENE, INTERFACE_PARAMETERS, "49ab604d97b82ccf4d950be87b9f4ef5"),
         (
             create_defect_point_interstitial,
             BULK_Si_PRIMITIVE,
