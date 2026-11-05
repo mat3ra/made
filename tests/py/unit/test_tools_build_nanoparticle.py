@@ -1,5 +1,7 @@
+import numpy as np
 import pytest
 from mat3ra.made.material import Material
+from mat3ra.made.tools.analyze import BaseMaterialAnalyzer
 from mat3ra.made.tools.build.pristine_structures.zero_dimensional.nanoparticle import (
     NanoparticleShapesEnum,
     create_nanoparticle_by_shape,
@@ -31,12 +33,15 @@ def test_create_nanoparticle_by_condition(material_config, condition, expected_m
 
 
 @pytest.mark.parametrize(
-    "material_config, shape, parameters",
+    "material_config, shape, parameters, expected_nearest_neighbor_distance",
     [
-        (BULK_Si_PRIMITIVE, NanoparticleShapesEnum.ICOSAHEDRON, {"noshells": 3}),
+        (BULK_Si_PRIMITIVE, NanoparticleShapesEnum.ICOSAHEDRON, {"noshells": 3}, 3.867),
+        (BULK_Si_PRIMITIVE, NanoparticleShapesEnum.OCTAHEDRON, {"length": 5, "cutoff": 2}, 3.867),
+        (BULK_Si_PRIMITIVE, NanoparticleShapesEnum.DECAHEDRON, {"p": 3, "q": 2, "r": 0}, 3.867),
     ],
 )
-def test_create_nanoparticle_by_shape(material_config, shape, parameters):
+def test_create_nanoparticle_by_shape(material_config, shape, parameters, expected_nearest_neighbor_distance):
     material = Material.create(material_config)
     nanoparticle = create_nanoparticle_by_shape(material, shape, parameters)
-    assert isinstance(nanoparticle, Material)
+    nearest_neighbor_distance = BaseMaterialAnalyzer(material=nanoparticle).pairwise_distances.min()
+    assert np.isclose(nearest_neighbor_distance, expected_nearest_neighbor_distance, atol=1e-3)
