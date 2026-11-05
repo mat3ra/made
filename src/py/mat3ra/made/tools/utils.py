@@ -136,6 +136,16 @@ def get_distance_between_coordinates(coordinate1: List[float], coordinate2: List
     return float(np.linalg.norm(np.array(coordinate1) - np.array(coordinate2)))
 
 
+def select_index_by_value(values: List[float], tolerance: float, keys: List[Any]) -> int:
+    """
+    Index of the smallest value. Values within tolerance of it tie; a tie goes to the smallest key, then to the
+    lowest index, so float noise in the values does not decide the choice.
+    """
+    values = np.array(values)
+    candidates = np.flatnonzero(values <= values.min() + tolerance)
+    return int(min(candidates, key=lambda index: (keys[index], index)))
+
+
 def get_norm(vector: List[float]) -> float:
     """
     Get the norm of a vector.

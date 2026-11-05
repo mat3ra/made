@@ -1,5 +1,3 @@
-import sys
-
 import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build.pristine_structures.three_dimensional.ideal_crystal.helpers import create_monolayer
@@ -10,15 +8,13 @@ from .utils import assert_two_entities_deep_almost_equal
 
 
 @pytest.mark.parametrize(
-    "material_config, vacuum, expected_material_config, skip_on_gh",
+    "material_config, vacuum, expected_material_config",
     [
-        (BULK_Si_PRIMITIVE, 10.0, SILICENE, True),
-        (BULK_GRAPHITE, 12.197, GRAPHENE, False),
+        (BULK_Si_PRIMITIVE, 10.0, SILICENE),
+        (BULK_GRAPHITE, 12.197, GRAPHENE),
     ],
 )
-def test_create_monolayer(material_config, vacuum, expected_material_config, skip_on_gh):
-    if sys.platform != "darwin" and skip_on_gh:
-        pytest.skip("Skipping test on non-Darwin platform due to different slab generation.")
+def test_create_monolayer(material_config, vacuum, expected_material_config):
     crystal = Material.create(material_config)
     monolayer = create_monolayer(crystal, vacuum=vacuum)
 

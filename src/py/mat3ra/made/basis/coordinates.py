@@ -14,6 +14,14 @@ class Coordinate(RoundedValueWithId):
 
 
 class Coordinates(RoundedArrayWithIds):
+    @classmethod
+    def to_standard_coordinate(cls, value):
+        """
+        Rounds to the coordinate precision, then wraps exactly into [0, 1): the wrapped value is rounded again, so
+        the result is its own standard coordinate.
+        """
+        return cls.round_array_or_number(np.mod(cls.round_array_or_number(value), 1))
+
     def get_values_along_axis(
         self,
         axis: Literal["x", "y", "z"] = "z",

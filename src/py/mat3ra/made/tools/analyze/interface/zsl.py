@@ -64,8 +64,8 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
             max_angle_tol=self.max_angle_tol,
         )
 
-        film_vectors = self.film_slab.lattice.vector_arrays[0:2]
-        substrate_vectors = self.substrate_slab.lattice.vector_arrays[0:2]
+        film_vectors = self.film_slab.lattice.vector_arrays_rounded[0:2]
+        substrate_vectors = self.substrate_slab.lattice.vector_arrays_rounded[0:2]
 
         zsl_matches_pymatgen = list(
             zsl_generator(
@@ -108,8 +108,8 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
         return unique_matches
 
     def convert_generated_match_to_match_holder(self, match_id: int, match_pymatgen) -> Optional[ZSLMatchHolder]:
-        film_slab_vectors = np.array(self.film_slab.lattice.vector_arrays[0:2])[:, :2]
-        substrate_slab_vectors = np.array(self.substrate_slab.lattice.vector_arrays[0:2])[:, :2]
+        film_slab_vectors = np.array(self.film_slab.lattice.vector_arrays_rounded[0:2])[:, :2]
+        substrate_slab_vectors = np.array(self.substrate_slab.lattice.vector_arrays_rounded[0:2])[:, :2]
 
         pymatgen_film_sl_vectors = match_pymatgen.film_sl_vectors[:, :2]
         pymatgen_substrate_sl_vectors = match_pymatgen.substrate_sl_vectors[:, :2]
@@ -137,8 +137,10 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
         ):
             return None
 
+        # The supercells are built with the first vector along x, right-handed, as made stores every lattice.
         real_strain_matrix, strain_percentage = self._calculate_strain(
-            film_sl_supercell_vectors, substrate_sl_supercell_vectors
+            align_first_vector_to_x_2d_right_handed(film_sl_supercell_vectors),
+            align_first_vector_to_x_2d_right_handed(substrate_sl_supercell_vectors),
         )
 
         return ZSLMatchHolder(
@@ -152,12 +154,9 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
 
     def _get_sl_vectors_for_supercell_calculation(self, pymatgen_film_sl_vectors, pymatgen_substrate_sl_vectors):
         """
-        Determine which superlattice vectors to use for supercell matrix calculation.
-
-        Calculating the supercell transformation matrix requires that corresponding
-        superlattice vectors of film and substrate are colinear. Non-colinear vectors
-        cannot be used to derive a valid integer transformation matrix from original to supercell.
-        While diagonal matrices can be used, and can give smaller area match, so they should be preserved.
+        Pymatgen's superlattice vectors, if corresponding film and substrate vectors are colinear once each set is
+        aligned to x. They are integer combinations of the slab vectors, so the supercell matrices come from them
+        unrotated: a rotated set gives non-integer matrices.
         """
         pymatgen_substrate_sl_vectors_aligned = align_first_vector_to_x_2d_right_handed(pymatgen_substrate_sl_vectors)
         pymatgen_film_sl_vectors_aligned = align_first_vector_to_x_2d_right_handed(pymatgen_film_sl_vectors)
@@ -167,22 +166,15 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
 
         if not (a_colinear and b_colinear):
             return None, None
-
-        is_film_diag = np.allclose(pymatgen_film_sl_vectors_aligned, np.diag(np.diag(pymatgen_film_sl_vectors_aligned)))
-        is_substrate_diag = np.allclose(
-            pymatgen_substrate_sl_vectors_aligned, np.diag(np.diag(pymatgen_substrate_sl_vectors_aligned))
-        )
-
-        if is_film_diag and is_substrate_diag:
-            return pymatgen_film_sl_vectors, pymatgen_substrate_sl_vectors
-        else:
-            return pymatgen_film_sl_vectors_aligned, pymatgen_substrate_sl_vectors_aligned
+        return pymatgen_film_sl_vectors, pymatgen_substrate_sl_vectors
 
     def _calculate_and_reduce_supercell_matrices(
         self, film_slab_vectors, substrate_slab_vectors, film_sl_vectors, substrate_sl_vectors, match_area
     ):
-        film_supercell_matrix = np.rint(np.linalg.solve(film_slab_vectors, film_sl_vectors)).astype(int)
-        substrate_supercell_matrix = np.rint(np.linalg.solve(substrate_slab_vectors, substrate_sl_vectors)).astype(int)
+        # The supercell matrix M has M @ slab_vectors = sl_vectors (vectors as rows).
+        film_supercell_matrix = np.rint(np.linalg.solve(film_slab_vectors.T, film_sl_vectors.T).T).astype(int)
+        substrate_supercell_matrix = np.rint(np.linalg.solve(substrate_slab_vectors.T, substrate_sl_vectors.T).T)
+        substrate_supercell_matrix = substrate_supercell_matrix.astype(int)
 
         area = match_area
         if self.reduce_result_cell:
@@ -194,16 +186,6 @@ class ZSLInterfaceAnalyzer(InterfaceAnalyzer):
         return film_supercell_matrix, substrate_supercell_matrix, area
 
     def _calculate_strain(self, film_sl_supercell_vectors, substrate_sl_supercell_vectors):
-        film_det = np.linalg.det(film_sl_supercell_vectors)
-        substrate_det = np.linalg.det(substrate_sl_supercell_vectors)
-
-        # Handle cases where lattices match but are oriented in opposite directions (e.g., 180° rotation).
-        # This keeps the right-handed system for the strain calculation.
-        # The strain calculation uses vector magnitudes, so we need consistent orientation to avoid artificial strain
-        if (film_det > 0) != (substrate_det > 0):
-            film_sl_supercell_vectors = film_sl_supercell_vectors.copy()
-            film_sl_supercell_vectors[1] = -film_sl_supercell_vectors[1]
-
         real_strain_matrix = np.linalg.solve(film_sl_supercell_vectors, substrate_sl_supercell_vectors)
         real_strain_matrix = convert_2x2_to_3x3(real_strain_matrix.tolist())
         strain_percentage = self.calculate_total_strain_percentage(real_strain_matrix)
