@@ -38,6 +38,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     cell: Cell = Field(Cell(), exclude=True)
     labels: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     constraints: ArrayWithIds = Field(ArrayWithIds.from_values([]))
+    startingMagnetization: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     DEFAULT_COORDINATE_PROXIMITY_TOLERANCE: float = Field(
         0.1, exclude=True
     )  # Angstroms, used for checking overlapping coordinates
@@ -51,6 +52,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             kwargs["labels"] = ArrayWithIds.from_list_of_dicts(kwargs["labels"])
         if isinstance(kwargs.get("constraints"), list):
             kwargs["constraints"] = ArrayWithIds.from_list_of_dicts(kwargs["constraints"])
+        if isinstance(kwargs.get("startingMagnetization"), list):
+            kwargs["startingMagnetization"] = ArrayWithIds.from_list_of_dicts(kwargs["startingMagnetization"])
         if isinstance(kwargs.get("cell"), list):
             kwargs["cell"] = Cell.from_vectors_array(kwargs["cell"])
         return kwargs
@@ -99,13 +102,11 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
-        labels_map = {lbl["id"]: str(lbl["value"]) for lbl in self.labels.to_dict()}
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
-            label = labels_map.get(elem["id"], "")
             stored = self.coordinates.round_array_or_number([value % 1 for value in coord["value"]])
             rounded = [f"{round_custom(value, HASH_TOLERANCE) % 1:g}" for value in stored]
-            parts.append(f"{elem['value']}{label} {','.join(rounded)}")
+            parts.append(f"{elem['value']} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()
         return ";".join(sorted(parts)) + ";"
@@ -179,12 +180,15 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             other_basis (Basis): The other basis to add atoms from.
         """
 
-        for el in other_basis.elements.values:
-            self.elements.add_item(el)
-        for coord in other_basis.coordinates.values:
-            self.coordinates.add_item(coord)
-        for label in other_basis.labels.values:
-            self.labels.add_item(label)
+        id_offset = max(self.elements.ids, default=-1) + 1
+        for own_values, other_values in (
+            (self.elements, other_basis.elements),
+            (self.coordinates, other_basis.coordinates),
+            (self.labels, other_basis.labels),
+            (self.startingMagnetization, other_basis.startingMagnetization),
+        ):
+            for value, atom_id in zip(other_values.values, other_values.ids):
+                own_values.add_item(value, atom_id + id_offset)
 
     def remove_atom_by_id(self, id: int):
         self.elements.remove_item(id)
@@ -201,9 +205,15 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         return self
 
     def filter_atoms_by_ids(self, ids: Union[List[int], int], invert: bool = False, reset_ids=False) -> "Basis":
-        self.elements.filter_by_ids(ids, invert, reset_ids=reset_ids)
+        self.elements.filter_by_ids(ids, invert)
         self.coordinates.filter_by_ids(ids, invert, reset_ids=reset_ids)
-        self.labels.filter_by_ids(ids, invert, reset_ids=reset_ids)
+        kept_atom_ids = self.elements.ids
+        for per_atom_values in (self.labels, self.startingMagnetization):
+            per_atom_values.filter_by_ids(kept_atom_ids)
+        if reset_ids:
+            new_id_by_atom_id = {atom_id: index for index, atom_id in enumerate(kept_atom_ids)}
+            for per_atom_values in (self.elements, self.labels, self.startingMagnetization):
+                per_atom_values.ids = [new_id_by_atom_id[atom_id] for atom_id in per_atom_values.ids]
         return self
 
     def filter_atoms_by_labels(self, labels: Union[List[str], str]) -> "Basis":

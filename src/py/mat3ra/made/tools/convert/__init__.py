@@ -2,8 +2,9 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
+import numpy as np
 from mat3ra.made.material import Material
-from mat3ra.made.utils import map_array_to_array_with_id_value, map_array_with_id_value_to_array
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import remove_comments_from_source_code
 from mat3ra.utils.mixins import RoundNumericValuesMixin
 
@@ -19,8 +20,9 @@ from .utils import (
     calculate_padded_cell_simple_cubic,
     extract_labels_from_pymatgen_structure,
     extract_metadata_from_pymatgen_structure,
-    extract_tags_from_ase_atoms,
 )
+
+ASE_ARRAY_NAME_BY_BASIS_KEY = {"labels": "tags", "startingMagnetization": "starting_magnetization"}
 
 
 def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> PymatgenStructure:
@@ -196,9 +198,11 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     structure = to_pymatgen(material_config)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
-    atomic_labels = material_config["basis"].get("labels", [])
-    if atomic_labels:
-        atoms.set_tags(map_array_with_id_value_to_array(atomic_labels))
+    basis = material_config["basis"]
+    for basis_key, ase_array_name in ASE_ARRAY_NAME_BY_BASIS_KEY.items():
+        value_by_atom_id = {item["id"]: item["value"] for item in basis.get(basis_key, [])}
+        if value_by_atom_id:
+            atoms.set_array(ase_array_name, np.array([value_by_atom_id.get(atom["id"]) for atom in basis["elements"]]))
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -231,8 +235,9 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     if is_molecule:
         material["lattice"]["type"] = "CUB"
 
-    ase_tags = extract_tags_from_ase_atoms(ase_atoms)
-    material["basis"]["labels"] = ase_tags
+    for basis_key, ase_array_name in ASE_ARRAY_NAME_BY_BASIS_KEY.items():
+        values = ase_atoms.arrays[ase_array_name].tolist() if ase_array_name in ase_atoms.arrays else []
+        material["basis"][basis_key] = map_array_to_array_with_id_value(values, remove_none=True)
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:
         material["metadata"].update(ase_metadata)

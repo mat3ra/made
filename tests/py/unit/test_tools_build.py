@@ -7,7 +7,9 @@ from mat3ra.made.tools.build_components.operations.core.combinations.merge.build
 )
 from mat3ra.made.tools.build_components.operations.core.combinations.merge.builder import MergeBuilder
 from mat3ra.made.tools.build_components.operations.core.combinations.merge.configuration import MergeConfiguration
+from mat3ra.made.tools.modify import filter_by_label
 from mat3ra.made.tools.operations.core.binary import merge
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import assertion as assertion_utils
 from unit.fixtures.bulk import BULK_Ge_CONVENTIONAL, BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
 from unit.fixtures.cuts import (
@@ -18,6 +20,7 @@ from unit.fixtures.cuts import (
     SECTION_MATERIAL_BASIS,
     SECTION_MATERIAL_BASIS_EXTRA_ATOM,
 )
+from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
 from unit.fixtures.merge import MERGED_BULK_Si_Ge
 from unit.fixtures.point_defects import (
     INTERSTITIAL_DEFECT_BULK_PRIMITIVE_Si,
@@ -51,6 +54,24 @@ def test_merge_materials(materials_to_merge, expected_basis, expected_basis_reve
     merged_material_reverse = merge(materials_to_merge[::-1])
     assertion_utils.assert_deep_almost_equal(merged_material.basis, expected_basis)
     assertion_utils.assert_deep_almost_equal(merged_material_reverse.basis, expected_basis_reverse)
+
+
+@pytest.mark.parametrize(
+    "is_film_first, expected_labels, expected_starting_magnetization",
+    [
+        (False, [None, None, None, 1, 1], [0.5, 0.5, 0.5, None, None]),
+        (True, [1, 1, None, None, None], [None, None, 0.5, 0.5, 0.5]),
+    ],
+)
+def test_merge_per_atom_values(is_film_first, expected_labels, expected_starting_magnetization):
+    interface = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
+    substrate, film = filter_by_label(interface, 0), filter_by_label(interface, 1)
+    substrate.set_labels_from_list([])
+    merged_material = merge([film, substrate] if is_film_first else [substrate, film])
+    assert merged_material.basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
+    assert merged_material.basis.startingMagnetization.to_dict() == map_array_to_array_with_id_value(
+        expected_starting_magnetization, remove_none=True
+    )
 
 
 def test_configuration():

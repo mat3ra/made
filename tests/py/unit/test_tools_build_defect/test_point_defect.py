@@ -16,8 +16,9 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
     create_multiple_defects,
 )
 from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.types import PointDefectDict
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from unit.fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
-from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
+from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
 from unit.fixtures.point_defects import (
     INTERSTITIAL_DEFECT_BULK_PRIMITIVE_Si,
     INTERSTITIAL_VORONOI_DEFECT_BULK_PRIMITIVE_Si,
@@ -34,18 +35,8 @@ from unit.utils import assert_two_entities_deep_almost_equal, get_platform_speci
 # within a reasonable tolerance of any of the valid symmetrical Voronoi sites.
 UPDATED_COORDINATE_TOLERANCE = 1e-4
 
-FILM_LABEL = 1
-SUBSTRATE_LABEL = 0
 SUBSTITUTION_ELEMENT = "Ge"
 INTERFACE_SUBSTITUTION_PLACEMENT_METHOD = SubstitutionPlacementMethodEnum.CLOSEST_SITE.value
-
-
-def _film_atom_coordinate(material: Material) -> list:
-    labels_by_id = {entry["id"]: entry["value"] for entry in material.basis.labels.to_dict()}
-    for coordinate_entry in material.basis.coordinates.to_dict():
-        if labels_by_id.get(coordinate_entry["id"]) == FILM_LABEL:
-            return coordinate_entry["value"]
-    raise ValueError("No film atom found in fixture material")
 
 
 @pytest.mark.parametrize(
@@ -129,20 +120,30 @@ def test_point_defect_helpers(material_config, defect_params, expected_material_
 
 
 @pytest.mark.parametrize(
-    "expected_label_count, expected_unique_labels",
-    [(5, {SUBSTRATE_LABEL, FILM_LABEL})],
+    "create_defect, atom_id, defect_arguments, expected_labels, expected_starting_magnetization",
+    [
+        (create_defect_point_vacancy, 1, [VacancyPlacementMethodEnum.CLOSEST_SITE.value], [0, 0, 1, 1], [0.5, 0.5]),
+        (
+            create_defect_point_substitution,
+            3,
+            [SUBSTITUTION_ELEMENT, INTERFACE_SUBSTITUTION_PLACEMENT_METHOD],
+            [0, 0, 0, 1, 1],
+            [0.5, 0.5, 0.5],
+        ),
+    ],
 )
-def test_create_defect_point_substitution_preserves_interface_labels(expected_label_count, expected_unique_labels):
-    material = Material.create(GRAPHENE_NICKEL_INTERFACE)
-    coordinate = _film_atom_coordinate(material)
+def test_create_defect_point_per_atom_values(
+    create_defect, atom_id, defect_arguments, expected_labels, expected_starting_magnetization
+):
+    material = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
+    coordinate = material.basis.coordinates.values[atom_id]
 
-    defect_material = create_defect_point_substitution(
-        material, coordinate, SUBSTITUTION_ELEMENT, INTERFACE_SUBSTITUTION_PLACEMENT_METHOD
+    defect_material = create_defect(material, coordinate, *defect_arguments)
+
+    assert defect_material.basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels)
+    assert defect_material.basis.startingMagnetization.to_dict() == map_array_to_array_with_id_value(
+        expected_starting_magnetization
     )
-
-    assert len(defect_material.basis.elements.values) == expected_label_count
-    assert len(defect_material.basis.labels.values) == expected_label_count
-    assert set(defect_material.basis.labels.values) == expected_unique_labels
 
 
 @pytest.mark.parametrize(

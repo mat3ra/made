@@ -6,9 +6,11 @@ from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
 from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -145,6 +147,22 @@ def test_from_ase(
     assert material_data["isNonPeriodic"] == expected_is_non_periodic
     if expected_lattice_type is not None:
         assert material_data["lattice"]["type"] == expected_lattice_type
+
+
+@pytest.mark.parametrize(
+    "material_config, removed_atom_id, expected_labels, expected_starting_magnetization",
+    [(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, 1, [0, 0, 1, 1], [0.5, 0.5, None, None])],
+)
+def test_to_ase_from_ase_per_atom_values(
+    material_config, removed_atom_id, expected_labels, expected_starting_magnetization
+):
+    material = Material.create(material_config)
+    material.basis.remove_atom_by_id(removed_atom_id)
+    basis = Material.create(from_ase(to_ase(material))).basis
+    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels)
+    assert basis.startingMagnetization.to_dict() == map_array_to_array_with_id_value(
+        expected_starting_magnetization, remove_none=True
+    )
 
 
 TOLERANCE = 1e-4

@@ -8,6 +8,7 @@ from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.utils import assertion as assertion_utils
 from unit.fixtures.bulk import BULK_Si_PRIMITIVE
+from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
 
@@ -148,6 +149,13 @@ def test_calculate_hash_feo_standata():
     material = Material.create(data)
     assert material.hash == expected_hashes["hash"]
     assert material.scaled_hash == expected_hashes["scaledHash"]
+
+
+@pytest.mark.parametrize("basis_key", ["labels", "startingMagnetization"])
+def test_calculate_hash_per_atom_values(basis_key):
+    basis = {**GRAPHENE_NICKEL_INTERFACE_MAGNETIZED["basis"], basis_key: []}
+    material = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
+    assert material.hash == Material.create({**GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, "basis": basis}).hash
 
 
 @pytest.mark.parametrize(
