@@ -99,6 +99,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
 
     @property
     def unique_atomic_species(self) -> List[Dict[str, Any]]:
+        """Species per element and starting magnetization, by first appearance: Fe, Fe1, Fe2 (at most 3 characters)."""
         species: List[Dict[str, Any]] = []
         for element, magnetization in dict.fromkeys(zip(self.elements.values, self.starting_magnetization_array)):
             count = sum(item["element"] == element for item in species)

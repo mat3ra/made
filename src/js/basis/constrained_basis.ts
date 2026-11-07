@@ -218,16 +218,21 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         });
     }
 
-    copyLabelsAndStartingMagnetizationByIndex(basis: ConstrainedBasis) {
+    /** Copies both lists by index, not id; extras drop; a label already here (XYZ "Fe1") wins */
+    copyLabelsAndStartingMagnetizationByIndex(otherBasis: ConstrainedBasis) {
         const ownIdByOtherId = new Map(
-            basis._elements.ids.map((id, index) => [id, this._elements.ids[index]] as const),
+            otherBasis._elements.ids.map((id, index) => [id, this._elements.ids[index]] as const),
         );
         const copyByIndex = <T extends { id: number }>(entries: T[]) =>
             entries
                 .filter(({ id }) => ownIdByOtherId.get(id) !== undefined)
                 .map((entry) => ({ ...entry, id: ownIdByOtherId.get(entry.id) as number }));
-        this.labels = copyByIndex(basis.labels);
-        this.startingMagnetization = copyByIndex(basis.startingMagnetization);
+        const ownLabelIds = this._labels.ids;
+        this.labels = [
+            ...copyByIndex(otherBasis.labels).filter(({ id }) => !ownLabelIds.includes(id)),
+            ...this.labels,
+        ];
+        this.startingMagnetization = copyByIndex(otherBasis.startingMagnetization);
     }
 
     removeAllAtoms() {

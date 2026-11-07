@@ -272,6 +272,24 @@ describe("Basis", () => {
             expectedLabels: [{ id: 0, value: 2 }],
             expectedStartingMagnetization: [{ id: 0, value: -0.5 }],
         },
+        {
+            edit: "a pasted labelled export",
+            config: FeOStandata,
+            editLines: () => new Material(FeOAntiferromagnetic).getBasisAsXyz().trim().split("\n"),
+            expectedLabels: FeOAntiferromagnetic.basis.labels,
+            expectedStartingMagnetization: [],
+        },
+        {
+            edit: "a typed label",
+            config: FeOAntiferromagnetic,
+            editLines: (lines: string[]) => [
+                ...lines.slice(0, 2),
+                lines[2].replace("O", "O1"),
+                lines[3],
+            ],
+            expectedLabels: [...FeOAntiferromagnetic.basis.labels, { id: 2, value: 1 }],
+            expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
+        },
     ].forEach(({ edit, config, editLines, expectedLabels, expectedStartingMagnetization }) => {
         it(`should copy labels and starting magnetization by index after XYZ text with ${edit}`, () => {
             const material = new Material(config);
