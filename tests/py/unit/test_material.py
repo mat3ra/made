@@ -133,6 +133,25 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
     assert material.basis.labels.values == expected_final
 
 
+@pytest.mark.parametrize(
+    "material_config, removed_atom_ids, expected_labels, expected_starting_magnetization",
+    [
+        (
+            GRAPHENE_NICKEL_INTERFACE_MAGNETIZED,
+            [1, 3],
+            [{"id": 0, "value": 0}, {"id": 2, "value": 0}, {"id": 4, "value": 1}],
+            [{"id": 0, "value": 0.5}, {"id": 2, "value": 0.5}],
+        )
+    ],
+)
+def test_remove_atom_by_id(material_config, removed_atom_ids, expected_labels, expected_starting_magnetization):
+    basis = Material.create(material_config).basis
+    for atom_id in removed_atom_ids:
+        basis.remove_atom_by_id(atom_id)
+    assert basis.labels.to_dict() == expected_labels
+    assert basis.startingMagnetization.to_dict() == expected_starting_magnetization
+
+
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
 def test_calculate_hash(fixture_file):
     fixture = load_fixture(fixture_file)

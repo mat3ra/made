@@ -191,9 +191,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
                 own_values.add_item(value, atom_id + id_offset)
 
     def remove_atom_by_id(self, id: int):
-        self.elements.remove_item(id)
-        self.coordinates.remove_item(id)
-        self.labels.remove_item(id)
+        self.filter_atoms_by_ids(id, invert=True)
 
     def remove_atoms_by_elements(self, values: Union[List[str], str]) -> "Basis":
         if isinstance(values, str):
@@ -219,10 +217,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def filter_atoms_by_labels(self, labels: Union[List[str], str]) -> "Basis":
         labels_int = [int(label) if isinstance(label, str) else label for label in labels]
         self.labels.filter_by_values(labels_int)
-        ids = self.labels.ids
-        self.elements.filter_by_ids(ids)
-        self.coordinates.filter_by_ids(ids)
-        return self
+        return self.filter_atoms_by_ids(self.labels.ids)
 
     def set_labels_from_list(self, labels: Optional[List[Union[int, str]]]) -> None:
         """

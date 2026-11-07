@@ -165,6 +165,17 @@ def test_to_ase_from_ase_per_atom_values(
     )
 
 
+@pytest.mark.parametrize(
+    "material_config, added_element, added_coordinate, expected_labels",
+    [(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, "H", [0.333, 0.333, 0.45], [0, 0, 0, 1, 1, None])],
+)
+def test_to_ase_from_ase_partially_labelled(material_config, added_element, added_coordinate, expected_labels):
+    material = Material.create(material_config)
+    material.basis.add_atom(added_element, added_coordinate)
+    basis = Material.create(from_ase(to_ase(material))).basis
+    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
+
+
 TOLERANCE = 1e-4
 
 H2_EXPECTED_LATTICE_A = DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE
