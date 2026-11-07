@@ -151,11 +151,15 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
  * @param coordinatePrintFormat Output format for coordinates.
  * @return Basis string in XYZ format
  */
-function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: string): string {
+function fromBasis(
+    basisClsInstance: ConstrainedBasis,
+    coordinatePrintFormat: string,
+    atomNames = basisClsInstance.elementsWithLabelsArray,
+): string {
     const XYZArray = basisClsInstance.getAtomicPositionsWithConstraintsAsStrings(
         coordinatePrintFormat,
         XYZ_COORDINATE_PRECISION,
-        basisClsInstance.elementsWithLabelsArray,
+        atomNames,
     );
     return `${XYZArray.join("\n")}\n`;
 }
@@ -166,7 +170,8 @@ function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: st
  */
 function fromMaterial(
     materialOrConfig: MaterialSchema | MaterialEnhancedSchema,
-    fractional = false,
+    fractional?: boolean,
+    atomNames?: string[],
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);
     const constraints =
@@ -179,7 +184,7 @@ function fromMaterial(
     if (fractional) {
         basis.toCrystal();
     }
-    return fromBasis(basis, "%11.6f");
+    return fromBasis(basis, "%11.6f", atomNames);
 }
 
 export default {

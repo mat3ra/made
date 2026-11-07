@@ -38,6 +38,15 @@ const FeOAntiferromagnetic = {
     },
 };
 
+const FeOAntiferromagneticWithIdGap = {
+    ...FeOAntiferromagnetic,
+    basis: {
+        ...FeOAntiferromagnetic.basis,
+        elements: FeOAntiferromagnetic.basis.elements.slice(1),
+        coordinates: FeOAntiferromagnetic.basis.coordinates.slice(1),
+    },
+};
+
 describe("Basis", () => {
     it("should return true if basises are equal", () => {
         const basis1 = new Basis(FeLiSiBasis);
@@ -232,6 +241,51 @@ describe("Basis", () => {
     it("should print labels, not species, in XYZ", () => {
         const xyz = new Material(FeOAntiferromagnetic).getBasisAsXyz();
         expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Fe1", "Fe2", "O", "O"]);
+    });
+
+    it("should print the given atom names in XYZ", () => {
+        const material = new Material(FeOAntiferromagnetic);
+        const elements = material.getBasis().elements.map(({ value }) => value);
+        const xyz = material.getBasisAsXyz(false, elements);
+        expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Fe", "Fe", "O", "O"]);
+    });
+
+    [
+        {
+            edit: "an appended atom",
+            config: FeOAntiferromagnetic,
+            editLines: (lines: string[]) => [...lines, lines[3]],
+            expectedLabels: FeOAntiferromagnetic.basis.labels,
+            expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
+        },
+        {
+            edit: "removed atoms",
+            config: FeOAntiferromagnetic,
+            editLines: (lines: string[]) => lines.slice(0, 1),
+            expectedLabels: [{ id: 0, value: 1 }],
+            expectedStartingMagnetization: [{ id: 0, value: 0.5 }],
+        },
+        {
+            edit: "an id gap",
+            config: FeOAntiferromagneticWithIdGap,
+            editLines: (lines: string[]) => lines,
+            expectedLabels: [{ id: 0, value: 2 }],
+            expectedStartingMagnetization: [{ id: 0, value: -0.5 }],
+        },
+    ].forEach(({ edit, config, editLines, expectedLabels, expectedStartingMagnetization }) => {
+        it(`should copy labels and starting magnetization by index after XYZ text with ${edit}`, () => {
+            const material = new Material(config);
+            const elements = material.getBasis().elements.map(({ value }) => value);
+            const lines = material.getBasisAsXyz(false, elements).trim().split("\n");
+            const editedMaterial = material.clone();
+            editedMaterial.setBasis(editLines(lines).join("\n"), "xyz", material.basis.units);
+            const basis = editedMaterial.getBasis();
+            basis.copyLabelsAndStartingMagnetizationByIndex(material.getBasis());
+            expect([basis.labels, basis.startingMagnetization]).to.be.deep.equal([
+                expectedLabels,
+                expectedStartingMagnetization,
+            ]);
+        });
     });
 
     /**
