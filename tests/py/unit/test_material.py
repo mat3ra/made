@@ -3,11 +3,14 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
+from mat3ra.made.tools.modify import filter_by_label
+from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.utils import assertion as assertion_utils
-from unit.fixtures.bulk import BULK_Si_PRIMITIVE
+from unit.fixtures.bulk import BULK_FeO_ANTIFERROMAGNETIC, BULK_Si_PRIMITIVE
 from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
@@ -150,6 +153,60 @@ def test_remove_atom_by_id(material_config, removed_atom_ids, expected_labels, e
         basis.remove_atom_by_id(atom_id)
     assert basis.labels.to_dict() == expected_labels
     assert basis.startingMagnetization.to_dict() == expected_starting_magnetization
+
+
+@pytest.mark.parametrize(
+    "material_config, element, coordinate, label, expected_elements",
+    [(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, "C", [0.1, 0.2, 0.9], 1, ["C", "C", "C"])],
+)
+def test_add_atom(material_config, element, coordinate, label, expected_elements):
+    interface = Material.create(material_config)
+    substrate, film = filter_by_label(interface, 0), filter_by_label(interface, 1)
+    substrate.set_labels_from_list([])
+    material = merge([film, substrate])
+    material.basis.add_atom(element, coordinate, label=label)
+    assert filter_by_label(material, label).basis.elements.values == expected_elements
+
+
+@pytest.mark.parametrize(
+    "material_config, expected_atomic_species, expected_unique_atomic_species",
+    [
+        (
+            BULK_FeO_ANTIFERROMAGNETIC,
+            ["Fe", "Fe1", "O", "O"],
+            [
+                {"name": "Fe", "element": "Fe", "startingMagnetization": 0.5},
+                {"name": "Fe1", "element": "Fe", "startingMagnetization": -0.5},
+                {"name": "O", "element": "O", "startingMagnetization": 0},
+            ],
+        ),
+        (
+            {
+                **BULK_FeO_ANTIFERROMAGNETIC,
+                "basis": {**BULK_FeO_ANTIFERROMAGNETIC["basis"], "startingMagnetization": []},
+            },
+            ["Fe", "Fe", "O", "O"],
+            [
+                {"name": "Fe", "element": "Fe", "startingMagnetization": 0},
+                {"name": "O", "element": "O", "startingMagnetization": 0},
+            ],
+        ),
+    ],
+)
+def test_unique_atomic_species(material_config, expected_atomic_species, expected_unique_atomic_species):
+    basis = Material.create(material_config).basis
+    assert basis.atomic_species_array == expected_atomic_species
+    assert basis.unique_atomic_species == expected_unique_atomic_species
+
+
+def test_unique_atomic_species_invalid():
+    starting_magnetization = [index / 10 for index in range(11)]
+    basis = Material.create_default().basis
+    basis.elements = ArrayWithIds.from_values(["Fe"] * len(starting_magnetization))
+    basis.coordinates = Coordinates.from_values([[value, 0, 0] for value in starting_magnetization])
+    basis.startingMagnetization = ArrayWithIds.from_values(starting_magnetization)
+    with pytest.raises(ValueError, match="Fe has more than 10 distinct starting magnetization values"):
+        basis.unique_atomic_species
 
 
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])

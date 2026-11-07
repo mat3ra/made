@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from ase import Atoms
 from ase.build import molecule
-from mat3ra.code.array_with_ids import ArrayWithIds
+from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
 from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
@@ -89,11 +89,14 @@ def test_from_poscar():
     assert material_data["lattice"]["alpha"] == 60
 
 
-def test_to_ase():
-    material = Material.create_default()
-    labels_array = [{"id": 0, "value": 0}, {"id": 1, "value": 1}]
-    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
-    ase_atoms = to_ase(material)
+@pytest.mark.parametrize(
+    "labels, expected_tags",
+    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), (None, [0, 0])],
+)
+def test_to_ase(labels, expected_tags):
+    material_config = Material.create_default().to_dict()
+    material_config["basis"]["labels"] = labels
+    ase_atoms = to_ase(material_config)
     assert isinstance(ase_atoms, Atoms)
     assert np.allclose(
         ase_atoms.get_cell().tolist(),
@@ -105,7 +108,7 @@ def test_to_ase():
     )
     assert ase_atoms.get_chemical_symbols() == ["Si", "Si"]
     assert np.allclose(ase_atoms.get_scaled_positions().tolist(), [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]])
-    assert ase_atoms.get_tags().tolist() == [0, 1]
+    assert ase_atoms.get_tags().tolist() == expected_tags
 
 
 @pytest.mark.parametrize(
@@ -150,30 +153,28 @@ def test_from_ase(
 
 
 @pytest.mark.parametrize(
-    "material_config, removed_atom_id, expected_labels, expected_starting_magnetization",
-    [(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, 1, [0, 0, 1, 1], [0.5, 0.5, None, None])],
+    "material_config, modify_basis, arguments, expected_labels, expected_starting_magnetization",
+    [
+        (GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, None, None]),
+        (
+            GRAPHENE_NICKEL_INTERFACE_MAGNETIZED,
+            Basis.add_atom,
+            ["H", [0.333, 0.333, 0.45]],
+            [0, 0, 0, 1, 1, None],
+            [0.5, 0.5, 0.5, None, None, None],
+        ),
+    ],
 )
 def test_to_ase_from_ase_per_atom_values(
-    material_config, removed_atom_id, expected_labels, expected_starting_magnetization
+    material_config, modify_basis, arguments, expected_labels, expected_starting_magnetization
 ):
     material = Material.create(material_config)
-    material.basis.remove_atom_by_id(removed_atom_id)
+    modify_basis(material.basis, *arguments)
     basis = Material.create(from_ase(to_ase(material))).basis
-    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels)
+    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
     assert basis.startingMagnetization.to_dict() == map_array_to_array_with_id_value(
         expected_starting_magnetization, remove_none=True
     )
-
-
-@pytest.mark.parametrize(
-    "material_config, added_element, added_coordinate, expected_labels",
-    [(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, "H", [0.333, 0.333, 0.45], [0, 0, 0, 1, 1, None])],
-)
-def test_to_ase_from_ase_partially_labelled(material_config, added_element, added_coordinate, expected_labels):
-    material = Material.create(material_config)
-    material.basis.add_atom(added_element, added_coordinate)
-    basis = Material.create(from_ase(to_ase(material))).basis
-    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
 
 
 TOLERANCE = 1e-4

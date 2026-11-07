@@ -136,7 +136,7 @@ def test_create_defect_point_per_atom_values(
     create_defect, atom_id, defect_arguments, expected_labels, expected_starting_magnetization
 ):
     material = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
-    coordinate = material.basis.coordinates.values[atom_id]
+    coordinate = material.basis.coordinates.values[material.basis.coordinates.ids.index(atom_id)]
 
     defect_material = create_defect(material, coordinate, *defect_arguments)
 

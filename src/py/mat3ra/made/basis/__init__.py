@@ -93,6 +93,32 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         )
 
     @property
+    def starting_magnetization_array(self) -> List[float]:
+        value_by_atom_id = dict(zip(self.startingMagnetization.ids, self.startingMagnetization.values))
+        return [value_by_atom_id.get(atom_id, 0) for atom_id in self.elements.ids]
+
+    @property
+    def unique_atomic_species(self) -> List[Dict[str, Any]]:
+        species: List[Dict[str, Any]] = []
+        for element, magnetization in dict.fromkeys(zip(self.elements.values, self.starting_magnetization_array)):
+            count = sum(item["element"] == element for item in species)
+            name = f"{element}{count}" if count else element
+            if len(name) > 3:
+                raise ValueError(
+                    f"{element} has more than {count} distinct starting magnetization values; "
+                    "species names are limited to 3 characters"
+                )
+            species.append({"name": name, "element": element, "startingMagnetization": magnetization})
+        return species
+
+    @property
+    def atomic_species_array(self) -> List[str]:
+        name_by_species = {
+            (item["element"], item["startingMagnetization"]): item["name"] for item in self.unique_atomic_species
+        }
+        return [name_by_species[atom] for atom in zip(self.elements.values, self.starting_magnetization_array)]
+
+    @property
     def hash_string(self) -> str:
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
@@ -170,7 +196,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         self.elements.add_item(element)
         self.coordinates.add_item(coordinate)
         if label is not None:
-            self.labels.add_item(label)
+            self.labels.add_item(label, self.elements.ids[-1])
 
     def add_atoms_from_another_basis(self, other_basis: "Basis"):
         """
@@ -204,13 +230,12 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
 
     def filter_atoms_by_ids(self, ids: Union[List[int], int], invert: bool = False, reset_ids=False) -> "Basis":
         self.elements.filter_by_ids(ids, invert)
-        self.coordinates.filter_by_ids(ids, invert, reset_ids=reset_ids)
         kept_atom_ids = self.elements.ids
-        for per_atom_values in (self.labels, self.startingMagnetization):
+        for per_atom_values in (self.coordinates, self.labels, self.startingMagnetization):
             per_atom_values.filter_by_ids(kept_atom_ids)
         if reset_ids:
             new_id_by_atom_id = {atom_id: index for index, atom_id in enumerate(kept_atom_ids)}
-            for per_atom_values in (self.elements, self.labels, self.startingMagnetization):
+            for per_atom_values in (self.elements, self.coordinates, self.labels, self.startingMagnetization):
                 per_atom_values.ids = [new_id_by_atom_id[atom_id] for atom_id in per_atom_values.ids]
         return self
 
