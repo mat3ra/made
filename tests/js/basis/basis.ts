@@ -290,6 +290,13 @@ describe("Basis", () => {
             expectedLabels: [...FeOAntiferromagnetic.basis.labels, { id: 2, value: 1 }],
             expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
         },
+        {
+            edit: "its own labelled export pasted back",
+            config: FeOAntiferromagnetic,
+            editLines: () => new Material(FeOAntiferromagnetic).getBasisAsXyz().trim().split("\n"),
+            expectedLabels: FeOAntiferromagnetic.basis.labels,
+            expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
+        },
     ].forEach(({ edit, config, editLines, expectedLabels, expectedStartingMagnetization }) => {
         it(`should copy labels and starting magnetization by index after XYZ text with ${edit}`, () => {
             const material = new Material(config);
