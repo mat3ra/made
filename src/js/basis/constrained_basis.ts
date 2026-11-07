@@ -162,7 +162,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
 
     /**
      * Returns an array of strings with species names and their atomic positions.
-     * E.g., ``` ['Si 0 0 0', 'Li 0.5 0.5 0.5']```
+     * E.g., ``` ['Fe 0,0,0', 'Fe1 0.5,0.5,0.5']```
      */
     get atomicPositions(): string[] {
         return this.atomicSpeciesArray.map(
@@ -179,7 +179,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     }
 
     /**
-     * Helper function returning a nested array with [element, coordinates, constraints] as elements
+     * Helper function returning a nested array with [element, species name, coordinates, constraints] as elements
      */
     get elementsCoordinatesConstraintsArray(): [
         AtomicElementValue,
@@ -198,6 +198,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     /**
      * Returns an array with atomic positions (with constraints) per atom stored as strings.
      * E.g., ``` ['Si  0 0 0  0 1 0', 'Li  0.5 0.5 0.5  1 0 1']```
+     * @param atomNames - species names for code inputs (default); XYZ passes elements with labels.
      */
     getAtomicPositionsWithConstraintsAsStrings(
         coordinatePrintFormat?: string,
