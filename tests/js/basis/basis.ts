@@ -5,6 +5,7 @@ import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
 import { Basis } from "../../../src/js/basis/basis";
+import { ConstrainedBasis } from "../../../src/js/basis/constrained_basis";
 import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
@@ -131,10 +132,34 @@ describe("Basis", () => {
      */
 
     it("should return elements with labels", () => {
-        const basis = new Basis(LiFeSiBasisLabels);
+        const basis = new ConstrainedBasis({ ...LiFeSiBasisLabels, constraints: [] });
         const elementsWithLabels = basis.elementsWithLabelsArray;
         const expectedElementsWithLabels = ["Li0", "Fe1", "Si2"];
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
+    });
+
+    it("should return labels and starting magnetization by atom id", () => {
+        const basis = new ConstrainedBasis({
+            elements: [
+                { id: 0, value: "Fe" },
+                { id: 2, value: "Fe" },
+            ],
+            coordinates: [
+                { id: 0, value: [0, 0, 0] },
+                { id: 2, value: [0.5, 0.5, 0.5] },
+            ],
+            constraints: [],
+        });
+        basis.labels = [
+            { id: 2, value: 1 },
+            { id: 0, value: 0 },
+        ];
+        basis.startingMagnetization = [{ id: 2, value: -0.5 }];
+        const clone = basis.clone();
+        expect(clone.atomicLabelsArray).to.be.deep.equal(["0", "1"]);
+        expect(clone.startingMagnetizationArray).to.be.deep.equal([0, -0.5]);
+        basis.removeAllAtoms();
+        expect([basis.labels, basis.startingMagnetization]).to.be.deep.equal([[], []]);
     });
 
     /**

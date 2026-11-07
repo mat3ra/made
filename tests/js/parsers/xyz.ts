@@ -1,4 +1,5 @@
 import { Utils } from "@mat3ra/utils";
+import { expect } from "chai";
 
 import parsers from "../../../src/js/parsers/parsers";
 import { FeO, Silicon } from "../fixtures";
@@ -22,6 +23,14 @@ describe("Parsers:XYZ", () => {
             "O    0.25  0.25  0.25  1 1 1\n" +
             "O    0.75  0.75  0.75  1 1 1";
         assertDeepAlmostEqual(parsers.xyz.toBasisConfig(text), FeO.basis, ["cell", "units"]);
+    });
+
+    it("should keep atomic label 0 from XYZ text", () => {
+        const { labels } = parsers.xyz.toBasisConfig("Si0 0 0 0\nSi1 0.25 0.25 0.25");
+        expect(labels).to.be.deep.equal([
+            { id: 0, value: 0 },
+            { id: 1, value: 1 },
+        ]);
     });
 
     it("should return [true, true, true] as constraints for the line without any constraints", () => {

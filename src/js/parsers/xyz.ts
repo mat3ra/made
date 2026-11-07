@@ -127,7 +127,7 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
     }[] = [];
 
     listOfObjects.forEach((elm, idx) => {
-        if (elm.label) {
+        if (elm.label !== undefined) {
             labels.push({
                 id: idx,
                 value: elm.label,

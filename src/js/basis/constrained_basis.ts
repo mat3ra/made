@@ -1,3 +1,4 @@
+import { ArrayWithIds } from "@mat3ra/code";
 import { AtomicConstraintsSchema, BasisConstrainedSchema } from "@mat3ra/esse/dist/js/types";
 
 import { Cell } from "../cell/cell";
@@ -6,7 +7,7 @@ import { Basis, ElementsAndCoordinatesConfig } from "./basis";
 import { AtomicCoordinateValue, Coordinate } from "./coordinates";
 import { AtomicElementValue } from "./elements";
 import { ElementWithLabel } from "./helpers";
-import { AtomicLabelValue } from "./labels";
+import { Labels } from "./labels";
 
 export interface ConstrainedBasisConfig extends BasisConstrainedSchema {
     cell?: Cell;
@@ -24,9 +25,15 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
 export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     private _constraints: AtomicConstraints;
 
+    _labels: Labels;
+
+    _startingMagnetization: ArrayWithIds<number>;
+
     constructor(config: ConstrainedBasisConfig) {
         super(config);
         this._constraints = AtomicConstraints.fromObjects(config.constraints ?? []); // `constraints` is an Array with ids
+        this._labels = Labels.fromObjects(config.labels || []);
+        this._startingMagnetization = ArrayWithIds.fromObjects(config.startingMagnetization || []);
     }
 
     static fromElementsCoordinatesAndConstraints(
@@ -52,11 +59,65 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         return AtomicConstraints.fromObjects(this.constraints);
     }
 
+    get labels(): ConstrainedBasisConfig["labels"] {
+        return this._labels.toJSON() as ConstrainedBasisConfig["labels"];
+    }
+
+    set labels(labels: ConstrainedBasisConfig["labels"]) {
+        this._labels = Labels.fromObjects(labels || []);
+    }
+
+    get startingMagnetization(): ConstrainedBasisConfig["startingMagnetization"] {
+        return this._startingMagnetization.toJSON() as ConstrainedBasisConfig["startingMagnetization"];
+    }
+
+    set startingMagnetization(
+        startingMagnetization: ConstrainedBasisConfig["startingMagnetization"],
+    ) {
+        this._startingMagnetization = ArrayWithIds.fromObjects(startingMagnetization || []);
+    }
+
     override toJSON(exclude: (keyof ConstrainedBasisConfig)[] = ["cell"]): ConstrainedBasisConfig {
         return {
             ...super.toJSON(exclude as (keyof ConstrainedBasisConfig)[]),
             constraints: this.constraints,
+            ...(this.labels?.length ? { labels: this.labels } : {}),
+            ...(this.startingMagnetization?.length
+                ? { startingMagnetization: this.startingMagnetization }
+                : {}),
         };
+    }
+
+    /* Returns array of atomic labels by atom id E.g., ["1", "2", "", ""] */
+    get atomicLabelsArray(): string[] {
+        const { ids, values } = this._labels;
+        const labelById = new Map(ids.map((id, index) => [id, `${values[index]}`] as const));
+        return this._elements.ids.map((id) => labelById.get(id) ?? "");
+    }
+
+    /* Returns array of starting magnetization by atom id E.g., [0.5, -0.5, 0, 0] */
+    get startingMagnetizationArray(): number[] {
+        const { ids, values } = this._startingMagnetization;
+        const valueById = new Map(ids.map((id, index) => [id, values[index]] as const));
+        return this._elements.ids.map((id) => valueById.get(id) ?? 0);
+    }
+
+    /* Returns array of elements with labels E.g., ["Fe1", "Fe2", "O", "O"] */
+    get elementsWithLabelsArray(): string[] {
+        return this.atomicLabelsArray.map(
+            (label, index) => `${this.getElementByIndex(index)}${label}`,
+        );
+    }
+
+    /**
+     * Returns an array of strings with chemical elements and their atomic positions.
+     * E.g., ``` ['Si 0 0 0', 'Li 0.5 0.5 0.5']```
+     */
+    get atomicPositions(): string[] {
+        return this.elementsWithLabelsArray.map(
+            (elementWithLabel, index) =>
+                `${elementWithLabel} ${this.getCoordinateValueByIndex(index)}`,
+        );
     }
 
     getConstraintByIndex(idx: number): AtomicConstraintValue {
@@ -72,7 +133,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
      */
     get elementsCoordinatesConstraintsArray(): [
         AtomicElementValue,
-        AtomicLabelValue,
+        string,
         AtomicCoordinateValue,
         AtomicConstraintValue,
     ][] {
@@ -111,5 +172,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     removeAllAtoms() {
         super.removeAllAtoms();
         this.constraints = [];
+        this.labels = [];
+        this.startingMagnetization = [];
     }
 }

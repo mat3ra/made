@@ -69,7 +69,7 @@ const Ge2Basis = Ge2Basis_JSON as BasisSchema;
 const AsGeBasis = AsGeBasis_JSON as BasisSchema;
 const FeLiSiBasis = FeLiSiBasis_JSON as BasisSchema;
 const LiFeSiBasis = LiFeSiBasis_JSON as BasisSchema;
-const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as BasisSchema;
+const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as unknown as BasisSchema;
 
 // Other
 const atomicConstraints = atomicConstraints_JSON as AtomicConstraintsSchema;
