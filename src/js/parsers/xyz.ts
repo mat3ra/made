@@ -155,6 +155,7 @@ function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: st
     const XYZArray = basisClsInstance.getAtomicPositionsWithConstraintsAsStrings(
         coordinatePrintFormat,
         XYZ_COORDINATE_PRECISION,
+        basisClsInstance.elementsWithLabelsArray,
     );
     return `${XYZArray.join("\n")}\n`;
 }

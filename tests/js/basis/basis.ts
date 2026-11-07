@@ -12,6 +12,7 @@ import {
     C2H4,
     C2H4Translated,
     FeLiSiBasis,
+    FeOStandata,
     LiFeSiBasis,
     LiFeSiBasisLabels,
     Na,
@@ -21,6 +22,21 @@ import {
 
 const { assertDeepAlmostEqual } = Utils.assertion;
 const TOLERANCE = 1e-4;
+
+const FeOAntiferromagnetic = {
+    ...FeOStandata,
+    basis: {
+        ...FeOStandata.basis,
+        labels: [
+            { id: 0, value: 1 },
+            { id: 1, value: 2 },
+        ],
+        startingMagnetization: [
+            { id: 0, value: 0.5 },
+            { id: 1, value: -0.5 },
+        ],
+    },
+};
 
 describe("Basis", () => {
     it("should return true if basises are equal", () => {
@@ -149,17 +165,73 @@ describe("Basis", () => {
                 { id: 2, value: [0.5, 0.5, 0.5] },
             ],
             constraints: [],
+            labels: [
+                { id: 2, value: 1 },
+                { id: 0, value: 0 },
+            ],
+            startingMagnetization: [{ id: 2, value: -0.5 }],
         });
-        basis.labels = [
-            { id: 2, value: 1 },
-            { id: 0, value: 0 },
-        ];
-        basis.startingMagnetization = [{ id: 2, value: -0.5 }];
         const clone = basis.clone();
-        expect(clone.atomicLabelsArray).to.be.deep.equal(["0", "1"]);
+        expect(clone.atomicLabelsArray).to.be.deep.equal([0, 1]);
         expect(clone.startingMagnetizationArray).to.be.deep.equal([0, -0.5]);
         basis.removeAllAtoms();
-        expect([basis.labels, basis.startingMagnetization]).to.be.deep.equal([[], []]);
+        const { labels, startingMagnetization } = basis.clone();
+        expect([labels, startingMagnetization]).to.be.deep.equal([[], []]);
+    });
+
+    it("should keep cleared labels and starting magnetization cleared through setBasis", () => {
+        const material = new Material(FeOAntiferromagnetic);
+        const basis = material.getBasis();
+        basis.labels = [];
+        basis.startingMagnetization = [];
+        material.setBasis(basis.toJSON());
+        const { labels, startingMagnetization } = material.getBasis();
+        expect([labels, startingMagnetization]).to.be.deep.equal([[], []]);
+    });
+
+    /**
+     * Species
+     */
+
+    it("should name one species per element and starting magnetization", () => {
+        const basis = new Material(FeOAntiferromagnetic).getBasis();
+        expect(basis.atomicSpeciesArray).to.be.deep.equal(["Fe", "Fe1", "O", "O"]);
+        expect(basis.uniqueAtomicSpecies).to.be.deep.equal([
+            { name: "Fe", element: "Fe", startingMagnetization: 0.5 },
+            { name: "Fe1", element: "Fe", startingMagnetization: -0.5 },
+            { name: "O", element: "O", startingMagnetization: 0 },
+        ]);
+    });
+
+    it("should refuse more starting magnetization values per element than species names fit", () => {
+        const values = Array.from({ length: 11 }, (_, index) => index / 10);
+        const basis = ConstrainedBasis.fromElementsCoordinatesAndConstraints({
+            elements: values.map(() => "Fe"),
+            coordinates: values.map((value) => [value, 0, 0]),
+            constraints: values.map(() => [true, true, true]),
+        });
+        basis.startingMagnetization = values.map((value, id) => ({ id, value }));
+        expect(() => basis.atomicSpeciesArray).to.throw(
+            "Fe has more than 10 distinct starting magnetization values",
+        );
+    });
+
+    it("should print species, not labels, in atomic positions", () => {
+        const basis = new Material(FeOAntiferromagnetic).getBasis();
+        const species = ["Fe", "Fe1", "O", "O"];
+        const firstWords = (lines: string[]) => lines.map((line) => line.split(" ")[0]);
+        expect(firstWords(basis.atomicPositions)).to.be.deep.equal(species);
+        expect(basis.elementsCoordinatesConstraintsArray.map(([, name]) => name)).to.be.deep.equal(
+            species,
+        );
+        expect(firstWords(basis.getAtomicPositionsWithConstraintsAsStrings())).to.be.deep.equal(
+            species,
+        );
+    });
+
+    it("should print labels, not species, in XYZ", () => {
+        const xyz = new Material(FeOAntiferromagnetic).getBasisAsXyz();
+        expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Fe1", "Fe2", "O", "O"]);
     });
 
     /**

@@ -1,4 +1,5 @@
 import { Basis } from "./basis/basis";
+import { ConstrainedBasis } from "./basis/constrained_basis";
 import { Cell } from "./cell/cell";
 import { ATOMIC_COORD_UNITS, coefficients, tolerance, units } from "./constants";
 import { AtomicConstraints } from "./constraints/constraints";
@@ -31,6 +32,7 @@ export const Made = {
     molecularLatticePaddingFactor,
     ReciprocalLattice,
     Basis,
+    ConstrainedBasis,
     AtomicConstraints,
 
     parsers,
@@ -54,6 +56,7 @@ export {
     molecularLatticePaddingFactor,
     ReciprocalLattice,
     Basis,
+    ConstrainedBasis,
     AtomicConstraints,
     parsers,
     tools,
