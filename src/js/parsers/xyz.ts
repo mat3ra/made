@@ -149,6 +149,7 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
  * Create XYZ from Basis class instance.
  * @param basisClsInstance Basis class instance.
  * @param coordinatePrintFormat Output format for coordinates.
+ * @param atomNames One name per atom, in basis order; default: elements with labels ("Fe1").
  * @return Basis string in XYZ format
  */
 function fromBasis(

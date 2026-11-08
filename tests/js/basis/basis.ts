@@ -282,12 +282,11 @@ describe("Basis", () => {
         {
             edit: "a typed label",
             config: FeOAntiferromagnetic,
-            editLines: (lines: string[]) => [
-                ...lines.slice(0, 2),
-                lines[2].replace("O", "O1"),
-                lines[3],
+            editLines: (lines: string[]) => [lines[0].replace("Fe", "Fe2"), ...lines.slice(1)],
+            expectedLabels: [
+                { id: 0, value: 2 },
+                { id: 1, value: 2 },
             ],
-            expectedLabels: [...FeOAntiferromagnetic.basis.labels, { id: 2, value: 1 }],
             expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
         },
         {

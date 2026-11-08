@@ -231,7 +231,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         this.labels = [
             ...copyByIndex(otherBasis.labels).filter(({ id }) => !ownLabelIds.includes(id)),
             ...this.labels,
-        ];
+        ].sort((a, b) => a.id - b.id);
         this.startingMagnetization = copyByIndex(otherBasis.startingMagnetization);
     }
 
