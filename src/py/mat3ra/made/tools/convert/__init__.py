@@ -23,8 +23,6 @@ from .utils import (
     extract_metadata_from_pymatgen_structure,
 )
 
-ASE_ARRAY_NAME_BY_BASIS_KEY = {"labels": "tags", "magneticMoments": "initial_magmoms"}
-
 
 def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> PymatgenStructure:
     """
@@ -235,9 +233,10 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     if is_molecule:
         material["lattice"]["type"] = "CUB"
 
-    for basis_key, ase_array_name in ASE_ARRAY_NAME_BY_BASIS_KEY.items():
-        values = ase_atoms.arrays[ase_array_name].tolist() if ase_array_name in ase_atoms.arrays else []
-        material["basis"][basis_key] = map_array_to_array_with_id_value(values, remove_none=True)
+    tags = ase_atoms.arrays.get("tags", np.array([])).tolist()
+    magnetic_moments = ase_atoms.arrays.get("initial_magmoms", np.array([])).tolist()
+    material["basis"]["labels"] = map_array_to_array_with_id_value(tags, remove_none=True)
+    material["basis"]["magneticMoments"] = map_array_to_array_with_id_value(magnetic_moments, remove_none=True)
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:
         material["metadata"].update(ase_metadata)

@@ -126,6 +126,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         });
     }
 
+    /** Returns the distinct species in order of first appearance E.g., [Fe, Fe1, O] */
     get uniqueAtomicSpecies(): AtomicSpecies[] {
         return uniq(this.speciesOfAtoms);
     }
@@ -162,10 +163,11 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         AtomicCoordinateValue,
         AtomicConstraintValue,
     ][] {
+        const atomicSpecies = this.atomicSpeciesArray;
         return this._elements.values.map((element: AtomicElementValue, idx: number) => {
             const coordinate = this.getCoordinateValueByIndex(idx);
             const constraint = this.getConstraintByIndex(idx);
-            return [element, this.atomicSpeciesArray[idx], coordinate, constraint];
+            return [element, atomicSpecies[idx], coordinate, constraint];
         });
     }
 
@@ -206,6 +208,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         });
     }
 
+    /** Removes the atoms with the given ids together with their per-atom values */
     removeAtomsByIds(ids: number[]) {
         const isKept = ({ id }: { id: number }) => !ids.includes(id);
         this.elements = this.elements.filter(isKept);

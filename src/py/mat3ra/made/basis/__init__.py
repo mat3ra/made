@@ -88,6 +88,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         )
 
     def values_by_atom(self, field: str, default: Any = None) -> List[Any]:
+        """Values of a per-atom field in basis order, matched by atom id; atoms without a value get the default."""
         per_atom_values = getattr(self, field)
         value_by_atom_id = dict(zip(per_atom_values.ids, per_atom_values.values))
         return [value_by_atom_id.get(atom_id, default) for atom_id in self.elements.ids]
@@ -110,6 +111,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
 
     @property
     def atomic_species_array(self) -> List[str]:
+        """Species name of each atom in basis order, e.g. ["Fe", "Fe1", "O", "O"]."""
         name_by_species = {
             (item["element"], item["magneticMoment"]): item["name"] for item in self.unique_atomic_species
         }
