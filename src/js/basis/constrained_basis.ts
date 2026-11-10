@@ -4,6 +4,7 @@ import {
     AtomicMagneticMomentsSchema,
     BasisConstrainedSchema,
 } from "@mat3ra/esse/dist/js/types";
+import { uniq } from "lodash";
 import s from "underscore.string";
 
 import { Cell } from "../cell/cell";
@@ -11,8 +12,6 @@ import { AtomicConstraints, AtomicConstraintValue, Constraint } from "../constra
 import { Basis, ElementsAndCoordinatesConfig } from "./basis";
 import { AtomicCoordinateValue, Coordinate } from "./coordinates";
 import { AtomicElementValue } from "./elements";
-import { AtomicLabelValue, Labels } from "./labels";
-import { AtomicMagneticMomentValue, MagneticMoments } from "./magnetic_moments";
 
 export interface ConstrainedBasisConfig extends BasisConstrainedSchema {
     cell?: Cell;
@@ -26,25 +25,29 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
 export interface AtomicSpecies {
     name: string;
     element: AtomicElementValue;
-    magneticMoment: AtomicMagneticMomentValue;
+    magneticMoment: number;
 }
+
+type PerAtomValues = { id: number; value: unknown }[];
 
 /**
  * @summary Extension of the Basis class holding per-atom constraints, labels and magnetic moments.
  * @extends Basis
  */
 export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
+    static readonly PER_ATOM_KEYS = ["constraints", "labels", "magneticMoments"] as const;
+
     private _constraints: AtomicConstraints;
 
-    private _labels: Labels;
+    labels: AtomicLabelsSchema;
 
-    private _magneticMoments: MagneticMoments;
+    magneticMoments: AtomicMagneticMomentsSchema;
 
     constructor(config: ConstrainedBasisConfig) {
         super(config);
         this._constraints = AtomicConstraints.fromObjects(config.constraints ?? []); // `constraints` is an Array with ids
-        this._labels = Labels.fromObjects(config.labels ?? []);
-        this._magneticMoments = MagneticMoments.fromObjects(config.magneticMoments ?? []);
+        this.labels = config.labels ?? [];
+        this.magneticMoments = config.magneticMoments ?? [];
     }
 
     static fromElementsCoordinatesAndConstraints(
@@ -70,43 +73,27 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         return AtomicConstraints.fromObjects(this.constraints);
     }
 
-    get labels(): AtomicLabelsSchema {
-        return this._labels.toJSON() as AtomicLabelsSchema;
-    }
-
-    set labels(labels: ConstrainedBasisConfig["labels"]) {
-        this._labels = Labels.fromObjects(labels || []);
-    }
-
-    get magneticMoments(): AtomicMagneticMomentsSchema {
-        return this._magneticMoments.toJSON() as AtomicMagneticMomentsSchema;
-    }
-
-    set magneticMoments(magneticMoments: ConstrainedBasisConfig["magneticMoments"]) {
-        this._magneticMoments = MagneticMoments.fromObjects(magneticMoments || []);
-    }
-
     override toJSON(exclude: (keyof ConstrainedBasisConfig)[] = ["cell"]): ConstrainedBasisConfig {
         return {
-            ...super.toJSON([...exclude, "labels", "magneticMoments"]),
-            constraints: this.constraints,
-            ...(this.labels?.length ? { labels: this.labels } : {}),
-            ...(this.magneticMoments?.length ? { magneticMoments: this.magneticMoments } : {}),
+            ...super.toJSON(exclude),
+            ...Object.fromEntries(ConstrainedBasis.PER_ATOM_KEYS.map((key) => [key, this[key]])),
         };
     }
 
+    /** Returns the value of each atom, in basis order, from per-atom entries keyed by atom id */
+    valuesByAtom<T>(entries: { id: number; value: T }[]): (T | undefined)[] {
+        const valueById = new Map(entries.map(({ id, value }) => [id, value]));
+        return this._elements.ids.map((id) => valueById.get(id));
+    }
+
     /** Returns array of atomic labels by atom id E.g., [1, 2, undefined, undefined] */
-    get atomicLabelsArray(): (AtomicLabelValue | undefined)[] {
-        const { ids, values } = this._labels;
-        const labelById = new Map(ids.map((id, index) => [id, values[index]] as const));
-        return this._elements.ids.map((id) => labelById.get(id));
+    get atomicLabelsArray() {
+        return this.valuesByAtom(this.labels);
     }
 
     /** Returns array of magnetic moments by atom id E.g., [0.5, -0.5, 0, 0] */
     get magneticMomentsArray(): number[] {
-        const { ids, values } = this._magneticMoments;
-        const valueById = new Map(ids.map((id, index) => [id, values[index]] as const));
-        return this._elements.ids.map((id) => valueById.get(id) ?? 0);
+        return this.valuesByAtom(this.magneticMoments).map((value) => value ?? 0);
     }
 
     /** Returns array of elements with labels E.g., ["Fe1", "Fe2", "O", "O"] */
@@ -117,37 +104,35 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     }
 
     /**
-     * Returns the species: one per element and magnetic moment, in order of first appearance,
-     * named "Fe", "Fe1", "Fe2" as Quantum ESPRESSO species names (at most 3 characters).
+     * Returns the species of each atom: one per element and magnetic moment, in order of first
+     * appearance, named "Fe", "Fe1", "Fe2" as Quantum ESPRESSO species names (at most 3 characters).
      */
-    get uniqueAtomicSpecies(): AtomicSpecies[] {
+    private get speciesOfAtoms(): AtomicSpecies[] {
         const species: AtomicSpecies[] = [];
-        this.magneticMomentsArray.forEach((magneticMoment, index) => {
+        return this.magneticMomentsArray.map((magneticMoment, index) => {
             const element = this.getElementByIndex(index);
             const speciesOfElement = species.filter((item) => item.element === element);
-            const valuesOfElement = speciesOfElement.map((item) => item.magneticMoment);
-            if (valuesOfElement.includes(magneticMoment)) return;
-            const name = speciesOfElement.length ? `${element}${speciesOfElement.length}` : element;
+            const found = speciesOfElement.find((item) => item.magneticMoment === magneticMoment);
+            if (found) return found;
+            const count = speciesOfElement.length;
+            const name = count ? `${element}${count}` : element;
             if (name.length > 3) {
                 throw new Error(
-                    `${element} has more than ${speciesOfElement.length} distinct magnetic moments; species names are limited to 3 characters`,
+                    `${element} has more than ${count} distinct magnetic moments; species names are limited to 3 characters`,
                 );
             }
             species.push({ name, element, magneticMoment });
+            return species[species.length - 1];
         });
-        return species;
+    }
+
+    get uniqueAtomicSpecies(): AtomicSpecies[] {
+        return uniq(this.speciesOfAtoms);
     }
 
     /** Returns array of species names by atom E.g., ["Fe", "Fe1", "O", "O"] */
     get atomicSpeciesArray(): AtomicSpecies["name"][] {
-        const species = this.uniqueAtomicSpecies;
-        return this.magneticMomentsArray.map((magneticMoment, index) => {
-            const element = this.getElementByIndex(index);
-            const speciesIndex = species.findIndex(
-                (item) => item.element === element && item.magneticMoment === magneticMoment,
-            );
-            return species[speciesIndex].name;
-        });
+        return this.speciesOfAtoms.map(({ name }) => name);
     }
 
     /**
@@ -177,11 +162,10 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         AtomicCoordinateValue,
         AtomicConstraintValue,
     ][] {
-        const { atomicSpeciesArray } = this;
         return this._elements.values.map((element: AtomicElementValue, idx: number) => {
             const coordinate = this.getCoordinateValueByIndex(idx);
             const constraint = this.getConstraintByIndex(idx);
-            return [element, atomicSpeciesArray[idx], coordinate, constraint];
+            return [element, this.atomicSpeciesArray[idx], coordinate, constraint];
         });
     }
 
@@ -208,27 +192,33 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         });
     }
 
-    /** Copies both lists by index, not id; extras drop; a label already here (XYZ "Fe1") wins */
-    copyLabelsAndMagneticMomentsByIndex(otherBasis: ConstrainedBasis) {
+    /** Copies each per-atom list by index, not id; extras drop; a value already here (XYZ "Fe1") wins */
+    copyPerAtomValuesByIndex(otherBasis: ConstrainedBasis) {
         const ownIdByOtherId = new Map(
-            otherBasis._elements.ids.map((id, index) => [id, this._elements.ids[index]] as const),
+            otherBasis._elements.ids.map((id, index) => [id, this._elements.ids[index]]),
         );
-        const copyByIndex = <T extends { id: number }>(entries: T[]) =>
-            entries
-                .filter(({ id }) => ownIdByOtherId.get(id) !== undefined)
-                .map((entry) => ({ ...entry, id: ownIdByOtherId.get(entry.id) as number }));
-        const ownLabelIds = this._labels.ids;
-        this.labels = [
-            ...copyByIndex(otherBasis.labels).filter(({ id }) => !ownLabelIds.includes(id)),
-            ...this.labels,
-        ].sort((a, b) => a.id - b.id);
-        this.magneticMoments = copyByIndex(otherBasis.magneticMoments);
+        ConstrainedBasis.PER_ATOM_KEYS.forEach((key) => {
+            const own: PerAtomValues = this[key];
+            const copied = (otherBasis[key] as PerAtomValues)
+                .map((entry) => ({ ...entry, id: ownIdByOtherId.get(entry.id) as number }))
+                .filter(({ id }) => id !== undefined && !own.some((entry) => entry.id === id));
+            this[key] = [...copied, ...own].sort((a, b) => a.id - b.id) as never;
+        });
+    }
+
+    removeAtomsByIds(ids: number[]) {
+        const isKept = ({ id }: { id: number }) => !ids.includes(id);
+        this.elements = this.elements.filter(isKept);
+        this.coordinates = this.coordinates.filter(isKept);
+        ConstrainedBasis.PER_ATOM_KEYS.forEach((key) => {
+            this[key] = (this[key] as PerAtomValues).filter(isKept) as never;
+        });
     }
 
     removeAllAtoms() {
         super.removeAllAtoms();
-        this.constraints = [];
-        this.labels = [];
-        this.magneticMoments = [];
+        ConstrainedBasis.PER_ATOM_KEYS.forEach((key) => {
+            this[key] = [];
+        });
     }
 }

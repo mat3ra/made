@@ -54,8 +54,7 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     basis = material_data["basis"]
     elements = [element["value"] for element in basis["elements"]]
     coordinates = [coord["value"] for coord in basis["coordinates"]]
-    label_by_atom_id = {label["id"]: label["value"] for label in basis.get("labels", []) or []}
-    labels = [label_by_atom_id.get(element["id"]) for element in basis["elements"]]
+    labels = Basis(**basis).values_by_atom("labels")
     # Assuming that the basis units are fractional since it's a crystal basis
     coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
 
@@ -199,12 +198,11 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     structure = to_pymatgen(material_config)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
-    basis = material_config["basis"]
-    label_by_atom_id = {label["id"]: label["value"] for label in basis.get("labels") or []}
-    if label_by_atom_id:
-        atoms.set_array("tags", np.array([label_by_atom_id.get(atom["id"]) for atom in basis["elements"]]))
-    if basis.get("magneticMoments"):
-        atoms.set_initial_magnetic_moments(Basis(**basis).magnetic_moments_array)
+    basis = Basis(**material_config["basis"])
+    if basis.labels.values:
+        atoms.set_array("tags", np.array(basis.values_by_atom("labels")))
+    if basis.magneticMoments.values:
+        atoms.set_initial_magnetic_moments(basis.values_by_atom("magneticMoments", 0))
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -237,9 +235,6 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     if is_molecule:
         material["lattice"]["type"] = "CUB"
 
-    magnetic_moments = ase_atoms.get_initial_magnetic_moments()
-    if magnetic_moments.ndim > 1:
-        raise ValueError(f"Expected one magnetic moment per atom, got shape {magnetic_moments.shape}")
     for basis_key, ase_array_name in ASE_ARRAY_NAME_BY_BASIS_KEY.items():
         values = ase_atoms.arrays[ase_array_name].tolist() if ase_array_name in ase_atoms.arrays else []
         material["basis"][basis_key] = map_array_to_array_with_id_value(values, remove_none=True)

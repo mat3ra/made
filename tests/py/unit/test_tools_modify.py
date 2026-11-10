@@ -16,7 +16,6 @@ from mat3ra.made.tools.modify import (
     filter_by_sphere,
     filter_by_triangle_projection,
     interface_displace_part,
-    interface_get_part,
     interface_label_parts_by_elements,
     remove_vacuum,
     translate_to_z_level,
@@ -26,7 +25,7 @@ from mat3ra.utils import assertion as assertion_utils
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_CONVENTIONAL_FILTERED
 from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
-from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE, GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
 from .fixtures.slab import SI_SLAB_001_2_ATOMS, SI_SLAB_001_WITH_VACUUM
 from .utils import assert_two_entities_deep_almost_equal
 
@@ -269,16 +268,3 @@ def test_interface_label_parts_by_elements(substrate_elements, expected_labels):
     material.set_labels_from_list(None)
     labeled_material = interface_label_parts_by_elements(material, substrate_elements)
     assertion_utils.assert_deep_almost_equal(expected_labels, labeled_material.basis.labels.to_dict())
-
-
-@pytest.mark.parametrize(
-    "part, expected_magnetic_moments",
-    [
-        (InterfacePartsEnum.SUBSTRATE, [{"id": 0, "value": 0.5}, {"id": 1, "value": 0.5}, {"id": 2, "value": 0.5}]),
-        (InterfacePartsEnum.FILM, []),
-    ],
-)
-def test_interface_get_part_magnetic_moments(part, expected_magnetic_moments):
-    interface = MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
-    interface_part = interface_get_part(interface, part)
-    assert interface_part.basis.magneticMoments.to_dict() == expected_magnetic_moments

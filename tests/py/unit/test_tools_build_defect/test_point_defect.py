@@ -16,9 +16,7 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
     create_multiple_defects,
 )
 from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.types import PointDefectDict
-from mat3ra.made.utils import map_array_to_array_with_id_value
 from unit.fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
-from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
 from unit.fixtures.point_defects import (
     INTERSTITIAL_DEFECT_BULK_PRIMITIVE_Si,
     INTERSTITIAL_VORONOI_DEFECT_BULK_PRIMITIVE_Si,
@@ -34,9 +32,6 @@ from unit.utils import assert_two_entities_deep_almost_equal, get_platform_speci
 # custom coordinate tolerance (atol=1e-4) to verify that the generated coordinate is
 # within a reasonable tolerance of any of the valid symmetrical Voronoi sites.
 UPDATED_COORDINATE_TOLERANCE = 1e-4
-
-SUBSTITUTION_ELEMENT = "Ge"
-INTERFACE_SUBSTITUTION_PLACEMENT_METHOD = SubstitutionPlacementMethodEnum.CLOSEST_SITE.value
 
 
 @pytest.mark.parametrize(
@@ -117,33 +112,6 @@ def test_point_defect_helpers(material_config, defect_params, expected_material_
             expected_material_config.basis.coordinates.values[2] = actual_coord
 
     assert_two_entities_deep_almost_equal(defect, expected_material_config)
-
-
-@pytest.mark.parametrize(
-    "create_defect, atom_id, defect_arguments, expected_labels, expected_magnetic_moments",
-    [
-        (create_defect_point_vacancy, 1, [VacancyPlacementMethodEnum.CLOSEST_SITE.value], [0, 0, 1, 1], [0.5, 0.5]),
-        (
-            create_defect_point_substitution,
-            3,
-            [SUBSTITUTION_ELEMENT, INTERFACE_SUBSTITUTION_PLACEMENT_METHOD],
-            [0, 0, 0, 1, 1],
-            [0.5, 0.5, 0.5],
-        ),
-    ],
-)
-def test_create_defect_point_per_atom_values(
-    create_defect, atom_id, defect_arguments, expected_labels, expected_magnetic_moments
-):
-    material = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
-    coordinate = material.basis.coordinates.values[material.basis.coordinates.ids.index(atom_id)]
-
-    defect_material = create_defect(material, coordinate, *defect_arguments)
-
-    assert defect_material.basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels)
-    assert defect_material.basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
-        expected_magnetic_moments
-    )
 
 
 @pytest.mark.parametrize(

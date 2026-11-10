@@ -1,7 +1,6 @@
 from typing import Optional
 
 import numpy as np
-from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.materials_category_components.operations.core.combinations.merge import MergeMethodsEnum
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
@@ -20,16 +19,13 @@ def merge_two_bases(basis1: Basis, basis2: Basis, distance_tolerance: float) -> 
         distance_tolerance (float): The tolerance for resolving overlapping coordinates.
 
     Returns:
-        Basis: A new Basis object with merged elements, coordinates, labels, magnetic moments and constraints.
+        Basis: A new Basis object containing merged elements, coordinates, labels, and constraints.
     """
     basis1.to_crystal()
     basis2.to_crystal()
 
-    merged_constraints_values = basis1.constraints.values + basis2.constraints.values
-
     new_basis = basis1.clone()
     new_basis.add_atoms_from_another_basis(basis2)
-    new_basis.constraints = ArrayWithIds.from_values(values=merged_constraints_values)
     new_basis.resolve_colliding_coordinates(tolerance=distance_tolerance)
 
     return new_basis

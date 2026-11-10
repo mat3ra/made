@@ -12,6 +12,8 @@ from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
+PER_ATOM_FIELDS = ("coordinates", "labels", "magneticMoments", "constraints")
+
 
 def get_overlapping_coordinates(
     coordinate: List[float],
@@ -44,16 +46,9 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     )  # Angstroms, used for checking overlapping coordinates
 
     def __convert_kwargs__(self, **kwargs: Any) -> Dict[str, Any]:
-        if isinstance(kwargs.get("elements"), list):
-            kwargs["elements"] = ArrayWithIds.from_list_of_dicts(kwargs["elements"])
-        if isinstance(kwargs.get("coordinates"), list):
-            kwargs["coordinates"] = Coordinates.from_list_of_dicts(kwargs["coordinates"])
-        if isinstance(kwargs.get("labels"), list):
-            kwargs["labels"] = ArrayWithIds.from_list_of_dicts(kwargs["labels"])
-        if isinstance(kwargs.get("constraints"), list):
-            kwargs["constraints"] = ArrayWithIds.from_list_of_dicts(kwargs["constraints"])
-        if isinstance(kwargs.get("magneticMoments"), list):
-            kwargs["magneticMoments"] = ArrayWithIds.from_list_of_dicts(kwargs["magneticMoments"])
+        for field in ("elements", *PER_ATOM_FIELDS):
+            if isinstance(kwargs.get(field), list):
+                kwargs[field] = type(self).model_fields[field].annotation.from_list_of_dicts(kwargs[field])
         if isinstance(kwargs.get("cell"), list):
             kwargs["cell"] = Cell.from_vectors_array(kwargs["cell"])
         return kwargs
@@ -92,16 +87,17 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             constraints=ArrayWithIds.from_list_of_dicts(constraints),
         )
 
-    @property
-    def magnetic_moments_array(self) -> List[float]:
-        value_by_atom_id = dict(zip(self.magneticMoments.ids, self.magneticMoments.values))
-        return [value_by_atom_id.get(atom_id, 0) for atom_id in self.elements.ids]
+    def values_by_atom(self, field: str, default: Any = None) -> List[Any]:
+        per_atom_values = getattr(self, field)
+        value_by_atom_id = dict(zip(per_atom_values.ids, per_atom_values.values))
+        return [value_by_atom_id.get(atom_id, default) for atom_id in self.elements.ids]
 
     @property
     def unique_atomic_species(self) -> List[Dict[str, Any]]:
         """Species per element and magnetic moment, by first appearance: Fe, Fe1, Fe2 (at most 3 characters)."""
         species: List[Dict[str, Any]] = []
-        for element, magnetic_moment in dict.fromkeys(zip(self.elements.values, self.magnetic_moments_array)):
+        atoms = zip(self.elements.values, self.values_by_atom("magneticMoments", 0))
+        for element, magnetic_moment in dict.fromkeys(atoms):
             count = sum(item["element"] == element for item in species)
             name = f"{element}{count}" if count else element
             if len(name) > 3:
@@ -117,7 +113,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         name_by_species = {
             (item["element"], item["magneticMoment"]): item["name"] for item in self.unique_atomic_species
         }
-        return [name_by_species[atom] for atom in zip(self.elements.values, self.magnetic_moments_array)]
+        atoms = zip(self.elements.values, self.values_by_atom("magneticMoments", 0))
+        return [name_by_species[atom] for atom in atoms]
 
     @property
     def hash_string(self) -> str:
@@ -208,14 +205,10 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """
 
         id_offset = max(self.elements.ids, default=-1) + 1
-        for own_values, other_values in (
-            (self.elements, other_basis.elements),
-            (self.coordinates, other_basis.coordinates),
-            (self.labels, other_basis.labels),
-            (self.magneticMoments, other_basis.magneticMoments),
-        ):
+        for field in ("elements", *PER_ATOM_FIELDS):
+            other_values = getattr(other_basis, field)
             for value, atom_id in zip(other_values.values, other_values.ids):
-                own_values.add_item(value, atom_id + id_offset)
+                getattr(self, field).add_item(value, atom_id + id_offset)
 
     def remove_atom_by_id(self, id: int):
         self.filter_atoms_by_ids(id, invert=True)
@@ -232,11 +225,12 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def filter_atoms_by_ids(self, ids: Union[List[int], int], invert: bool = False, reset_ids=False) -> "Basis":
         self.elements.filter_by_ids(ids, invert)
         kept_atom_ids = self.elements.ids
-        for per_atom_values in (self.coordinates, self.labels, self.magneticMoments):
-            per_atom_values.filter_by_ids(kept_atom_ids)
+        for field in PER_ATOM_FIELDS:
+            getattr(self, field).filter_by_ids(kept_atom_ids)
         if reset_ids:
             new_id_by_atom_id = {atom_id: index for index, atom_id in enumerate(kept_atom_ids)}
-            for per_atom_values in (self.elements, self.coordinates, self.labels, self.magneticMoments):
+            for field in ("elements", *PER_ATOM_FIELDS):
+                per_atom_values = getattr(self, field)
                 per_atom_values.ids = [new_id_by_atom_id[atom_id] for atom_id in per_atom_values.ids]
         return self
 
