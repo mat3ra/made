@@ -14,7 +14,7 @@ import { CombinatorialBasis } from "./xyz_combinatorial_basis";
 // Regular expression for an XYZ line with atomic constraints, eg. Si    0.000000    0.500000    0.446678 1 1 1`
 // eslint-disable-next-line max-len
 const XYZ_LINE_REGEX =
-    /[A-Z][a-z]?(\d)?\s+((-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)(\s+)?(\s+[0-1]\s+[0-1]\s+[0-1](\s+)?)?)$/;
+    /[A-Z][a-z]?(\d+)?\s+((-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)(\s+)?(\s+[0-1]\s+[0-1]\s+[0-1](\s+)?)?)$/;
 
 export const XYZ_COORDINATE_PRECISION = 4;
 /**
@@ -63,7 +63,7 @@ export interface ParsedObject {
 function _parseXYZLineAsWords(line: string): ParsedObject {
     const words = s.words(line);
     const elementWithOptionalLabel = words[0];
-    const element = elementWithOptionalLabel.replace(/\d$/, "") as AtomicElementValue; // Fe1 => Fe
+    const element = elementWithOptionalLabel.replace(/\d+$/, "") as AtomicElementValue; // Fe10 => Fe
     const generateConstraintValue = (n: number) => parseInt(`${n}`, 10) !== 0;
 
     const basisLineConfig: ParsedObject = {
@@ -80,7 +80,7 @@ function _parseXYZLineAsWords(line: string): ParsedObject {
     if (elementWithOptionalLabel !== element) {
         return {
             ...basisLineConfig,
-            label: parseInt(elementWithOptionalLabel[elementWithOptionalLabel.length - 1], 10),
+            label: parseInt(elementWithOptionalLabel.slice(element.length), 10),
         };
     }
 
