@@ -2,6 +2,8 @@ import numpy as np
 import pytest
 from ase import Atoms
 from ase.build import molecule
+from ase.calculators.emt import EMT
+from ase.optimize import BFGS
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
@@ -172,11 +174,14 @@ def test_to_ase_from_ase_per_atom_values(
     modify_basis(material.basis, *arguments)
     atoms = to_ase(material)
     assert atoms.get_initial_magnetic_moments().tolist() == expected_magnetic_moments
+    assert atoms.get_initial_magnetic_moments().dtype == float
     basis = Material.create(from_ase(atoms)).basis
     assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
     assert basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
         expected_magnetic_moments, remove_none=True
     )
+    atoms.calc = EMT()
+    BFGS(atoms).run(steps=2)
 
 
 def test_from_ase_non_collinear_magnetic_moments():

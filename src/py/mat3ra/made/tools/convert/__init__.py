@@ -200,10 +200,9 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     basis = material_config["basis"]
-    for basis_key, ase_array_name in ASE_ARRAY_NAME_BY_BASIS_KEY.items():
-        value_by_atom_id = {item["id"]: item["value"] for item in basis.get(basis_key) or []}
-        if value_by_atom_id:
-            atoms.set_array(ase_array_name, np.array([value_by_atom_id.get(atom["id"]) for atom in basis["elements"]]))
+    label_by_atom_id = {label["id"]: label["value"] for label in basis.get("labels") or []}
+    if label_by_atom_id:
+        atoms.set_array("tags", np.array([label_by_atom_id.get(atom["id"]) for atom in basis["elements"]]))
     if basis.get("magneticMoments"):
         atoms.set_initial_magnetic_moments(Basis(**basis).magnetic_moments_array)
     if "metadata" in material_config:
