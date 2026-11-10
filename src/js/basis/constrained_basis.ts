@@ -194,20 +194,6 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
         });
     }
 
-    /** Copies each per-atom list by index, not id; extras drop; a value already here (XYZ "Fe1") wins */
-    copyPerAtomValuesByIndex(otherBasis: ConstrainedBasis) {
-        const ownIdByOtherId = new Map(
-            otherBasis._elements.ids.map((id, index) => [id, this._elements.ids[index]]),
-        );
-        ConstrainedBasis.PER_ATOM_KEYS.forEach((key) => {
-            const own: PerAtomValues = this[key];
-            const copied = (otherBasis[key] as PerAtomValues)
-                .map((entry) => ({ ...entry, id: ownIdByOtherId.get(entry.id) as number }))
-                .filter(({ id }) => id !== undefined && !own.some((entry) => entry.id === id));
-            this[key] = [...copied, ...own].sort((a, b) => a.id - b.id) as never;
-        });
-    }
-
     /** Removes the atoms with the given ids together with their per-atom values */
     removeAtomsByIds(ids: number[]) {
         const isKept = ({ id }: { id: number }) => !ids.includes(id);

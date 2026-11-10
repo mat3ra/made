@@ -39,28 +39,41 @@ direct
 
 
 @pytest.mark.parametrize(
-    "material_config, expected_lattice_params, expected_species, expected_frac_coords",
+    "material_config, expected_lattice_params, expected_species, expected_frac_coords, expected_labels",
     [
         (
             Material.__default_config__,
             {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
             [Element("Si"), Element("Si")],
             [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
+            ["Si", "Si"],
+        ),
+        (
+            {
+                **Material.__default_config__,
+                "basis": {**Material.__default_config__["basis"], "labels": [{"id": 1, "value": 1}]},
+            },
+            {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
+            [Element("Si"), Element("Si")],
+            [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
+            ["Si", "Si"],
         ),
         (
             GRAPHENE,
             {"a": 2.467291, "b": 2.467291, "c": 20.0, "alpha": 90, "beta": 90, "gamma": 120},
             [Element("C"), Element("C")],
             [[0.0, 0.0, 0.0], [0.333333, 0.666667, 0.0]],
+            ["C", "C"],
         ),
     ],
 )
-def test_to_pymatgen(material_config, expected_lattice_params, expected_species, expected_frac_coords):
+def test_to_pymatgen(material_config, expected_lattice_params, expected_species, expected_frac_coords, expected_labels):
     material = Material.create(material_config)
     structure = to_pymatgen(material)
     assert isinstance(structure, Structure)
     assert np.allclose(structure.lattice.parameters, tuple(expected_lattice_params.values()), atol=1e-6)
     assert structure.species == expected_species
+    assert structure.labels == expected_labels
     assert np.allclose(structure.frac_coords, expected_frac_coords, atol=1e-6)
 
     structure_to_poscar_str = structure.to(fmt="poscar")
@@ -93,7 +106,7 @@ def test_from_poscar():
 
 @pytest.mark.parametrize(
     "labels, expected_tags",
-    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0])],
+    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0]), ([{"id": 1, "value": 1}], [0, 0])],
 )
 def test_to_ase(labels, expected_tags):
     material_config = Material.create_default().to_dict()

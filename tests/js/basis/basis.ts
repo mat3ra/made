@@ -238,52 +238,12 @@ describe("Basis", () => {
         });
     });
 
-    [
-        {
-            edit: "an appended atom",
-            config: FeOAntiferromagnetic,
-            editLines: (lines: string[]) => [...lines, lines[3]],
-            expectedLabels: FeOAntiferromagnetic.basis.labels,
-            expectedMagneticMoments: FeOAntiferromagnetic.basis.magneticMoments,
-        },
-        {
-            edit: "removed atoms",
-            config: FeOAntiferromagnetic,
-            editLines: (lines: string[]) => lines.slice(0, 1),
-            expectedLabels: [{ id: 0, value: 1 }],
-            expectedMagneticMoments: [{ id: 0, value: 0.5 }],
-        },
-        {
-            edit: "an id gap",
-            config: FeOAntiferromagneticWithIdGap,
-            editLines: (lines: string[]) => lines,
-            expectedLabels: [{ id: 0, value: 2 }],
-            expectedMagneticMoments: [{ id: 0, value: -0.5 }],
-        },
-        {
-            edit: "a typed label",
-            config: FeOAntiferromagnetic,
-            editLines: (lines: string[]) => [lines[0].replace("Fe", "Fe2"), ...lines.slice(1)],
-            expectedLabels: [
-                { id: 0, value: 2 },
-                { id: 1, value: 2 },
-            ],
-            expectedMagneticMoments: FeOAntiferromagnetic.basis.magneticMoments,
-        },
-    ].forEach(({ edit, config, editLines, expectedLabels, expectedMagneticMoments }) => {
-        it(`should copy per-atom values by index after XYZ text with ${edit}`, () => {
-            const material = new Material(config);
-            const elements = material.getBasis().elements.map(({ value }) => value);
-            const lines = material.getBasisAsXyz(false, elements).trim().split("\n");
-            const editedMaterial = material.clone();
-            editedMaterial.setBasis(editLines(lines).join("\n"), "xyz", material.basis.units);
-            const basis = editedMaterial.getBasis();
-            basis.copyPerAtomValuesByIndex(material.getBasis());
-            expect([basis.labels, basis.magneticMoments]).to.be.deep.equal([
-                expectedLabels,
-                expectedMagneticMoments,
-            ]);
-        });
+    it("should keep labels on their XYZ lines and clear magnetic moments after a line is deleted", () => {
+        const material = new Material(FeOAntiferromagnetic);
+        const lines = material.getBasisAsXyz(false).trim().split("\n");
+        material.setBasis([lines[0], ...lines.slice(2)].join("\n"), "xyz", material.basis.units);
+        const { labels, magneticMoments } = material.getBasis().toJSON();
+        expect([labels, magneticMoments]).to.be.deep.equal([[{ id: 0, value: 1 }], []]);
     });
 
     /**
