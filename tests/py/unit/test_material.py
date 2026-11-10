@@ -137,7 +137,7 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
 
 
 @pytest.mark.parametrize(
-    "material_config, removed_atom_ids, expected_labels, expected_starting_magnetization",
+    "material_config, removed_atom_ids, expected_labels, expected_magnetic_moments",
     [
         (
             GRAPHENE_NICKEL_INTERFACE_MAGNETIZED,
@@ -147,12 +147,12 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
         )
     ],
 )
-def test_remove_atom_by_id(material_config, removed_atom_ids, expected_labels, expected_starting_magnetization):
+def test_remove_atom_by_id(material_config, removed_atom_ids, expected_labels, expected_magnetic_moments):
     basis = Material.create(material_config).basis
     for atom_id in removed_atom_ids:
         basis.remove_atom_by_id(atom_id)
     assert basis.labels.to_dict() == expected_labels
-    assert basis.startingMagnetization.to_dict() == expected_starting_magnetization
+    assert basis.magneticMoments.to_dict() == expected_magnetic_moments
 
 
 @pytest.mark.parametrize(
@@ -175,20 +175,20 @@ def test_add_atom(material_config, element, coordinate, label, expected_elements
             BULK_FeO_ANTIFERROMAGNETIC,
             ["Fe", "Fe1", "O", "O"],
             [
-                {"name": "Fe", "element": "Fe", "startingMagnetization": 0.5},
-                {"name": "Fe1", "element": "Fe", "startingMagnetization": -0.5},
-                {"name": "O", "element": "O", "startingMagnetization": 0},
+                {"name": "Fe", "element": "Fe", "magneticMoment": 0.5},
+                {"name": "Fe1", "element": "Fe", "magneticMoment": -0.5},
+                {"name": "O", "element": "O", "magneticMoment": 0},
             ],
         ),
         (
             {
                 **BULK_FeO_ANTIFERROMAGNETIC,
-                "basis": {**BULK_FeO_ANTIFERROMAGNETIC["basis"], "startingMagnetization": []},
+                "basis": {**BULK_FeO_ANTIFERROMAGNETIC["basis"], "magneticMoments": []},
             },
             ["Fe", "Fe", "O", "O"],
             [
-                {"name": "Fe", "element": "Fe", "startingMagnetization": 0},
-                {"name": "O", "element": "O", "startingMagnetization": 0},
+                {"name": "Fe", "element": "Fe", "magneticMoment": 0},
+                {"name": "O", "element": "O", "magneticMoment": 0},
             ],
         ),
     ],
@@ -200,12 +200,12 @@ def test_unique_atomic_species(material_config, expected_atomic_species, expecte
 
 
 def test_unique_atomic_species_invalid():
-    starting_magnetization = [index / 10 for index in range(11)]
+    magnetic_moments = [index / 10 for index in range(11)]
     basis = Material.create_default().basis
-    basis.elements = ArrayWithIds.from_values(["Fe"] * len(starting_magnetization))
-    basis.coordinates = Coordinates.from_values([[value, 0, 0] for value in starting_magnetization])
-    basis.startingMagnetization = ArrayWithIds.from_values(starting_magnetization)
-    with pytest.raises(ValueError, match="Fe has more than 10 distinct starting magnetization values"):
+    basis.elements = ArrayWithIds.from_values(["Fe"] * len(magnetic_moments))
+    basis.coordinates = Coordinates.from_values([[value, 0, 0] for value in magnetic_moments])
+    basis.magneticMoments = ArrayWithIds.from_values(magnetic_moments)
+    with pytest.raises(ValueError, match="Fe has more than 10 distinct magnetic moments"):
         basis.unique_atomic_species
 
 
@@ -227,7 +227,7 @@ def test_calculate_hash_feo_standata():
     assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
-@pytest.mark.parametrize("basis_key", ["labels", "startingMagnetization"])
+@pytest.mark.parametrize("basis_key", ["labels", "magneticMoments"])
 def test_calculate_hash_per_atom_values(basis_key):
     basis = {**GRAPHENE_NICKEL_INTERFACE_MAGNETIZED["basis"], basis_key: []}
     material = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)

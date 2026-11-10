@@ -20,7 +20,7 @@ def merge_two_bases(basis1: Basis, basis2: Basis, distance_tolerance: float) -> 
         distance_tolerance (float): The tolerance for resolving overlapping coordinates.
 
     Returns:
-        Basis: A new Basis object with merged elements, coordinates, labels, starting magnetization and constraints.
+        Basis: A new Basis object with merged elements, coordinates, labels, magnetic moments and constraints.
     """
     basis1.to_crystal()
     basis2.to_crystal()

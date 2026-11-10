@@ -759,6 +759,6 @@ GRAPHENE_NICKEL_INTERFACE_MAGNETIZED = {
     **GRAPHENE_NICKEL_INTERFACE,
     "basis": {
         **GRAPHENE_NICKEL_INTERFACE["basis"],  # type: ignore[dict-item]
-        "startingMagnetization": [{"id": 0, "value": 0.5}, {"id": 1, "value": 0.5}, {"id": 2, "value": 0.5}],
+        "magneticMoments": [{"id": 0, "value": 0.5}, {"id": 1, "value": 0.5}, {"id": 2, "value": 0.5}],
     },
 }

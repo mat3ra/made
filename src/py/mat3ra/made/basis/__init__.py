@@ -38,7 +38,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     cell: Cell = Field(Cell(), exclude=True)
     labels: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     constraints: ArrayWithIds = Field(ArrayWithIds.from_values([]))
-    startingMagnetization: ArrayWithIds = Field(ArrayWithIds.from_values([]))
+    magneticMoments: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     DEFAULT_COORDINATE_PROXIMITY_TOLERANCE: float = Field(
         0.1, exclude=True
     )  # Angstroms, used for checking overlapping coordinates
@@ -52,8 +52,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             kwargs["labels"] = ArrayWithIds.from_list_of_dicts(kwargs["labels"])
         if isinstance(kwargs.get("constraints"), list):
             kwargs["constraints"] = ArrayWithIds.from_list_of_dicts(kwargs["constraints"])
-        if isinstance(kwargs.get("startingMagnetization"), list):
-            kwargs["startingMagnetization"] = ArrayWithIds.from_list_of_dicts(kwargs["startingMagnetization"])
+        if isinstance(kwargs.get("magneticMoments"), list):
+            kwargs["magneticMoments"] = ArrayWithIds.from_list_of_dicts(kwargs["magneticMoments"])
         if isinstance(kwargs.get("cell"), list):
             kwargs["cell"] = Cell.from_vectors_array(kwargs["cell"])
         return kwargs
@@ -93,31 +93,31 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         )
 
     @property
-    def starting_magnetization_array(self) -> List[float]:
-        value_by_atom_id = dict(zip(self.startingMagnetization.ids, self.startingMagnetization.values))
+    def magnetic_moments_array(self) -> List[float]:
+        value_by_atom_id = dict(zip(self.magneticMoments.ids, self.magneticMoments.values))
         return [value_by_atom_id.get(atom_id, 0) for atom_id in self.elements.ids]
 
     @property
     def unique_atomic_species(self) -> List[Dict[str, Any]]:
-        """Species per element and starting magnetization, by first appearance: Fe, Fe1, Fe2 (at most 3 characters)."""
+        """Species per element and magnetic moment, by first appearance: Fe, Fe1, Fe2 (at most 3 characters)."""
         species: List[Dict[str, Any]] = []
-        for element, magnetization in dict.fromkeys(zip(self.elements.values, self.starting_magnetization_array)):
+        for element, magnetic_moment in dict.fromkeys(zip(self.elements.values, self.magnetic_moments_array)):
             count = sum(item["element"] == element for item in species)
             name = f"{element}{count}" if count else element
             if len(name) > 3:
                 raise ValueError(
-                    f"{element} has more than {count} distinct starting magnetization values; "
+                    f"{element} has more than {count} distinct magnetic moments; "
                     "species names are limited to 3 characters"
                 )
-            species.append({"name": name, "element": element, "startingMagnetization": magnetization})
+            species.append({"name": name, "element": element, "magneticMoment": magnetic_moment})
         return species
 
     @property
     def atomic_species_array(self) -> List[str]:
         name_by_species = {
-            (item["element"], item["startingMagnetization"]): item["name"] for item in self.unique_atomic_species
+            (item["element"], item["magneticMoment"]): item["name"] for item in self.unique_atomic_species
         }
-        return [name_by_species[atom] for atom in zip(self.elements.values, self.starting_magnetization_array)]
+        return [name_by_species[atom] for atom in zip(self.elements.values, self.magnetic_moments_array)]
 
     @property
     def hash_string(self) -> str:
@@ -212,7 +212,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             (self.elements, other_basis.elements),
             (self.coordinates, other_basis.coordinates),
             (self.labels, other_basis.labels),
-            (self.startingMagnetization, other_basis.startingMagnetization),
+            (self.magneticMoments, other_basis.magneticMoments),
         ):
             for value, atom_id in zip(other_values.values, other_values.ids):
                 own_values.add_item(value, atom_id + id_offset)
@@ -232,11 +232,11 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def filter_atoms_by_ids(self, ids: Union[List[int], int], invert: bool = False, reset_ids=False) -> "Basis":
         self.elements.filter_by_ids(ids, invert)
         kept_atom_ids = self.elements.ids
-        for per_atom_values in (self.coordinates, self.labels, self.startingMagnetization):
+        for per_atom_values in (self.coordinates, self.labels, self.magneticMoments):
             per_atom_values.filter_by_ids(kept_atom_ids)
         if reset_ids:
             new_id_by_atom_id = {atom_id: index for index, atom_id in enumerate(kept_atom_ids)}
-            for per_atom_values in (self.elements, self.coordinates, self.labels, self.startingMagnetization):
+            for per_atom_values in (self.elements, self.coordinates, self.labels, self.magneticMoments):
                 per_atom_values.ids = [new_id_by_atom_id[atom_id] for atom_id in per_atom_values.ids]
         return self
 

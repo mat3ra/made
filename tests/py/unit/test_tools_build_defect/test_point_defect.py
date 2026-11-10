@@ -120,7 +120,7 @@ def test_point_defect_helpers(material_config, defect_params, expected_material_
 
 
 @pytest.mark.parametrize(
-    "create_defect, atom_id, defect_arguments, expected_labels, expected_starting_magnetization",
+    "create_defect, atom_id, defect_arguments, expected_labels, expected_magnetic_moments",
     [
         (create_defect_point_vacancy, 1, [VacancyPlacementMethodEnum.CLOSEST_SITE.value], [0, 0, 1, 1], [0.5, 0.5]),
         (
@@ -133,7 +133,7 @@ def test_point_defect_helpers(material_config, defect_params, expected_material_
     ],
 )
 def test_create_defect_point_per_atom_values(
-    create_defect, atom_id, defect_arguments, expected_labels, expected_starting_magnetization
+    create_defect, atom_id, defect_arguments, expected_labels, expected_magnetic_moments
 ):
     material = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
     coordinate = material.basis.coordinates.values[material.basis.coordinates.ids.index(atom_id)]
@@ -141,8 +141,8 @@ def test_create_defect_point_per_atom_values(
     defect_material = create_defect(material, coordinate, *defect_arguments)
 
     assert defect_material.basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels)
-    assert defect_material.basis.startingMagnetization.to_dict() == map_array_to_array_with_id_value(
-        expected_starting_magnetization
+    assert defect_material.basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
+        expected_magnetic_moments
     )
 
 

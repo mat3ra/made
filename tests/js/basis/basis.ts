@@ -31,7 +31,7 @@ const FeOAntiferromagnetic = {
             { id: 0, value: 1 },
             { id: 1, value: 2 },
         ],
-        startingMagnetization: [
+        magneticMoments: [
             { id: 0, value: 0.5 },
             { id: 1, value: -0.5 },
         ],
@@ -163,7 +163,7 @@ describe("Basis", () => {
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
     });
 
-    it("should return labels and starting magnetization by atom id", () => {
+    it("should return labels and magnetic moments by atom id", () => {
         const basis = new ConstrainedBasis({
             elements: [
                 { id: 0, value: "Fe" },
@@ -178,50 +178,50 @@ describe("Basis", () => {
                 { id: 2, value: 1 },
                 { id: 0, value: 0 },
             ],
-            startingMagnetization: [{ id: 2, value: -0.5 }],
+            magneticMoments: [{ id: 2, value: -0.5 }],
         });
         const clone = basis.clone();
         expect(clone.atomicLabelsArray).to.be.deep.equal([0, 1]);
-        expect(clone.startingMagnetizationArray).to.be.deep.equal([0, -0.5]);
+        expect(clone.magneticMomentsArray).to.be.deep.equal([0, -0.5]);
         basis.removeAllAtoms();
-        const { labels, startingMagnetization } = basis.clone();
-        expect([labels, startingMagnetization]).to.be.deep.equal([[], []]);
+        const { labels, magneticMoments } = basis.clone();
+        expect([labels, magneticMoments]).to.be.deep.equal([[], []]);
     });
 
-    it("should keep cleared labels and starting magnetization cleared through setBasis", () => {
+    it("should keep cleared labels and magnetic moments cleared through setBasis", () => {
         const material = new Material(FeOAntiferromagnetic);
         const basis = material.getBasis();
         basis.labels = [];
-        basis.startingMagnetization = [];
+        basis.magneticMoments = [];
         material.setBasis(basis.toJSON());
-        const { labels, startingMagnetization } = material.getBasis();
-        expect([labels, startingMagnetization]).to.be.deep.equal([[], []]);
+        const { labels, magneticMoments } = material.getBasis();
+        expect([labels, magneticMoments]).to.be.deep.equal([[], []]);
     });
 
     /**
      * Species
      */
 
-    it("should name one species per element and starting magnetization", () => {
+    it("should name one species per element and magnetic moment", () => {
         const basis = new Material(FeOAntiferromagnetic).getBasis();
         expect(basis.atomicSpeciesArray).to.be.deep.equal(["Fe", "Fe1", "O", "O"]);
         expect(basis.uniqueAtomicSpecies).to.be.deep.equal([
-            { name: "Fe", element: "Fe", startingMagnetization: 0.5 },
-            { name: "Fe1", element: "Fe", startingMagnetization: -0.5 },
-            { name: "O", element: "O", startingMagnetization: 0 },
+            { name: "Fe", element: "Fe", magneticMoment: 0.5 },
+            { name: "Fe1", element: "Fe", magneticMoment: -0.5 },
+            { name: "O", element: "O", magneticMoment: 0 },
         ]);
     });
 
-    it("should refuse more starting magnetization values per element than species names fit", () => {
+    it("should refuse more magnetic moments per element than species names fit", () => {
         const values = Array.from({ length: 11 }, (_, index) => index / 10);
         const basis = ConstrainedBasis.fromElementsCoordinatesAndConstraints({
             elements: values.map(() => "Fe"),
             coordinates: values.map((value) => [value, 0, 0]),
             constraints: values.map(() => [true, true, true]),
         });
-        basis.startingMagnetization = values.map((value, id) => ({ id, value }));
+        basis.magneticMoments = values.map((value, id) => ({ id, value }));
         expect(() => basis.atomicSpeciesArray).to.throw(
-            "Fe has more than 10 distinct starting magnetization values",
+            "Fe has more than 10 distinct magnetic moments",
         );
     });
 
@@ -256,28 +256,28 @@ describe("Basis", () => {
             config: FeOAntiferromagnetic,
             editLines: (lines: string[]) => [...lines, lines[3]],
             expectedLabels: FeOAntiferromagnetic.basis.labels,
-            expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
+            expectedMagneticMoments: FeOAntiferromagnetic.basis.magneticMoments,
         },
         {
             edit: "removed atoms",
             config: FeOAntiferromagnetic,
             editLines: (lines: string[]) => lines.slice(0, 1),
             expectedLabels: [{ id: 0, value: 1 }],
-            expectedStartingMagnetization: [{ id: 0, value: 0.5 }],
+            expectedMagneticMoments: [{ id: 0, value: 0.5 }],
         },
         {
             edit: "an id gap",
             config: FeOAntiferromagneticWithIdGap,
             editLines: (lines: string[]) => lines,
             expectedLabels: [{ id: 0, value: 2 }],
-            expectedStartingMagnetization: [{ id: 0, value: -0.5 }],
+            expectedMagneticMoments: [{ id: 0, value: -0.5 }],
         },
         {
             edit: "a pasted labelled export",
             config: FeOStandata,
             editLines: () => new Material(FeOAntiferromagnetic).getBasisAsXyz().trim().split("\n"),
             expectedLabels: FeOAntiferromagnetic.basis.labels,
-            expectedStartingMagnetization: [],
+            expectedMagneticMoments: [],
         },
         {
             edit: "a typed label",
@@ -287,27 +287,27 @@ describe("Basis", () => {
                 { id: 0, value: 2 },
                 { id: 1, value: 2 },
             ],
-            expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
+            expectedMagneticMoments: FeOAntiferromagnetic.basis.magneticMoments,
         },
         {
             edit: "its own labelled export pasted back",
             config: FeOAntiferromagnetic,
             editLines: () => new Material(FeOAntiferromagnetic).getBasisAsXyz().trim().split("\n"),
             expectedLabels: FeOAntiferromagnetic.basis.labels,
-            expectedStartingMagnetization: FeOAntiferromagnetic.basis.startingMagnetization,
+            expectedMagneticMoments: FeOAntiferromagnetic.basis.magneticMoments,
         },
-    ].forEach(({ edit, config, editLines, expectedLabels, expectedStartingMagnetization }) => {
-        it(`should copy labels and starting magnetization by index after XYZ text with ${edit}`, () => {
+    ].forEach(({ edit, config, editLines, expectedLabels, expectedMagneticMoments }) => {
+        it(`should copy labels and magnetic moments by index after XYZ text with ${edit}`, () => {
             const material = new Material(config);
             const elements = material.getBasis().elements.map(({ value }) => value);
             const lines = material.getBasisAsXyz(false, elements).trim().split("\n");
             const editedMaterial = material.clone();
             editedMaterial.setBasis(editLines(lines).join("\n"), "xyz", material.basis.units);
             const basis = editedMaterial.getBasis();
-            basis.copyLabelsAndStartingMagnetizationByIndex(material.getBasis());
-            expect([basis.labels, basis.startingMagnetization]).to.be.deep.equal([
+            basis.copyLabelsAndMagneticMomentsByIndex(material.getBasis());
+            expect([basis.labels, basis.magneticMoments]).to.be.deep.equal([
                 expectedLabels,
-                expectedStartingMagnetization,
+                expectedMagneticMoments,
             ]);
         });
     });

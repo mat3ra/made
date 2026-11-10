@@ -272,13 +272,13 @@ def test_interface_label_parts_by_elements(substrate_elements, expected_labels):
 
 
 @pytest.mark.parametrize(
-    "part, expected_starting_magnetization",
+    "part, expected_magnetic_moments",
     [
         (InterfacePartsEnum.SUBSTRATE, [{"id": 0, "value": 0.5}, {"id": 1, "value": 0.5}, {"id": 2, "value": 0.5}]),
         (InterfacePartsEnum.FILM, []),
     ],
 )
-def test_interface_get_part_starting_magnetization(part, expected_starting_magnetization):
+def test_interface_get_part_magnetic_moments(part, expected_magnetic_moments):
     interface = MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
     interface_part = interface_get_part(interface, part)
-    assert interface_part.basis.startingMagnetization.to_dict() == expected_starting_magnetization
+    assert interface_part.basis.magneticMoments.to_dict() == expected_magnetic_moments

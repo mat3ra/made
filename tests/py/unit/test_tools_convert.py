@@ -153,7 +153,7 @@ def test_from_ase(
 
 
 @pytest.mark.parametrize(
-    "material_config, modify_basis, arguments, expected_labels, expected_starting_magnetization",
+    "material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments",
     [
         (GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, None, None]),
         (
@@ -166,14 +166,16 @@ def test_from_ase(
     ],
 )
 def test_to_ase_from_ase_per_atom_values(
-    material_config, modify_basis, arguments, expected_labels, expected_starting_magnetization
+    material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments
 ):
     material = Material.create(material_config)
     modify_basis(material.basis, *arguments)
-    basis = Material.create(from_ase(to_ase(material))).basis
+    atoms = to_ase(material)
+    assert atoms.get_initial_magnetic_moments().tolist() == expected_magnetic_moments
+    basis = Material.create(from_ase(atoms)).basis
     assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
-    assert basis.startingMagnetization.to_dict() == map_array_to_array_with_id_value(
-        expected_starting_magnetization, remove_none=True
+    assert basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
+        expected_magnetic_moments, remove_none=True
     )
 
 

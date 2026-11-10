@@ -22,7 +22,7 @@ from .utils import (
     extract_metadata_from_pymatgen_structure,
 )
 
-ASE_ARRAY_NAME_BY_BASIS_KEY = {"labels": "tags", "startingMagnetization": "starting_magnetization"}
+ASE_ARRAY_NAME_BY_BASIS_KEY = {"labels": "tags", "magneticMoments": "initial_magmoms"}
 
 
 def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> PymatgenStructure:

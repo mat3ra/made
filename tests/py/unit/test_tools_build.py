@@ -57,20 +57,20 @@ def test_merge_materials(materials_to_merge, expected_basis, expected_basis_reve
 
 
 @pytest.mark.parametrize(
-    "is_film_first, expected_labels, expected_starting_magnetization",
+    "is_film_first, expected_labels, expected_magnetic_moments",
     [
         (False, [None, None, None, 1, 1], [0.5, 0.5, 0.5, None, None]),
         (True, [1, 1, None, None, None], [None, None, 0.5, 0.5, 0.5]),
     ],
 )
-def test_merge_per_atom_values(is_film_first, expected_labels, expected_starting_magnetization):
+def test_merge_per_atom_values(is_film_first, expected_labels, expected_magnetic_moments):
     interface = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
     substrate, film = filter_by_label(interface, 0), filter_by_label(interface, 1)
     substrate.set_labels_from_list([])
     merged_material = merge([film, substrate] if is_film_first else [substrate, film])
     assert merged_material.basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
-    assert merged_material.basis.startingMagnetization.to_dict() == map_array_to_array_with_id_value(
-        expected_starting_magnetization, remove_none=True
+    assert merged_material.basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
+        expected_magnetic_moments, remove_none=True
     )
 
 

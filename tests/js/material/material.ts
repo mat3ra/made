@@ -165,7 +165,7 @@ describe("Material", () => {
             });
         });
 
-        ["labels", "startingMagnetization"].forEach((key) => {
+        ["labels", "magneticMoments"].forEach((key) => {
             it(`does not hash ${key}`, () => {
                 const perAtomValues = [
                     { id: 0, value: 0 },

@@ -16,7 +16,7 @@ BULK_FeO_ANTIFERROMAGNETIC = {
     "basis": {
         **BULK_FeO["basis"],
         "labels": [{"id": 0, "value": 1}, {"id": 1, "value": 2}],
-        "startingMagnetization": [{"id": 0, "value": 0.5}, {"id": 1, "value": -0.5}],
+        "magneticMoments": [{"id": 0, "value": 0.5}, {"id": 1, "value": -0.5}],
     },
 }
 
