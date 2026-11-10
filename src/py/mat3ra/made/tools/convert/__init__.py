@@ -3,6 +3,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, Union
 
 import numpy as np
+from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import remove_comments_from_source_code
@@ -203,6 +204,8 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
         value_by_atom_id = {item["id"]: item["value"] for item in basis.get(basis_key) or []}
         if value_by_atom_id:
             atoms.set_array(ase_array_name, np.array([value_by_atom_id.get(atom["id"]) for atom in basis["elements"]]))
+    if basis.get("magneticMoments"):
+        atoms.set_initial_magnetic_moments(Basis(**basis).magnetic_moments_array)
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -235,6 +238,9 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     if is_molecule:
         material["lattice"]["type"] = "CUB"
 
+    magnetic_moments = ase_atoms.get_initial_magnetic_moments()
+    if magnetic_moments.ndim > 1:
+        raise ValueError(f"Expected one magnetic moment per atom, got shape {magnetic_moments.shape}")
     for basis_key, ase_array_name in ASE_ARRAY_NAME_BY_BASIS_KEY.items():
         values = ase_atoms.arrays[ase_array_name].tolist() if ase_array_name in ase_atoms.arrays else []
         material["basis"][basis_key] = map_array_to_array_with_id_value(values, remove_none=True)

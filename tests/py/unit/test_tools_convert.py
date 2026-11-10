@@ -155,13 +155,13 @@ def test_from_ase(
 @pytest.mark.parametrize(
     "material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments",
     [
-        (GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, None, None]),
+        (GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, 0, 0]),
         (
             GRAPHENE_NICKEL_INTERFACE_MAGNETIZED,
             Basis.add_atom,
             ["H", [0.333, 0.333, 0.45]],
             [0, 0, 0, 1, 1, None],
-            [0.5, 0.5, 0.5, None, None, None],
+            [0.5, 0.5, 0.5, 0, 0, 0],
         ),
     ],
 )
@@ -177,6 +177,13 @@ def test_to_ase_from_ase_per_atom_values(
     assert basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
         expected_magnetic_moments, remove_none=True
     )
+
+
+def test_from_ase_non_collinear_magnetic_moments():
+    atoms = Atoms("Fe2", scaled_positions=[[0, 0, 0], [0.5, 0.5, 0.5]], cell=[2.8] * 3, pbc=True)
+    atoms.set_initial_magnetic_moments([[0, 0, 2.2], [0, 0, -2.2]])
+    with pytest.raises(ValueError, match=r"shape \(2, 3\)"):
+        from_ase(atoms)
 
 
 TOLERANCE = 1e-4
