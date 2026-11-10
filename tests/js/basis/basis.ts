@@ -241,9 +241,9 @@ describe("Basis", () => {
     it("should keep labels on their XYZ lines and clear magnetic moments after a line is deleted", () => {
         const material = new Material(FeOAntiferromagnetic);
         const lines = material.getBasisAsXyz(false).trim().split("\n");
-        material.setBasis([lines[0], ...lines.slice(2)].join("\n"), "xyz", material.basis.units);
+        material.setBasis(lines.slice(1).join("\n"), "xyz", material.basis.units);
         const { labels, magneticMoments } = material.getBasis().toJSON();
-        expect([labels, magneticMoments]).to.be.deep.equal([[{ id: 0, value: 1 }], []]);
+        expect([labels, magneticMoments]).to.be.deep.equal([[{ id: 0, value: 2 }], []]);
     });
 
     /**

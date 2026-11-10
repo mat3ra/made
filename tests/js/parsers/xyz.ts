@@ -28,7 +28,7 @@ describe("Parsers:XYZ", () => {
 
     it("should keep atomic labels 0 and 10 from XYZ text to basis and back", () => {
         const text = "Si0 0 0 0\nSi10 0.25 0.25 0.25";
-        parsers.xyz.validate(text);
+        expect(() => parsers.xyz.validate(text)).not.to.throw();
         const basisConfig = parsers.xyz.toBasisConfig(text);
         expect(basisConfig.labels).to.be.deep.equal([
             { id: 0, value: 0 },
