@@ -61,6 +61,47 @@ describe("Basis", () => {
         expect(basis1.hasEquivalentCellTo(basis2)).to.be.equal(true);
     });
 
+    const inOrderCases: {
+        title: string;
+        changes: Record<number, Vector3DSchema>;
+        expected: boolean;
+    }[] = [
+        { title: "the same atoms", changes: {}, expected: true },
+        {
+            title: "the two Fe swapped",
+            changes: { 0: [0.5, 0.5, 0.5], 1: [0.0004, 0, 0] },
+            expected: false,
+        },
+        {
+            title: "x 0.43749997 against 0.4375",
+            changes: { 2: [0.43749997, 0, 0] },
+            expected: true,
+        },
+        { title: "x 0.9995 against 0.0004", changes: { 0: [0.9995, 0, 0] }, expected: true },
+        { title: "x 0.439 against 0.437", changes: { 3: [0.439, 0.75, 0.75] }, expected: false },
+    ];
+    inOrderCases.forEach(({ title, changes, expected }) => {
+        it(`should compare atoms in order within the hash tolerance: ${title}`, () => {
+            const coordinates: Vector3DSchema[] = [
+                [0.0004, 0, 0],
+                [0.5, 0.5, 0.5],
+                [0.4375, 0, 0],
+                [0.437, 0.75, 0.75],
+            ];
+            const reference = new Basis({
+                ...FeOStandata.basis,
+                coordinates: coordinates.map((value, id) => ({ id, value })),
+            });
+            const other = new Basis({
+                ...FeOStandata.basis,
+                coordinates: coordinates.map((value, id) => ({ id, value: changes[id] ?? value })),
+            });
+            const referenceJSON = reference.toJSON();
+            expect(other.isEqualInOrderTo(reference)).to.be.equal(expected);
+            expect(reference.toJSON()).to.be.deep.equal(referenceJSON);
+        });
+    });
+
     it("should return jsonified basis", () => {
         const basis = new Material(Na4Cl4).getBasis();
         expect(basis.toJSON()).to.be.deep.almost.equal({

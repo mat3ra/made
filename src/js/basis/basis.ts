@@ -406,6 +406,28 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
+     * @summary Returns true if the other basis lists the same elements in the same order, at crystal coordinates
+     * equal within the hash tolerance up to a lattice translation; neither basis is changed.
+     * @param anotherBasisClsInstance {Basis} Another Basis.
+     */
+    isEqualInOrderTo(anotherBasisClsInstance: Basis): boolean {
+        const tolerance = 10 ** -HASH_TOLERANCE;
+        const sites = this.clone().toCrystal().elementsAndCoordinatesArray;
+        const otherSites = anotherBasisClsInstance.clone().toCrystal().elementsAndCoordinatesArray;
+        return (
+            sites.length === otherSites.length &&
+            sites.every(
+                ([element, coordinate], index) =>
+                    element === otherSites[index][0] &&
+                    coordinate.every(
+                        (value, axis) =>
+                            Utils.math.mod(value - otherSites[index][1][axis], tolerance) === 0,
+                    ),
+            )
+        );
+    }
+
+    /**
      * @summary Returns true if basis cells are equal, otherwise - false.
      * @param anotherBasisClsInstance {Basis} Another Basis.
      */
