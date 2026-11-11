@@ -80,7 +80,7 @@ class FilmSubstrateDistanceASECalculator(ASECalculator):
         self.material_calculator = material_calculator
 
     def _add_constraints(self, atoms: ASEAtoms) -> ASEAtoms:
-        constraints: List[Union[ASEFixAtoms, ASEFixedPlane, RigidFilmXYInterfaceConstraint]] = []
+        constraints: List[Union[ASEFixAtoms, ASEFixedPlane, RigidFilmXYInterfaceConstraint]] = list(atoms.constraints)
         if self.fix_substrate:
             substrate_indices = get_interface_part_indices(atoms, InterfacePartsEnum.SUBSTRATE)
             constraints.append(ASEFixAtoms(indices=substrate_indices))

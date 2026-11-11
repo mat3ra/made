@@ -167,10 +167,20 @@ def test_from_ase(
         assert material_data["lattice"]["type"] == expected_lattice_type
 
 
+GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED = {
+    **GRAPHENE_NICKEL_INTERFACE_MAGNETIZED,
+    "basis": {
+        **GRAPHENE_NICKEL_INTERFACE_MAGNETIZED["basis"],  # type: ignore[dict-item]
+        "constraints": [{"id": 0, "value": [True, False, True]}],
+    },
+}
+
+
 @pytest.mark.parametrize(
     "material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments",
     [
         (GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, 0, 0]),
+        (GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, 0, 0]),
     ],
 )
 def test_to_ase_from_ase_per_atom_values(
@@ -178,6 +188,7 @@ def test_to_ase_from_ase_per_atom_values(
 ):
     material = Material.create(material_config)
     modify_basis(material.basis, *arguments)
+    expected_constraints = material.basis.values_by_atom("constraints")
     atoms = to_ase(material)
     assert atoms.get_initial_magnetic_moments().tolist() == expected_magnetic_moments
     assert atoms.get_initial_magnetic_moments().dtype == float
@@ -186,6 +197,7 @@ def test_to_ase_from_ase_per_atom_values(
     assert basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
         expected_magnetic_moments, remove_none=True
     )
+    assert basis.constraints.to_dict() == map_array_to_array_with_id_value(expected_constraints, remove_none=True)
     atoms.calc = EMT()
     BFGS(atoms).run(steps=2)
 
