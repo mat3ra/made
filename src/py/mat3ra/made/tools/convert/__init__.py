@@ -21,6 +21,7 @@ from ..third_party import (
 )
 from .utils import (
     calculate_padded_cell_simple_cubic,
+    extract_constraints_from_ase_atoms,
     extract_labels_from_pymatgen_structure,
     extract_metadata_from_pymatgen_structure,
 )
@@ -250,13 +251,7 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     magnetic_moments = ase_atoms.arrays.get("initial_magmoms", np.array([])).tolist()
     material["basis"]["labels"] = map_array_to_array_with_id_value(tags, remove_none=True)
     material["basis"]["magneticMoments"] = map_array_to_array_with_id_value(magnetic_moments, remove_none=True)
-    is_fixed_by_atom = np.zeros((len(ase_atoms), 3), dtype=bool)
-    for constraint in ase_atoms.constraints:
-        if isinstance(constraint, ASEFixAtoms):
-            is_fixed_by_atom[constraint.index] = True
-        elif isinstance(constraint, ASEFixCartesian):
-            is_fixed_by_atom[constraint.index] |= constraint.mask
-    is_free_by_atom = [(~is_fixed).tolist() if is_fixed.any() else None for is_fixed in is_fixed_by_atom]
+    is_free_by_atom = extract_constraints_from_ase_atoms(ase_atoms)
     material["basis"]["constraints"] = map_array_to_array_with_id_value(is_free_by_atom, remove_none=True)
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:

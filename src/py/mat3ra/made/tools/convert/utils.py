@@ -1,5 +1,5 @@
 import json
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from mat3ra.made.data_helper import DATA_DIR
@@ -7,7 +7,7 @@ from mat3ra.made.utils import get_center_of_coordinates
 from mat3ra.utils.object import NumpyNDArrayRoundEncoder
 from scipy.spatial.distance import pdist
 
-from ..third_party import PymatgenInterface, PymatgenStructure
+from ..third_party import ASEAtoms, ASEFixAtoms, ASEFixCartesian, PymatgenInterface, PymatgenStructure
 from .interface_parts_enum import INTERFACE_LABELS_MAP
 
 _CONSTANTS_FILE = DATA_DIR / "constants.json"
@@ -46,6 +46,16 @@ def extract_labels_from_pymatgen_structure(structure: PymatgenStructure) -> List
     if isinstance(structure, PymatgenInterface):
         labels = list(map(lambda s: INTERFACE_LABELS_MAP[s.properties["interface_label"]], structure.sites))
     return labels
+
+
+def extract_constraints_from_ase_atoms(ase_atoms: ASEAtoms) -> List[Optional[List[bool]]]:
+    is_fixed_by_atom = np.zeros((len(ase_atoms), 3), dtype=bool)
+    for constraint in ase_atoms.constraints:
+        if isinstance(constraint, ASEFixAtoms):
+            is_fixed_by_atom[constraint.index] = True
+        elif isinstance(constraint, ASEFixCartesian):
+            is_fixed_by_atom[constraint.index] |= constraint.mask
+    return [(~is_fixed).tolist() if is_fixed.any() else None for is_fixed in is_fixed_by_atom]
 
 
 def extract_metadata_from_pymatgen_structure(structure: PymatgenStructure) -> Dict[str, Any]:
