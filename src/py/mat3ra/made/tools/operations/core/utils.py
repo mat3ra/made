@@ -1,9 +1,8 @@
 from typing import Optional
 
 import numpy as np
-from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.materials_category_components.operations.core.combinations.merge import MergeMethodsEnum
-from mat3ra.made.basis import Basis, Coordinates
+from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 
 from ...build_components import MaterialWithBuildMetadata
@@ -25,16 +24,8 @@ def merge_two_bases(basis1: Basis, basis2: Basis, distance_tolerance: float) -> 
     basis1.to_crystal()
     basis2.to_crystal()
 
-    merged_elements_values = basis1.elements.values + basis2.elements.values
-    merged_coordinates_values = basis1.coordinates.values + basis2.coordinates.values
-    merged_labels_values = basis1.labels.values + basis2.labels.values if basis1.labels and basis2.labels else []
-    merged_constraints_values = basis1.constraints.values + basis2.constraints.values
-
     new_basis = basis1.clone()
-    new_basis.elements = ArrayWithIds.from_values(values=merged_elements_values)
-    new_basis.coordinates = Coordinates.from_values(values=merged_coordinates_values)
-    new_basis.labels = ArrayWithIds.from_values(values=merged_labels_values)
-    new_basis.constraints = ArrayWithIds.from_values(values=merged_constraints_values)
+    new_basis.add_atoms_from_another_basis(basis2)
     new_basis.resolve_colliding_coordinates(tolerance=distance_tolerance)
 
     return new_basis

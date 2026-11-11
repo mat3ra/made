@@ -3,13 +3,25 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
+from mat3ra.made.tools.build import MaterialWithBuildMetadata
+from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.helpers import (
+    create_defect_point_substitution,
+    create_defect_point_vacancy,
+)
+from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from mat3ra.made.tools.modify import filter_by_ids, filter_by_label, interface_get_part
+from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.utils import assertion as assertion_utils
-from unit.fixtures.bulk import BULK_Si_PRIMITIVE
+from unit.fixtures.bulk import BULK_FeO_ANTIFERROMAGNETIC, BULK_Si_PRIMITIVE
+from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
+
+FIXED = [False, False, False]
 
 FIXTURES_DIR = Path(__file__).parents[2] / "fixtures"
 HASH_KEY = "hash"
@@ -132,6 +144,82 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
     assert material.basis.labels.values == expected_final
 
 
+@pytest.mark.parametrize(
+    "operation, expected_labels, expected_magnetic_moments, expected_constraints",
+    [
+        (
+            lambda material: filter_by_ids(material, [1, 3], invert=True),
+            [0, 0, 1],
+            [0.5, 0.5, None],
+            [None, None, FIXED],
+        ),
+        (
+            lambda material: create_defect_point_vacancy(
+                material, material.basis.coordinates.values[1], "closest_site"
+            ),
+            [0, 0, 1, 1],
+            [0.5, 0.5, None, None],
+            [None, None, None, FIXED],
+        ),
+        (
+            lambda material: create_defect_point_substitution(
+                material, material.basis.coordinates.values[3], "Ge", "closest_site"
+            ),
+            [0, 0, 0, 1, 1],
+            [0.5, 0.5, 0.5, None, None],
+            [None, None, None, FIXED, None],
+        ),
+        (
+            lambda material: interface_get_part(material, InterfacePartsEnum.SUBSTRATE),
+            [0, 0, 0],
+            [0.5, 0.5, 0.5],
+            [None, None, None],
+        ),
+        (
+            lambda material: merge([filter_by_label(material, 1), filter_by_label(material, 0)]),
+            [1, 1, 0, 0, 0],
+            [None, None, 0.5, 0.5, 0.5],
+            [None, FIXED, None, None, None],
+        ),
+    ],
+)
+def test_per_atom_values_follow_atom_ids(operation, expected_labels, expected_magnetic_moments, expected_constraints):
+    basis = operation(MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)).basis
+    assert basis.values_by_atom("labels") == expected_labels
+    assert basis.values_by_atom("magneticMoments") == expected_magnetic_moments
+    assert basis.values_by_atom("constraints") == expected_constraints
+
+
+@pytest.mark.parametrize(
+    "material_config, expected_atomic_species, expected_unique_atomic_species",
+    [
+        (
+            BULK_FeO_ANTIFERROMAGNETIC,
+            ["Fe", "Fe1", "O", "O"],
+            [
+                {"name": "Fe", "element": "Fe", "magneticMoment": 0.5},
+                {"name": "Fe1", "element": "Fe", "magneticMoment": -0.5},
+                {"name": "O", "element": "O", "magneticMoment": 0},
+            ],
+        ),
+    ],
+)
+def test_unique_atomic_species(material_config, expected_atomic_species, expected_unique_atomic_species):
+    basis = Material.create(material_config).basis
+    assert basis.atomic_species_array == expected_atomic_species
+    assert basis.unique_atomic_species == expected_unique_atomic_species
+
+
+def test_unique_atomic_species_invalid():
+    magnetic_moments = [index / 10 for index in range(11)]
+    basis = Material.create_default().basis
+    basis.elements = ArrayWithIds.from_values(["Fe"] * len(magnetic_moments))
+    basis.coordinates = Coordinates.from_values([[value, 0, 0] for value in magnetic_moments])
+    basis.magneticMoments = ArrayWithIds.from_values(magnetic_moments)
+    with pytest.raises(ValueError, match="Fe has more than 10 distinct magnetic moments"):
+        basis.unique_atomic_species
+
+
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
 def test_calculate_hash(fixture_file):
     fixture = load_fixture(fixture_file)
@@ -148,6 +236,13 @@ def test_calculate_hash_feo_standata():
     material = Material.create(data)
     assert material.hash == expected_hashes["hash"]
     assert material.scaled_hash == expected_hashes["scaledHash"]
+
+
+@pytest.mark.parametrize("basis_key", ["labels", "magneticMoments"])
+def test_calculate_hash_per_atom_values(basis_key):
+    basis = {**GRAPHENE_NICKEL_INTERFACE_MAGNETIZED["basis"], basis_key: []}
+    material = Material.create(GRAPHENE_NICKEL_INTERFACE_MAGNETIZED)
+    assert material.hash == Material.create({**GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, "basis": basis}).hash
 
 
 @pytest.mark.parametrize(

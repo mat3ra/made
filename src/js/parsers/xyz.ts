@@ -14,7 +14,7 @@ import { CombinatorialBasis } from "./xyz_combinatorial_basis";
 // Regular expression for an XYZ line with atomic constraints, eg. Si    0.000000    0.500000    0.446678 1 1 1`
 // eslint-disable-next-line max-len
 const XYZ_LINE_REGEX =
-    /[A-Z][a-z]?(\d)?\s+((-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)(\s+)?(\s+[0-1]\s+[0-1]\s+[0-1](\s+)?)?)$/;
+    /[A-Z][a-z]?(\d+)?\s+((-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)\s+(-?\d+\.?\d*|\.\d+)(\s+)?(\s+[0-1]\s+[0-1]\s+[0-1](\s+)?)?)$/;
 
 export const XYZ_COORDINATE_PRECISION = 4;
 /**
@@ -63,7 +63,7 @@ export interface ParsedObject {
 function _parseXYZLineAsWords(line: string): ParsedObject {
     const words = s.words(line);
     const elementWithOptionalLabel = words[0];
-    const element = elementWithOptionalLabel.replace(/\d$/, "") as AtomicElementValue; // Fe1 => Fe
+    const element = elementWithOptionalLabel.replace(/\d+$/, "") as AtomicElementValue; // Fe10 => Fe
     const generateConstraintValue = (n: number) => parseInt(`${n}`, 10) !== 0;
 
     const basisLineConfig: ParsedObject = {
@@ -80,7 +80,7 @@ function _parseXYZLineAsWords(line: string): ParsedObject {
     if (elementWithOptionalLabel !== element) {
         return {
             ...basisLineConfig,
-            label: parseInt(elementWithOptionalLabel[elementWithOptionalLabel.length - 1], 10),
+            label: parseInt(elementWithOptionalLabel.slice(element.length), 10),
         };
     }
 
@@ -127,7 +127,7 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
     }[] = [];
 
     listOfObjects.forEach((elm, idx) => {
-        if (elm.label) {
+        if (elm.label !== undefined) {
             labels.push({
                 id: idx,
                 value: elm.label,
@@ -149,12 +149,18 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
  * Create XYZ from Basis class instance.
  * @param basisClsInstance Basis class instance.
  * @param coordinatePrintFormat Output format for coordinates.
+ * @param atomNames One name per atom, in basis order; default: elements with labels ("Fe1").
  * @return Basis string in XYZ format
  */
-function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: string): string {
+function fromBasis(
+    basisClsInstance: ConstrainedBasis,
+    coordinatePrintFormat: string,
+    atomNames = basisClsInstance.elementsWithLabelsArray,
+): string {
     const XYZArray = basisClsInstance.getAtomicPositionsWithConstraintsAsStrings(
         coordinatePrintFormat,
         XYZ_COORDINATE_PRECISION,
+        atomNames,
     );
     return `${XYZArray.join("\n")}\n`;
 }
@@ -165,7 +171,8 @@ function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: st
  */
 function fromMaterial(
     materialOrConfig: MaterialSchema | MaterialEnhancedSchema,
-    fractional = false,
+    fractional?: boolean,
+    atomNames?: string[],
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);
     const constraints =
@@ -178,7 +185,7 @@ function fromMaterial(
     if (fractional) {
         basis.toCrystal();
     }
-    return fromBasis(basis, "%11.6f");
+    return fromBasis(basis, "%11.6f", atomNames);
 }
 
 export default {

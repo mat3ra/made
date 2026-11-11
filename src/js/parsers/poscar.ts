@@ -41,13 +41,12 @@ function toPoscar(
         constraints: omitConstraints ? [] : constraints,
     });
     const BasisLines: string[] = [];
-    let addSelectiveDynamics = false;
+    const printConstraints = !basis.AtomicConstraints.areUnconstrained;
     basis._elements.values.forEach((item, idx) => {
         const coord = basis.getCoordinateValueByIndex(idx).map((x) => _print(x));
-        const constraintsAsString = omitConstraints
-            ? ""
-            : basis.AtomicConstraints.getAsStringByIndex(idx, atomicConstraintsCharFromBool);
-        if (constraintsAsString && !omitConstraints) addSelectiveDynamics = true;
+        const constraintsAsString = printConstraints
+            ? basis.getConstraintByIndex(idx).map(atomicConstraintsCharFromBool).join(" ")
+            : "";
         BasisLines.push([coord.join(" "), constraintsAsString, item].join(" "));
     });
     const basisContent = BasisLines.join("\n");
@@ -62,8 +61,7 @@ function toPoscar(
         vectorsAsString,
         elementsLine,
         countsLine,
-        // add selective dynamics only if there are some constraints!
-        ...(addSelectiveDynamics ? ["Selective dynamics"] : []),
+        ...(printConstraints ? ["Selective dynamics"] : []),
         coordsType,
         basisContent,
     ].join("\n");

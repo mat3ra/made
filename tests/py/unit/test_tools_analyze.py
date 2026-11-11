@@ -21,6 +21,9 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
     AtomPlacementMethodEnum,
 )
 from mat3ra.made.tools.build_components.operations.core.combinations.enums import AdatomPlacementMethodEnum
+from mat3ra.made.tools.calculate.ase import get_interface_part_indices
+from mat3ra.made.tools.convert import to_ase
+from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from unit.fixtures.nanoribbon.nanoribbon import GRAPHENE_ZIGZAG_NANORIBBON
 from unit.utils import OSPlatform, get_platform_specific_value
 
@@ -41,6 +44,20 @@ def test_calculate_average_interlayer_distance(material_config, layer_indices, e
     material = Material.create(material_config)
     distance = get_average_interlayer_distance(material, *layer_indices)
     assert np.isclose(distance, expected_distance)
+
+
+@pytest.mark.parametrize(
+    "function, arguments",
+    [
+        (get_average_interlayer_distance, [0, 1]),
+        (get_interface_part_indices, [InterfacePartsEnum.FILM]),
+    ],
+)
+def test_interface_parts_need_a_label_on_every_atom(function, arguments):
+    material = Material.create(GRAPHENE_NICKEL_INTERFACE)
+    material.basis.add_atom("C", [0.5, 0.5, 0.9])
+    with pytest.raises(ValueError, match="Interface parts need a label on every atom"):
+        function(to_ase(material), *arguments)
 
 
 @pytest.mark.parametrize(
