@@ -10,6 +10,15 @@ BULK_TiN = Materials.get_by_name_first_match("TiN")
 BULK_Ni_PRIMITIVE = Materials.get_by_name_first_match("Nickel")
 BULK_GRAPHENE = Materials.get_by_name_first_match("Graphene")
 BULK_Cu = Materials.get_by_name_first_match("Copper")
+BULK_FeO = Materials.get_by_name_first_match("FeO")
+BULK_FeO_ANTIFERROMAGNETIC = {
+    **BULK_FeO,
+    "basis": {
+        **BULK_FeO["basis"],
+        "labels": [{"id": 0, "value": 1}, {"id": 1, "value": 2}],
+        "magneticMoments": [{"id": 0, "value": 0.5}, {"id": 1, "value": -0.5}],
+    },
+}
 
 BULK_Si_PRIMITIVE: Dict[str, Any] = {
     "name": "Silicon FCC",

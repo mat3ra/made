@@ -21,6 +21,8 @@ def get_interface_part_indices(atoms: ASEAtoms, part: InterfacePartsEnum) -> Lis
     Returns:
         List[int]: The indices of the atoms in the interface part.
     """
+    if not atoms.has("tags"):
+        raise ValueError("Interface parts need a label on every atom")
     return [i for i, tag in enumerate(atoms.get_tags()) if tag == INTERFACE_LABELS_MAP[part.name.lower()]]
 
 

@@ -1,13 +1,13 @@
 import json
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 
 import numpy as np
 from mat3ra.made.data_helper import DATA_DIR
-from mat3ra.made.utils import get_center_of_coordinates, map_array_to_array_with_id_value
+from mat3ra.made.utils import get_center_of_coordinates
 from mat3ra.utils.object import NumpyNDArrayRoundEncoder
 from scipy.spatial.distance import pdist
 
-from ..third_party import ASEAtoms, PymatgenInterface, PymatgenStructure
+from ..third_party import PymatgenInterface, PymatgenStructure
 from .interface_parts_enum import INTERFACE_LABELS_MAP
 
 _CONSTANTS_FILE = DATA_DIR / "constants.json"
@@ -62,14 +62,6 @@ def extract_metadata_from_pymatgen_structure(structure: PymatgenStructure) -> Di
         metadata["interface_properties"] = json.loads(json.dumps(interface_props, cls=NumpyNDArrayRoundEncoder))
 
     return metadata
-
-
-def extract_tags_from_ase_atoms(atoms: ASEAtoms) -> List[Union[str, int]]:
-    result = []
-    if "tags" in atoms.arrays:
-        int_tags = [int(tag) for tag in atoms.arrays["tags"] if tag is not None]
-        result = map_array_to_array_with_id_value(int_tags, remove_none=True)
-    return result
 
 
 def calculate_padded_cell_simple_cubic(

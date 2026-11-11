@@ -433,9 +433,10 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
 
     /**
      * Returns material's basis in XYZ format (includes atomic constraints when present).
+     * @param atomNames - one name per atom, in basis order; default: elements with labels ("Fe1").
      */
-    getBasisAsXyz(fractional = false): string {
-        return parsers.xyz.fromMaterial(this.toJSONEnhanced(), fractional);
+    getBasisAsXyz(fractional?: boolean, atomNames?: string[]): string {
+        return parsers.xyz.fromMaterial(this.toJSONEnhanced(), fractional, atomNames);
     }
 
     /**

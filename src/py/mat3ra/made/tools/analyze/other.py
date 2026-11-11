@@ -27,6 +27,8 @@ def get_average_interlayer_distance(
     Returns:
         float: The average distance between the top layer of substrate and the bottom layer of film.
     """
+    if not interface_atoms.has("tags"):
+        raise ValueError("Interface parts need a label on every atom")
     # Extract z-coordinates of substrate and film atoms
     z_substrate = interface_atoms.positions[interface_atoms.get_tags() == tag_substrate][:, 2]
     z_film = interface_atoms.positions[interface_atoms.get_tags() == tag_film][:, 2]

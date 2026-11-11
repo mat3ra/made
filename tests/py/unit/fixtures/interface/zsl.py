@@ -754,3 +754,12 @@ DIAMOND_GaAs_INTERFACE_GH = {
         "type": "TRI",
     },
 }
+
+GRAPHENE_NICKEL_INTERFACE_MAGNETIZED = {
+    **GRAPHENE_NICKEL_INTERFACE,
+    "basis": {
+        **GRAPHENE_NICKEL_INTERFACE["basis"],  # type: ignore[dict-item]
+        "magneticMoments": [{"id": 0, "value": 0.5}, {"id": 1, "value": 0.5}, {"id": 2, "value": 0.5}],
+        "constraints": [{"id": 4, "value": [False, False, False]}],
+    },
+}

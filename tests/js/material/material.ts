@@ -165,6 +165,18 @@ describe("Material", () => {
             });
         });
 
+        ["labels", "magneticMoments"].forEach((key) => {
+            it(`does not hash ${key}`, () => {
+                const perAtomValues = [
+                    { id: 0, value: 0 },
+                    { id: 1, value: 1 },
+                ];
+                const basis = { ...Silicon.basis, [key]: perAtomValues };
+                const material = new Material({ ...Silicon, basis });
+                expect(material.calculateHash()).to.equal(new Material(Silicon).calculateHash());
+            });
+        });
+
         it("stores InChI hash for non-periodic materials when InChI is present", () => {
             // MD5 of the InChI string — same contract as web-app MolView upload.
             const inchi =
