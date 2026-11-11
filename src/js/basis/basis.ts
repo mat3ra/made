@@ -410,7 +410,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      * equal within the hash tolerance up to a lattice translation; neither basis is changed.
      * @param anotherBasisClsInstance {Basis} Another Basis.
      */
-    isEqualInOrderTo(anotherBasisClsInstance: Basis): boolean {
+    isEqualInOrderTo<T extends BasisConfig>(anotherBasisClsInstance: Basis<T>): boolean {
         const tolerance = 10 ** -HASH_TOLERANCE;
         const sites = this.clone().toCrystal().elementsAndCoordinatesArray;
         const otherSites = anotherBasisClsInstance.clone().toCrystal().elementsAndCoordinatesArray;
