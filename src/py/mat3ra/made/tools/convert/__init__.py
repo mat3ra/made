@@ -207,11 +207,13 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     if basis.magneticMoments.values:
         atoms.set_initial_magnetic_moments(basis.values_by_atom("magneticMoments", 0))
     if basis.constraints.values:
-        atom_indices_by_fixed_axes: Dict[tuple, list] = {}
-        for atom_index, is_free in enumerate(basis.values_by_atom("constraints", [True, True, True])):
-            if not all(is_free):
-                atom_indices_by_fixed_axes.setdefault(tuple(not value for value in is_free), []).append(atom_index)
-        atoms.set_constraint([ASEFixCartesian(indices, axes) for axes, indices in atom_indices_by_fixed_axes.items()])
+        atoms.set_constraint(
+            [
+                ASEFixAtoms([atom_index]) if not any(is_free) else ASEFixCartesian(atom_index, np.logical_not(is_free))
+                for atom_index, is_free in enumerate(basis.values_by_atom("constraints", [True, True, True]))
+                if not all(is_free)
+            ]
+        )
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -248,14 +250,13 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     magnetic_moments = ase_atoms.arrays.get("initial_magmoms", np.array([])).tolist()
     material["basis"]["labels"] = map_array_to_array_with_id_value(tags, remove_none=True)
     material["basis"]["magneticMoments"] = map_array_to_array_with_id_value(magnetic_moments, remove_none=True)
-    is_free_by_atom: list = [None] * len(ase_atoms)
+    is_fixed_by_atom = np.zeros((len(ase_atoms), 3), dtype=bool)
     for constraint in ase_atoms.constraints:
         if isinstance(constraint, ASEFixAtoms):
-            for atom_index in constraint.index:
-                is_free_by_atom[atom_index] = [False, False, False]
+            is_fixed_by_atom[constraint.index] = True
         elif isinstance(constraint, ASEFixCartesian):
-            for atom_index in constraint.index:
-                is_free_by_atom[atom_index] = [not is_fixed for is_fixed in constraint.mask]
+            is_fixed_by_atom[constraint.index] |= constraint.mask
+    is_free_by_atom = [(~is_fixed).tolist() if is_fixed.any() else None for is_fixed in is_fixed_by_atom]
     material["basis"]["constraints"] = map_array_to_array_with_id_value(is_free_by_atom, remove_none=True)
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:

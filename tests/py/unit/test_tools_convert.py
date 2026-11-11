@@ -3,6 +3,7 @@ import pytest
 from ase import Atoms
 from ase.build import molecule
 from ase.calculators.emt import EMT
+from ase.constraints import FixAtoms, FixCartesian
 from ase.optimize import BFGS
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
@@ -200,6 +201,12 @@ def test_to_ase_from_ase_per_atom_values(
     assert basis.constraints.to_dict() == map_array_to_array_with_id_value(expected_constraints, remove_none=True)
     atoms.calc = EMT()
     BFGS(atoms).run(steps=2)
+
+
+def test_from_ase_overlapping_constraints():
+    atoms = ASE_BULK_Si.copy()
+    atoms.set_constraint([FixAtoms([0]), FixCartesian(0, [False, False, True])])
+    assert from_ase(atoms)["basis"]["constraints"] == [{"id": 0, "value": [False, False, False]}]
 
 
 TOLERANCE = 1e-4
