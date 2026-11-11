@@ -147,6 +147,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     }
 
     getConstraintByIndex(idx: number): AtomicConstraintValue {
+        // Not getElementIdByIndex: it returns `ids[index] || undefined`, so atom id 0 would lose its constraint.
         return this.getConstraintById(this._elements.ids[idx]);
     }
 

@@ -86,4 +86,29 @@ direct
         const poscar = clonedMaterial.getAsPOSCAR(true);
         expect(poscar).to.be.equal(poscarConstraints);
     });
+
+    it("should keep constraints on their atoms by id", () => {
+        const material = new Material({
+            ...Na4Cl4,
+            basis: {
+                ...Na4Cl4.basis,
+                constraints: [4, 5].map((id) => ({ id, value: [false, false, false] })),
+            },
+        });
+        const isFree = [true, true, true, true, false, false, true, true];
+        const poscarFlags = material.getAsPOSCAR().match(/[TF] [TF] [TF]/g);
+        expect(poscarFlags?.map((flags) => flags === "T T T")).to.be.deep.equal(isFree);
+    });
+
+    it("should omit selective dynamics when every atom is free", () => {
+        const allFree: [boolean, boolean, boolean] = [true, true, true];
+        const material = new Material({
+            ...Na4Cl4,
+            basis: {
+                ...Na4Cl4.basis,
+                constraints: Na4Cl4.basis.elements.map(({ id }) => ({ id, value: allFree })),
+            },
+        });
+        expect(`${material.getAsPOSCAR()}\n`).to.be.equal(Na4Cl4Poscar);
+    });
 });

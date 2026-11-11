@@ -196,8 +196,6 @@ describe("Basis", () => {
         const isFree = [true, true, true, true, false, false, true, true];
         const positions = material.getBasis().getAtomicPositionsWithConstraintsAsStrings();
         expect(positions.map((line) => line.endsWith("1 1 1"))).to.be.deep.equal(isFree);
-        const poscarFlags = material.getAsPOSCAR().match(/[TF] [TF] [TF]/g);
-        expect(poscarFlags?.map((flags) => flags === "T T T")).to.be.deep.equal(isFree);
     });
 
     it("should keep cleared labels and magnetic moments cleared through setBasis", () => {
