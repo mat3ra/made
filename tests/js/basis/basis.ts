@@ -61,17 +61,27 @@ describe("Basis", () => {
         expect(basis1.hasEquivalentCellTo(basis2)).to.be.equal(true);
     });
 
+    const inOrderCoordinates: Vector3DSchema[] = [
+        [0.0004, 0, 0],
+        [0.5, 0.5, 0.5],
+        [0.4375, 0, 0],
+        [0.437, 0.75, 0.75],
+    ];
     const inOrderCases: {
         title: string;
-        changes: Record<number, Vector3DSchema>;
+        changes?: Record<number, Vector3DSchema>;
+        elementOrder?: number[];
+        numberOfAtoms?: number;
         expected: boolean;
     }[] = [
-        { title: "the same atoms", changes: {}, expected: true },
+        { title: "the same atoms", expected: true },
         {
             title: "the two Fe swapped",
             changes: { 0: [0.5, 0.5, 0.5], 1: [0.0004, 0, 0] },
             expected: false,
         },
+        { title: "Fe and O swapped on their sites", elementOrder: [2, 1, 0, 3], expected: false },
+        { title: "one atom fewer", numberOfAtoms: 3, expected: false },
         {
             title: "x 0.43749997 against 0.4375",
             changes: { 2: [0.43749997, 0, 0] },
@@ -80,27 +90,34 @@ describe("Basis", () => {
         { title: "x 0.9995 against 0.0004", changes: { 0: [0.9995, 0, 0] }, expected: true },
         { title: "x 0.439 against 0.437", changes: { 3: [0.439, 0.75, 0.75] }, expected: false },
     ];
-    inOrderCases.forEach(({ title, changes, expected }) => {
-        it(`should compare atoms in order within the hash tolerance: ${title}`, () => {
-            const coordinates: Vector3DSchema[] = [
-                [0.0004, 0, 0],
-                [0.5, 0.5, 0.5],
-                [0.4375, 0, 0],
-                [0.437, 0.75, 0.75],
-            ];
-            const reference = new Basis({
-                ...FeOStandata.basis,
-                coordinates: coordinates.map((value, id) => ({ id, value })),
+    inOrderCases.forEach(
+        ({ title, changes = {}, elementOrder = [0, 1, 2, 3], numberOfAtoms = 4, expected }) => {
+            it(`should compare atoms in order within the hash tolerance, both unchanged: ${title}`, () => {
+                const { cell } = new Material(FeOStandata).getBasis();
+                const reference = new Basis({
+                    ...FeOStandata.basis,
+                    coordinates: inOrderCoordinates.map((value, id) => ({ id, value })),
+                    cell,
+                }).toCartesian();
+                const other = new Basis({
+                    ...FeOStandata.basis,
+                    elements: elementOrder
+                        .slice(0, numberOfAtoms)
+                        .map((from, id) => ({ id, value: FeOStandata.basis.elements[from].value })),
+                    coordinates: inOrderCoordinates
+                        .slice(0, numberOfAtoms)
+                        .map((value, id) => ({ id, value: changes[id] ?? value })),
+                    cell,
+                }).toCartesian();
+                const [referenceJSON, otherJSON] = [reference.toJSON(), other.toJSON()];
+                expect(other.isEqualInOrderTo(reference)).to.be.equal(expected);
+                expect([reference.toJSON(), other.toJSON()]).to.be.deep.equal([
+                    referenceJSON,
+                    otherJSON,
+                ]);
             });
-            const other = new Basis({
-                ...FeOStandata.basis,
-                coordinates: coordinates.map((value, id) => ({ id, value: changes[id] ?? value })),
-            });
-            const referenceJSON = reference.toJSON();
-            expect(other.isEqualInOrderTo(reference)).to.be.equal(expected);
-            expect(reference.toJSON()).to.be.deep.equal(referenceJSON);
-        });
-    });
+        },
+    );
 
     it("should return jsonified basis", () => {
         const basis = new Material(Na4Cl4).getBasis();
