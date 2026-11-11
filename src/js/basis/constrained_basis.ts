@@ -147,7 +147,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
     }
 
     getConstraintByIndex(idx: number): AtomicConstraintValue {
-        return this._constraints.getElementValueByIndex(idx) || [true, true, true];
+        return this.getConstraintById(this._elements.ids[idx]);
     }
 
     getConstraintById(id: number): AtomicConstraintValue {

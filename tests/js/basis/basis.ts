@@ -185,6 +185,21 @@ describe("Basis", () => {
         expect([basis.labels, basis.magneticMoments]).to.be.deep.equal([[], []]);
     });
 
+    it("should keep constraints on their atoms by id", () => {
+        const material = new Material({
+            ...Na4Cl4,
+            basis: {
+                ...Na4Cl4.basis,
+                constraints: [4, 5].map((id) => ({ id, value: [false, false, false] })),
+            },
+        });
+        const isFree = [true, true, true, true, false, false, true, true];
+        const positions = material.getBasis().getAtomicPositionsWithConstraintsAsStrings();
+        expect(positions.map((line) => line.endsWith("1 1 1"))).to.be.deep.equal(isFree);
+        const poscarFlags = material.getAsPOSCAR().match(/[TF] [TF] [TF]/g);
+        expect(poscarFlags?.map((flags) => flags === "T T T")).to.be.deep.equal(isFree);
+    });
+
     it("should keep cleared labels and magnetic moments cleared through setBasis", () => {
         const material = new Material(FeOAntiferromagnetic);
         const basis = material.getBasis();
