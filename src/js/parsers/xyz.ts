@@ -171,8 +171,7 @@ function fromBasis(
  */
 function fromMaterial(
     materialOrConfig: MaterialSchema | MaterialEnhancedSchema,
-    fractional?: boolean,
-    atomNames?: string[],
+    fractional = false,
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);
     const constraints =
@@ -185,7 +184,7 @@ function fromMaterial(
     if (fractional) {
         basis.toCrystal();
     }
-    return fromBasis(basis, "%11.6f", atomNames);
+    return fromBasis(basis, "%11.6f");
 }
 
 export default {

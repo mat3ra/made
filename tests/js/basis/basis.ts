@@ -7,6 +7,7 @@ import { expect } from "chai";
 import { Basis } from "../../../src/js/basis/basis";
 import { ConstrainedBasis } from "../../../src/js/basis/constrained_basis";
 import Material from "../../../src/js/Material";
+import parsers from "../../../src/js/parsers/parsers";
 import {
     AsGeBasis,
     C2H4,
@@ -286,14 +287,10 @@ describe("Basis", () => {
         );
     });
 
-    [
-        { atomNames: undefined, expectedNames: ["Fe1", "Fe2", "O", "O"] },
-        { atomNames: ["Fe", "Fe", "O", "O"], expectedNames: ["Fe", "Fe", "O", "O"] },
-    ].forEach(({ atomNames, expectedNames }) => {
-        it(`should print ${expectedNames.join(" ")} in XYZ`, () => {
-            const xyz = new Material(FeOAntiferromagnetic).getBasisAsXyz(false, atomNames);
-            expect(xyz.match(/^\S+/gm)).to.be.deep.equal(expectedNames);
-        });
+    it("should print the given atom names in XYZ", () => {
+        const basis = new Material(FeOAntiferromagnetic).getBasis();
+        const xyz = parsers.xyz.fromBasis(basis, "%11.6f", ["Fe", "Fe", "O", "O"]);
+        expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Fe", "Fe", "O", "O"]);
     });
 
     it("should keep labels on their XYZ lines and clear magnetic moments after a line is deleted", () => {

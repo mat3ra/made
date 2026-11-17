@@ -75,7 +75,7 @@ export class ConstrainedBasis extends Basis<ConstrainedBasisConfig> {
 
     override toJSON(exclude: (keyof ConstrainedBasisConfig)[] = ["cell"]): ConstrainedBasisConfig {
         return {
-            ...super.toJSON(exclude),
+            ...super.toJSON(exclude as (keyof ConstrainedBasisConfig)[]),
             ...Object.fromEntries(ConstrainedBasis.PER_ATOM_KEYS.map((key) => [key, this[key]])),
         };
     }
