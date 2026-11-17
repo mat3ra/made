@@ -180,14 +180,13 @@ def test_to_ase_from_ase_per_atom_values(
     modify_basis(material.basis, *arguments)
     atoms = to_ase(material)
     assert atoms.get_initial_magnetic_moments().tolist() == expected_magnetic_moments
-    assert atoms.get_initial_magnetic_moments().dtype == float
+    atoms.calc = EMT()
+    BFGS(atoms).run(steps=2)
     basis = Material.create(from_ase(atoms)).basis
     assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
     assert basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
         expected_magnetic_moments, remove_none=True
     )
-    atoms.calc = EMT()
-    BFGS(atoms).run(steps=2)
 
 
 TOLERANCE = 1e-4

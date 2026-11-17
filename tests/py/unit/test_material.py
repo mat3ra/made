@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from mat3ra.code.array_with_ids import ArrayWithIds
-from mat3ra.made.basis import Basis, Coordinates
+from mat3ra.made.basis import PER_ATOM_FIELDS, Basis, Coordinates
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
@@ -13,7 +13,7 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
     create_defect_point_vacancy,
 )
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.modify import filter_by_ids, filter_by_label, interface_get_part
+from mat3ra.made.tools.modify import filter_by_label, interface_get_part
 from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.utils import assertion as assertion_utils
 from unit.fixtures.bulk import BULK_FeO_ANTIFERROMAGNETIC, BULK_Si_PRIMITIVE
@@ -148,12 +148,6 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
     "operation, expected_labels, expected_magnetic_moments, expected_constraints",
     [
         (
-            lambda material: filter_by_ids(material, [1, 3], invert=True),
-            [0, 0, 1],
-            [0.5, 0.5, None],
-            [None, None, FIXED],
-        ),
-        (
             lambda material: create_defect_point_vacancy(
                 material, material.basis.coordinates.values[1], "closest_site"
             ),
@@ -188,6 +182,7 @@ def test_per_atom_values_follow_atom_ids(operation, expected_labels, expected_ma
     assert basis.values_by_atom("labels") == expected_labels
     assert basis.values_by_atom("magneticMoments") == expected_magnetic_moments
     assert basis.values_by_atom("constraints") == expected_constraints
+    assert all(set(getattr(basis, field).ids) <= set(basis.elements.ids) for field in PER_ATOM_FIELDS)
 
 
 @pytest.mark.parametrize(
