@@ -1,6 +1,5 @@
 import {
     AtomicConstraintsSchema,
-    BasisConstrainedSchema,
     BasisSchema,
     MaterialHashedSchema,
     MaterialSchema,
@@ -9,6 +8,7 @@ import { MaterialStandata } from "@mat3ra/standata";
 import fs from "fs";
 import path from "path";
 
+import type { ConstrainedBasisConfig } from "../../src/js/basis/constrained_basis";
 import AsGeBasis_JSON from "../fixtures/AsGe-basis.json";
 import atomicConstraints_JSON from "../fixtures/atomic-constraints.json";
 import C2H4_JSON from "../fixtures/C2H4.json";
@@ -70,7 +70,7 @@ const Ge2Basis = Ge2Basis_JSON as BasisSchema;
 const AsGeBasis = AsGeBasis_JSON as BasisSchema;
 const FeLiSiBasis = FeLiSiBasis_JSON as BasisSchema;
 const LiFeSiBasis = LiFeSiBasis_JSON as BasisSchema;
-const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as BasisConstrainedSchema;
+const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as ConstrainedBasisConfig;
 
 // Other
 const atomicConstraints = atomicConstraints_JSON as AtomicConstraintsSchema;

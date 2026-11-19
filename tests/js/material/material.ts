@@ -30,6 +30,15 @@ describe("Material", () => {
         expect(material.toJSON().metadata).to.deep.equal({});
     });
 
+    it("should carry labels beside the basis in JSON and back onto the basis", () => {
+        const labels = [0, 1].map((value, id) => ({ id, value }));
+        const material = new Material(Silicon);
+        material.labels = labels;
+        const json = material.toJSON();
+        expect([json.labels, "labels" in json.basis]).to.be.deep.equal([labels, false]);
+        expect(new Material(json).labels).to.be.deep.equal(labels);
+    });
+
     describe("toJSON variants", () => {
         const material = new Material(Silicon);
 
@@ -165,16 +174,10 @@ describe("Material", () => {
             });
         });
 
-        ["labels", "magneticMoments"].forEach((key) => {
-            it(`does not hash ${key}`, () => {
-                const perAtomValues = [
-                    { id: 0, value: 0 },
-                    { id: 1, value: 1 },
-                ];
-                const basis = { ...Silicon.basis, [key]: perAtomValues };
-                const material = new Material({ ...Silicon, basis });
-                expect(material.calculateHash()).to.equal(new Material(Silicon).calculateHash());
-            });
+        it("does not hash labels", () => {
+            const labels = [0, 1].map((value, id) => ({ id, value }));
+            const material = new Material({ ...Silicon, labels });
+            expect(material.calculateHash()).to.equal(new Material(Silicon).calculateHash());
         });
 
         it("stores InChI hash for non-periodic materials when InChI is present", () => {

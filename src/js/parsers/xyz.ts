@@ -149,18 +149,12 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
  * Create XYZ from Basis class instance.
  * @param basisClsInstance Basis class instance.
  * @param coordinatePrintFormat Output format for coordinates.
- * @param atomNames One name per atom, in basis order; default: elements with labels ("Fe1").
  * @return Basis string in XYZ format
  */
-function fromBasis(
-    basisClsInstance: ConstrainedBasis,
-    coordinatePrintFormat: string,
-    atomNames = basisClsInstance.elementsWithLabelsArray,
-): string {
+function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: string): string {
     const XYZArray = basisClsInstance.getAtomicPositionsWithConstraintsAsStrings(
         coordinatePrintFormat,
         XYZ_COORDINATE_PRECISION,
-        atomNames,
     );
     return `${XYZArray.join("\n")}\n`;
 }
@@ -177,6 +171,7 @@ function fromMaterial(
     const constraints =
         "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
     const basis = new ConstrainedBasis({
+        labels: materialOrConfig.labels,
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
         constraints,

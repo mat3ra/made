@@ -7,7 +7,6 @@ import { expect } from "chai";
 import { Basis } from "../../../src/js/basis/basis";
 import { ConstrainedBasis } from "../../../src/js/basis/constrained_basis";
 import Material from "../../../src/js/Material";
-import parsers from "../../../src/js/parsers/parsers";
 import {
     AsGeBasis,
     C2H4,
@@ -32,19 +31,6 @@ const FeOAntiferromagnetic = {
             { id: 0, value: 1 },
             { id: 1, value: 2 },
         ],
-        magneticMoments: [
-            { id: 0, value: 0.5 },
-            { id: 1, value: -0.5 },
-        ],
-    },
-};
-
-const FeOAntiferromagneticWithIdGap = {
-    ...FeOAntiferromagnetic,
-    basis: {
-        ...FeOAntiferromagnetic.basis,
-        elements: FeOAntiferromagnetic.basis.elements.slice(1),
-        coordinates: FeOAntiferromagnetic.basis.coordinates.slice(1),
     },
 };
 
@@ -125,7 +111,6 @@ describe("Basis", () => {
         expect(basis.toJSON()).to.be.deep.almost.equal({
             ...Na4Cl4.basis,
             labels: [],
-            magneticMoments: [],
         });
     });
 
@@ -226,79 +211,11 @@ describe("Basis", () => {
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
     });
 
-    it("should keep per-atom values on their atoms by id", () => {
-        const { atomicLabelsArray, magneticMomentsArray } = new Material(
-            FeOAntiferromagneticWithIdGap,
-        ).getBasis();
-        expect([atomicLabelsArray, magneticMomentsArray]).to.be.deep.equal([
-            [2, undefined, undefined],
-            [-0.5, 0, 0],
-        ]);
-        const basis = new Material(FeOAntiferromagnetic).getBasis();
-        basis.removeAtomsByIds([0]);
-        expect([basis.labels, basis.magneticMoments]).to.be.deep.equal([
-            [{ id: 1, value: 2 }],
-            [{ id: 1, value: -0.5 }],
-        ]);
-        basis.removeAllAtoms();
-        expect([basis.labels, basis.magneticMoments]).to.be.deep.equal([[], []]);
-    });
-
-    it("should keep cleared labels and magnetic moments cleared through setBasis", () => {
-        const material = new Material(FeOAntiferromagnetic);
-        const basis = material.getBasis();
-        basis.labels = [];
-        basis.magneticMoments = [];
-        material.setBasis(basis.toJSON());
-        const { labels, magneticMoments } = material.getBasis();
-        expect([labels, magneticMoments]).to.be.deep.equal([[], []]);
-    });
-
-    /**
-     * Species
-     */
-
-    it("should name and print one species per element and magnetic moment", () => {
-        const basis = new Material(FeOAntiferromagnetic).getBasis();
-        const species = ["Fe", "Fe1", "O", "O"];
-        const firstWords = (lines: string[]) => lines.map((line) => line.split(" ")[0]);
-        expect(basis.uniqueAtomicSpecies).to.be.deep.equal([
-            { name: "Fe", element: "Fe", magneticMoment: 0.5 },
-            { name: "Fe1", element: "Fe", magneticMoment: -0.5 },
-            { name: "O", element: "O", magneticMoment: 0 },
-        ]);
-        expect(basis.atomicSpeciesArray).to.be.deep.equal(species);
-        expect(firstWords(basis.atomicPositions)).to.be.deep.equal(species);
-        expect(firstWords(basis.getAtomicPositionsWithConstraintsAsStrings())).to.be.deep.equal(
-            species,
-        );
-    });
-
-    it("should refuse more magnetic moments per element than species names fit", () => {
-        const values = Array.from({ length: 11 }, (_, index) => index / 10);
-        const basis = ConstrainedBasis.fromElementsCoordinatesAndConstraints({
-            elements: values.map(() => "Fe"),
-            coordinates: values.map((value) => [value, 0, 0]),
-            constraints: values.map(() => [true, true, true]),
-        });
-        basis.magneticMoments = values.map((value, id) => ({ id, value }));
-        expect(() => basis.atomicSpeciesArray).to.throw(
-            "Fe has more than 10 distinct magnetic moments",
-        );
-    });
-
-    it("should print the given atom names in XYZ", () => {
-        const basis = new Material(FeOAntiferromagnetic).getBasis();
-        const xyz = parsers.xyz.fromBasis(basis, "%11.6f", ["Fe", "Fe", "O", "O"]);
-        expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Fe", "Fe", "O", "O"]);
-    });
-
-    it("should keep labels on their XYZ lines and clear magnetic moments after a line is deleted", () => {
+    it("should keep labels on their XYZ lines after a line is deleted", () => {
         const material = new Material(FeOAntiferromagnetic);
         const lines = material.getBasisAsXyz(false).trim().split("\n");
         material.setBasis(lines.slice(1).join("\n"), "xyz", material.basis.units);
-        const { labels, magneticMoments } = material.getBasis().toJSON();
-        expect([labels, magneticMoments]).to.be.deep.equal([[{ id: 0, value: 2 }], []]);
+        expect(material.getBasis().labels).to.be.deep.equal([{ id: 0, value: 2 }]);
     });
 
     /**
