@@ -12,7 +12,7 @@ from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
-PER_ATOM_FIELDS = ("coordinates", "labels", "magneticMoments", "constraints")
+PER_ATOM_FIELDS = ("coordinates", "labels", "constraints")
 
 
 def get_overlapping_coordinates(
@@ -40,7 +40,6 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     cell: Cell = Field(Cell(), exclude=True)
     labels: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     constraints: ArrayWithIds = Field(ArrayWithIds.from_values([]))
-    magneticMoments: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     DEFAULT_COORDINATE_PROXIMITY_TOLERANCE: float = Field(
         0.1, exclude=True
     )  # Angstroms, used for checking overlapping coordinates
@@ -92,31 +91,6 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         per_atom_values = getattr(self, field)
         value_by_atom_id = dict(zip(per_atom_values.ids, per_atom_values.values))
         return [value_by_atom_id.get(atom_id, default) for atom_id in self.elements.ids]
-
-    @property
-    def unique_atomic_species(self) -> List[Dict[str, Any]]:
-        """Species per element and magnetic moment, by first appearance: Fe, Fe1, Fe2 (at most 3 characters)."""
-        species: List[Dict[str, Any]] = []
-        atoms = zip(self.elements.values, self.values_by_atom("magneticMoments", 0))
-        for element, magnetic_moment in dict.fromkeys(atoms):
-            count = sum(item["element"] == element for item in species)
-            name = f"{element}{count}" if count else element
-            if len(name) > 3:
-                raise ValueError(
-                    f"{element} has more than {count} distinct magnetic moments; "
-                    "species names are limited to 3 characters"
-                )
-            species.append({"name": name, "element": element, "magneticMoment": magnetic_moment})
-        return species
-
-    @property
-    def atomic_species_array(self) -> List[str]:
-        """Species name of each atom in basis order, e.g. ["Fe", "Fe1", "O", "O"]."""
-        name_by_species = {
-            (item["element"], item["magneticMoment"]): item["name"] for item in self.unique_atomic_species
-        }
-        atoms = zip(self.elements.values, self.values_by_atom("magneticMoments", 0))
-        return [name_by_species[atom] for atom in atoms]
 
     @property
     def hash_string(self) -> str:

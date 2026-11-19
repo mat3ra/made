@@ -100,7 +100,6 @@ SI_NANOPARTICLE_SPHERE = {
             {"id": 46, "value": [0.75, 0.5, 0.562501]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {

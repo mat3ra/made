@@ -1,4 +1,6 @@
-GRAPHENE_NICKEL_INTERFACE_TOP_HCP = {
+from typing import Any, Dict
+
+GRAPHENE_NICKEL_INTERFACE_TOP_HCP: Dict[str, Any] = {
     "name": "C(001)-Ni(111), Interface, Strain 0.475pct",
     "basis": {
         "elements": [
@@ -15,16 +17,16 @@ GRAPHENE_NICKEL_INTERFACE_TOP_HCP = {
             {"id": 3, "value": [0.333333333, 0.666666667, 0.351561882]},
             {"id": 4, "value": [0.666666667, 0.333333333, 0.351561882]},
         ],
-        "labels": [
-            {"id": 0, "value": 0},
-            {"id": 1, "value": 0},
-            {"id": 2, "value": 0},
-            {"id": 3, "value": 1},
-            {"id": 4, "value": 1},
-        ],
         "units": "crystal",
         "constraints": [],
     },
+    "labels": [
+        {"id": 0, "value": 0},
+        {"id": 1, "value": 0},
+        {"id": 2, "value": 0},
+        {"id": 3, "value": 1},
+        {"id": 4, "value": 1},
+    ],
     "lattice": {
         "a": 2.478974,
         "b": 2.478974,

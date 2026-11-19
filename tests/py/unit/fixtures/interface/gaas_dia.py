@@ -702,7 +702,6 @@ GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE = {
             {"id": 47, "value": [0.7, 0.6, 0.145076551]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -821,7 +820,6 @@ GALLIUM_ARSENIDE_DIAMOND_INTERFACE_PRIMITIVE_GH_WF = {
             {"id": 47, "value": [0.4, 0.3, 0.145076551]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {

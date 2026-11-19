@@ -16,7 +16,6 @@ VACANCY_DEFECT_BULK_PRIMITIVE_Si = {
         "elements": [{"id": 0, "value": "Si"}],
         "coordinates": [{"id": 0, "value": [0.25, 0.25, 0.25]}],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
 }
@@ -37,7 +36,6 @@ SUBSTITUTION_DEFECT_BULK_PRIMITIVE_Si = {
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Ge"}],
         "coordinates": [{"id": 0, "value": [0.25, 0.25, 0.25]}, {"id": 1, "value": [0.0, 0.0, 0.0]}],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
 }
@@ -62,7 +60,6 @@ INTERSTITIAL_DEFECT_BULK_PRIMITIVE_Si = {
             {"id": 2, "value": [0.5, 0.5, 0.5]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
 }
@@ -78,7 +75,6 @@ INTERSTITIAL_VORONOI_DEFECT_BULK_PRIMITIVE_Si = {
                 {"id": 2, "value": [0.625, 0.625, 0.125]},
             ],
             "units": "crystal",
-            "labels": [],
             "constraints": [],
         },
         "lattice": {
@@ -102,7 +98,6 @@ INTERSTITIAL_VORONOI_DEFECT_BULK_PRIMITIVE_Si = {
                 {"id": 2, "value": [0.5, 0.5, 0.5]},
             ],
             "units": "crystal",
-            "labels": [],
             "constraints": [],
         },
         "lattice": {
@@ -142,7 +137,6 @@ MULTIPLE_POINT_DEFECTS_BULK_Si_CONVENTIONAL = {
             {"id": 7, "value": [0.5, 0.5, 0.5]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {

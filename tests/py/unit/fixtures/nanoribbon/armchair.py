@@ -86,7 +86,6 @@ GRAPHENE_NANORIBBON_ARMCHAIR = {
             {"id": 39, "value": [0.467762819, 0.720920554, 1e-06]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {

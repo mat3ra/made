@@ -12,7 +12,7 @@ from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
-from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -168,25 +168,19 @@ def test_from_ase(
 
 
 @pytest.mark.parametrize(
-    "material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments",
+    "material_config, modify_basis, arguments, expected_labels",
     [
-        (GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, 0, 0]),
+        (GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1]),
     ],
 )
-def test_to_ase_from_ase_per_atom_values(
-    material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments
-):
+def test_to_ase_from_ase_per_atom_values(material_config, modify_basis, arguments, expected_labels):
     material = Material.create(material_config)
     modify_basis(material.basis, *arguments)
     atoms = to_ase(material)
-    assert atoms.get_initial_magnetic_moments().tolist() == expected_magnetic_moments
     atoms.calc = EMT()
     BFGS(atoms).run(steps=2)
     basis = Material.create(from_ase(atoms)).basis
     assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
-    assert basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
-        expected_magnetic_moments, remove_none=True
-    )
 
 
 TOLERANCE = 1e-4

@@ -3,7 +3,6 @@ from functools import wraps
 from typing import Any, Callable, Dict, Union
 
 import numpy as np
-from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import remove_comments_from_source_code
@@ -34,10 +33,8 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     Returns:
         Structure: A pymatgen Structure object.
     """
-    material_data = material_or_material_data
-
-    if isinstance(material_or_material_data, Material):
-        material_data = material_or_material_data.to_dict()
+    material = Material.create_from_config_or_class_instance(material_or_material_data)
+    material_data = material.to_dict()
 
     lattice_params = material_data["lattice"]
     lattice = PymatgenLattice.from_parameters(
@@ -52,7 +49,7 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     basis = material_data["basis"]
     elements = [element["value"] for element in basis["elements"]]
     coordinates = [coord["value"] for coord in basis["coordinates"]]
-    labels = Basis(**basis).values_by_atom("labels")
+    labels = material.basis.values_by_atom("labels")
     if None in labels:
         labels = None
     # Assuming that the basis units are fractional since it's a crystal basis
@@ -191,19 +188,14 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     Returns:
         Any: An ASE Atoms object.
     """
-    if isinstance(material_or_material_data, Material):
-        material_config = material_or_material_data.to_dict()
-    else:
-        material_config = material_or_material_data
-    structure = to_pymatgen(material_config)
+    material = Material.create_from_config_or_class_instance(material_or_material_data)
+    material_config = material.to_dict()
+    structure = to_pymatgen(material)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
-    basis = Basis(**material_config["basis"])
-    labels = basis.values_by_atom("labels")
+    labels = material.basis.values_by_atom("labels")
     if None not in labels:
         atoms.set_array("tags", np.array(labels))
-    if basis.magneticMoments.values:
-        atoms.set_initial_magnetic_moments(basis.values_by_atom("magneticMoments", 0))
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -237,9 +229,7 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
         material["lattice"]["type"] = "CUB"
 
     tags = ase_atoms.arrays.get("tags", np.array([])).tolist()
-    magnetic_moments = ase_atoms.arrays.get("initial_magmoms", np.array([])).tolist()
     material["basis"]["labels"] = map_array_to_array_with_id_value(tags, remove_none=True)
-    material["basis"]["magneticMoments"] = map_array_to_array_with_id_value(magnetic_moments, remove_none=True)
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:
         material["metadata"].update(ase_metadata)

@@ -320,7 +320,6 @@ ISLAND_SLAB_Si_001_CYLINDER_CONDITION_1_LAYER = {
             {"id": 156, "value": [0.666666667, 0.666666667, 0.465976986]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {

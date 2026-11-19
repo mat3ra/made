@@ -38,7 +38,6 @@ GRAPHENE_NANORIBBON_ZIGZAG = {
             {"id": 15, "value": [0.707416796, 0.653609193, 1e-06]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {

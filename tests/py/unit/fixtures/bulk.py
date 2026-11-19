@@ -10,15 +10,6 @@ BULK_TiN = Materials.get_by_name_first_match("TiN")
 BULK_Ni_PRIMITIVE = Materials.get_by_name_first_match("Nickel")
 BULK_GRAPHENE = Materials.get_by_name_first_match("Graphene")
 BULK_Cu = Materials.get_by_name_first_match("Copper")
-BULK_FeO = Materials.get_by_name_first_match("FeO")
-BULK_FeO_ANTIFERROMAGNETIC = {
-    **BULK_FeO,
-    "basis": {
-        **BULK_FeO["basis"],
-        "labels": [{"id": 0, "value": 1}, {"id": 1, "value": 2}],
-        "magneticMoments": [{"id": 0, "value": 0.5}, {"id": 1, "value": -0.5}],
-    },
-}
 
 BULK_Si_PRIMITIVE: Dict[str, Any] = {
     "name": "Silicon FCC",
@@ -26,7 +17,6 @@ BULK_Si_PRIMITIVE: Dict[str, Any] = {
         "constraints": [],
         "coordinates": [{"id": 0, "value": [0.0, 0.0, 0.0]}, {"id": 1, "value": [0.25, 0.25, 0.25]}],
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}],
-        "labels": [],
         "units": "crystal",
     },
     "lattice": {
@@ -48,7 +38,6 @@ BULK_Si_PRIMITIVIZED = {
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}],
         "coordinates": [{"id": 0, "value": [0.5, 0.5, 0.5]}, {"id": 1, "value": [0.75, 0.75, 0.75]}],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -89,7 +78,6 @@ BULK_Si_CONVENTIONAL: Dict[str, Any] = {
         ],
         "units": "crystal",
         "constraints": [],
-        "labels": [],
     },
     "lattice": {
         "a": 5.468763846,
@@ -117,7 +105,6 @@ BULK_Si_CONVENTIONAL_FILTERED: Dict[str, Any] = {
             {"id": 2, "value": [0.5, 0.5, 0.5]},
         ],
         "units": "crystal",
-        "labels": [],
         "constraints": [],
     },
     "lattice": {
