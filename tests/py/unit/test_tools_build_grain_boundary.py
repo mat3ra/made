@@ -15,9 +15,9 @@ from mat3ra.made.tools.build.defective_structures.two_dimensional.grain_boundary
 )
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL
-from .fixtures.grain_boundary import GRAIN_BOUNDARY_LINEAR_SI, GRAIN_BOUNDARY_SI_001_011, GRAIN_BOUNDARY_SI_001_011_GH
+from .fixtures.grain_boundary import GRAIN_BOUNDARY_LINEAR_SI, GRAIN_BOUNDARY_SI_001_011
 from .fixtures.monolayer import GRAPHENE
-from .utils import OSPlatform, assert_two_entities_deep_almost_equal, get_platform_specific_value
+from .utils import assert_two_entities_deep_almost_equal
 
 
 @pytest.mark.parametrize(
@@ -30,10 +30,7 @@ from .utils import OSPlatform, assert_two_entities_deep_almost_equal, get_platfo
             2.0,
             [2.0, 1.0],
             220,
-            {
-                OSPlatform.DARWIN: GRAIN_BOUNDARY_SI_001_011,
-                OSPlatform.OTHER: GRAIN_BOUNDARY_SI_001_011_GH,
-            },
+            GRAIN_BOUNDARY_SI_001_011,
         ),
     ],
 )
@@ -53,7 +50,6 @@ def test_create_grain_boundary_planar(
         max_area=max_area,
     )
 
-    expected_material_config = get_platform_specific_value(expected_material_config)
     assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
 
 
@@ -67,10 +63,7 @@ def test_create_grain_boundary_planar(
             2.0,
             [2.0, 1.0],
             220,
-            {
-                OSPlatform.DARWIN: GRAIN_BOUNDARY_SI_001_011,
-                OSPlatform.OTHER: GRAIN_BOUNDARY_SI_001_011_GH,
-            },
+            GRAIN_BOUNDARY_SI_001_011,
         ),
     ],
 )
@@ -102,7 +95,6 @@ def test_grain_boundary_builder(
     builder = GrainBoundaryPlanarBuilder()
     grain_boundary = builder.get_material(config)
 
-    expected_material_config = get_platform_specific_value(expected_material_config)
     assert_two_entities_deep_almost_equal(grain_boundary, expected_material_config)
 
 

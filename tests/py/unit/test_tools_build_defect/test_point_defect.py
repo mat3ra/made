@@ -1,6 +1,5 @@
 from types import SimpleNamespace
 
-import numpy as np
 import pytest
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
@@ -25,14 +24,7 @@ from unit.fixtures.point_defects import (
     SUBSTITUTION_DEFECT_BULK_PRIMITIVE_Si,
     VACANCY_DEFECT_BULK_PRIMITIVE_Si,
 )
-from unit.utils import assert_two_entities_deep_almost_equal, get_platform_specific_value
-
-# The default comparison tolerance (atol=1e-9) in assert_two_entities_deep_almost_equal
-# is too strict for the interstitial Voronoi placement method. Because Qhull/SciPy calculates
-# different symmetrically equivalent vertices on different platforms/compilers, we define a
-# custom coordinate tolerance (atol=1e-4) to verify that the generated coordinate is
-# within a reasonable tolerance of any of the valid symmetrical Voronoi sites.
-UPDATED_COORDINATE_TOLERANCE = 1e-4
+from unit.utils import assert_two_entities_deep_almost_equal
 
 FILM_LABEL = 1
 SUBSTRATE_LABEL = 0
@@ -107,23 +99,6 @@ def test_point_defect_helpers(material_config, defect_params, expected_material_
         )
     else:
         raise ValueError(f"Unknown defect_type: {defect_params.type}")
-
-    expected_material_config = get_platform_specific_value(expected_material_config)
-
-    if (
-        defect_params.type == "interstitial"
-        and defect_params.placement_method == InterstitialPlacementMethodEnum.VORONOI_SITE.value
-    ):
-        # The interstitial atom is the 3rd atom (index 2)
-        actual_coord = defect.basis.coordinates.values[2]
-        allowed_coords = [[0.625, 0.625, 0.125], [0.625, 0.625, 0.625], [0.5, 0.5, 0.5]]
-        assert any(
-            np.allclose(actual_coord, allowed, atol=UPDATED_COORDINATE_TOLERANCE) for allowed in allowed_coords
-        ), f"Voronoi coordinate {actual_coord} not in allowed list"
-        if isinstance(expected_material_config, dict):
-            expected_material_config["basis"]["coordinates"][2]["value"] = actual_coord
-        else:
-            expected_material_config.basis.coordinates.values[2] = actual_coord
 
     assert_two_entities_deep_almost_equal(defect, expected_material_config)
 

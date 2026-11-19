@@ -9,6 +9,7 @@ from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZ
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
+from .fixtures.bulk import BULK_Hf2O_MCL, BULK_Si_PRIMITIVE, BULK_Si_PRIMITIVE_CARTESIAN
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -33,6 +34,19 @@ direct
    0.2500000000000000    0.2500000000000000    0.2500000000000000 Si
 """
 
+# to_poscar writes the lattice vectors rounded to 9 decimals.
+POSCAR_CONTENT_STORED = """Si2
+1.0
+   3.3489202360000001    0.0000000000000000    1.9335000000000000
+   1.1163067449999999    3.1573922780000001    1.9335000000000000
+   0.0000000000000000    0.0000000000000000    3.8670000000000000
+Si
+2
+direct
+   0.0000000000000000    0.0000000000000000    0.0000000000000000 Si
+   0.2500000000000000    0.2500000000000000    0.2500000000000000 Si
+"""
+
 
 @pytest.mark.parametrize(
     "material_config, expected_lattice_params, expected_species, expected_frac_coords",
@@ -48,6 +62,12 @@ direct
             {"a": 2.467291, "b": 2.467291, "c": 20.0, "alpha": 90, "beta": 90, "gamma": 120},
             [Element("C"), Element("C")],
             [[0.0, 0.0, 0.0], [0.333333, 0.666667, 0.0]],
+        ),
+        (
+            BULK_Si_PRIMITIVE_CARTESIAN,
+            {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
+            [Element("Si"), Element("Si")],
+            [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
         ),
     ],
 )
@@ -75,10 +95,23 @@ def test_from_pymatgen():
     assertion_utils.assert_deep_almost_equal(converted_material, default_material)
 
 
+@pytest.mark.parametrize(
+    "material_config, expected_lattice_parameters",
+    [
+        (BULK_Si_PRIMITIVE, [3.867, 3.867, 3.867, 60.0, 60.0, 60.0]),
+        (GRAPHENE, [2.467291, 2.467291, 20.0, 90.0, 90.0, 120.0]),
+        (BULK_Hf2O_MCL, [5.142319, 5.195148, 5.326038, 90.0, 99.6745, 90.0]),
+    ],
+)
+def test_from_pymatgen_lattice_parameters(material_config, expected_lattice_parameters):
+    lattice = from_pymatgen(to_pymatgen(Material.create(material_config)))["lattice"]
+    assert [lattice[name] for name in ["a", "b", "c", "alpha", "beta", "gamma"]] == expected_lattice_parameters
+
+
 def test_to_poscar():
     material = Material.create_default()
     poscar = to_poscar(material)
-    assert poscar == POSCAR_CONTENT
+    assert poscar == POSCAR_CONTENT_STORED
 
 
 def test_from_poscar():

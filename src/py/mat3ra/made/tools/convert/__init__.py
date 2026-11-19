@@ -16,6 +16,8 @@ from ..third_party import (
     PymatgenStructure,
 )
 from .utils import (
+    LATTICE_ANGLES_PRECISION,
+    LATTICE_LENGTHS_PRECISION,
     calculate_padded_cell_simple_cubic,
     extract_labels_from_pymatgen_structure,
     extract_metadata_from_pymatgen_structure,
@@ -33,37 +35,21 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     Returns:
         Structure: A pymatgen Structure object.
     """
-    material_data = material_or_material_data
+    material = Material.create_from_config_or_class_instance(material_or_material_data)
+    lattice = PymatgenLattice(material.lattice.vector_arrays_rounded)
 
-    if isinstance(material_or_material_data, Material):
-        material_data = material_or_material_data.to_dict()
-
-    lattice_params = material_data["lattice"]
-    lattice = PymatgenLattice.from_parameters(
-        a=lattice_params["a"],
-        b=lattice_params["b"],
-        c=lattice_params["c"],
-        alpha=lattice_params["alpha"],
-        beta=lattice_params["beta"],
-        gamma=lattice_params["gamma"],
-    )
-
-    basis = material_data["basis"]
-    elements = [element["value"] for element in basis["elements"]]
-    coordinates = [coord["value"] for coord in basis["coordinates"]]
-    labels_data = basis.get("labels", []) or []
-    labels = [label["value"] for label in labels_data]
-    # Assuming that the basis units are fractional since it's a crystal basis
-    coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
+    basis = material.basis.clone()
+    basis.to_standard_representation()
+    elements = basis.elements.values
+    coordinates = basis.coordinates.values
+    labels = basis.labels.values
 
     if "labels" in inspect.signature(PymatgenStructure.__init__).parameters:
-        structure = PymatgenStructure(
-            lattice, elements, coordinates, coords_are_cartesian=coords_are_cartesian, labels=labels
-        )
+        structure = PymatgenStructure(lattice, elements, coordinates, labels=labels)
     else:
         # Passing labels does not work for pymatgen `2023.6.23` supporting py3.8
         print(f"labels: {labels}. Not passing labels to pymatgen.")
-        structure = PymatgenStructure(lattice, elements, coordinates, coords_are_cartesian=coords_are_cartesian)
+        structure = PymatgenStructure(lattice, elements, coordinates)
 
     return structure
 
@@ -91,12 +77,12 @@ def from_pymatgen(structure: Union[PymatgenStructure, PymatgenInterface]) -> Dic
     }
 
     lattice = {
-        "a": __round__(structure.lattice.a),
-        "b": __round__(structure.lattice.b),
-        "c": __round__(structure.lattice.c),
-        "alpha": __round__(structure.lattice.alpha),
-        "beta": __round__(structure.lattice.beta),
-        "gamma": __round__(structure.lattice.gamma),
+        "a": __round__(structure.lattice.a, LATTICE_LENGTHS_PRECISION),
+        "b": __round__(structure.lattice.b, LATTICE_LENGTHS_PRECISION),
+        "c": __round__(structure.lattice.c, LATTICE_LENGTHS_PRECISION),
+        "alpha": __round__(structure.lattice.alpha, LATTICE_ANGLES_PRECISION),
+        "beta": __round__(structure.lattice.beta, LATTICE_ANGLES_PRECISION),
+        "gamma": __round__(structure.lattice.gamma, LATTICE_ANGLES_PRECISION),
         "units": {"length": "angstrom", "angle": "degree"},
         "type": "TRI",
         "vectors": {
@@ -193,7 +179,7 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
         material_config = material_or_material_data.to_dict()
     else:
         material_config = material_or_material_data
-    structure = to_pymatgen(material_config)
+    structure = to_pymatgen(material_or_material_data)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     atomic_labels = material_config["basis"].get("labels", [])

@@ -29,14 +29,11 @@ from mat3ra.made.tools.helpers import create_interface_simple, create_interface_
 from unit.fixtures.bulk import BULK_Ge_CONVENTIONAL, BULK_Ni_PRIMITIVE, BULK_Si_CONVENTIONAL
 
 from .fixtures.interface.commensurate import INTERFACE_GRAPHENE_GRAPHENE_X, INTERFACE_GRAPHENE_GRAPHENE_Z
-from .fixtures.interface.gr_ni_111_top_hcp import (
-    GRAPHENE_NICKEL_INTERFACE_TOP_HCP,
-    GRAPHENE_NICKEL_INTERFACE_TOP_HCP_GH_WF,
-)
+from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
 from .fixtures.interface.simple import INTERFACE_Si_001_Ge_001  # type: ignore
 from .fixtures.interface.twisted_nanoribbons import TWISTED_INTERFACE_GRAPHENE_GRAPHENE_60
 from .fixtures.monolayer import GRAPHENE
-from .utils import OSPlatform, assert_two_entities_deep_almost_equal
+from .utils import assert_two_entities_deep_almost_equal
 
 HASH_KEY = "hash"
 SCALED_HASH_KEY = "scaledHash"
@@ -57,28 +54,6 @@ Si_Ge_SIMPLE_INTERFACE_TEST_CASE = (
     INTERFACE_Si_001_Ge_001,
 )
 
-
-GRAPHENE_NICKEL_TEST_CASE = (
-    SimpleNamespace(
-        bulk_config=BULK_Ni_PRIMITIVE,
-        miller_indices=(1, 1, 1),
-        number_of_layers=3,
-        vacuum=0.0,
-    ),
-    SimpleNamespace(
-        bulk_config=GRAPHENE,
-        miller_indices=(0, 0, 1),
-        number_of_layers=1,
-        vacuum=0.0,
-    ),
-    3.0,  # gap between graphene and nickel
-    10.0,  # vacuum
-    90,  # max area
-    {
-        OSPlatform.DARWIN: GRAPHENE_NICKEL_INTERFACE_TOP_HCP,
-        OSPlatform.OTHER: GRAPHENE_NICKEL_INTERFACE_TOP_HCP_GH_WF,
-    },
-)
 
 PRECISION = 1e-3
 

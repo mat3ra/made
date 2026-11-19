@@ -93,22 +93,25 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def hash_string(self) -> str:
         """
         Mirrors JS Basis.hashString (getAsSortedString in crystal units).
-        Converts to crystal, takes each coordinate as stored (wrapped into [0, 1), rounded to the coordinates'
-        precision), rounds it with round_custom and wraps again, as JS getAsSortedString does, then builds sorted
-        atom strings.
+        Takes the standard representation, rounds each coordinate with round_custom and wraps again, as JS
+        getAsSortedString does, then builds sorted atom strings.
         """
-        original_is_in_cartesian = self.is_in_cartesian_units
-        self.to_crystal()
+        standard_basis = self.clone()
+        standard_basis.to_standard_representation()
         labels_map = {lbl["id"]: str(lbl["value"]) for lbl in self.labels.to_dict()}
         parts = []
-        for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
+        for elem, coord in zip(standard_basis.elements.to_dict(), standard_basis.coordinates.to_dict()):
             label = labels_map.get(elem["id"], "")
-            stored = self.coordinates.round_array_or_number([value % 1 for value in coord["value"]])
-            rounded = [f"{round_custom(value, HASH_TOLERANCE) % 1:g}" for value in stored]
+            rounded = [f"{round_custom(value, HASH_TOLERANCE) % 1:g}" for value in coord["value"]]
             parts.append(f"{elem['value']}{label} {','.join(rounded)}")
-        if original_is_in_cartesian:
-            self.to_cartesian()
         return ";".join(sorted(parts)) + ";"
+
+    def to_standard_representation(self):
+        """
+        Crystal coordinates, each a standard coordinate, as JS Basis.toStandardRepresentation.
+        """
+        self.to_crystal()
+        self.coordinates.map_array_in_place(Coordinates.to_standard_coordinate)
 
     @property
     def is_in_crystal_units(self):

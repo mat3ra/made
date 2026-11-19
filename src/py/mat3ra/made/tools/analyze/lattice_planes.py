@@ -3,12 +3,13 @@ from typing import List, Tuple, Union
 
 from mat3ra.code.vector import Vector3D
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
+from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.material import Material
 
 from ..build_components.metadata import MaterialWithBuildMetadata
 from ..convert import from_pymatgen, to_pymatgen
 from ..entities import MillerIndices, Termination, TerminationHolder
-from ..third_party import PymatgenSlab, PymatgenSlabGenerator, label_pymatgen_slab_termination
+from ..third_party import PymatgenSlab, PymatgenSlabGenerator, PymatgenStructure, label_pymatgen_slab_termination
 from .lattice import LatticeMaterialAnalyzer
 
 
@@ -37,7 +38,7 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
         in_unit_planes: bool = True,
         make_primitive: bool = False,
     ):
-        return PymatgenSlabGenerator(
+        generator = PymatgenSlabGenerator(
             initial_structure=to_pymatgen(self.material_with_conventional_lattice),
             miller_index=MillerIndices(root=self.miller_indices).to_tuple(),
             min_slab_size=min_slab_size,
@@ -45,6 +46,15 @@ class CrystalLatticePlanesMaterialAnalyzer(LatticeMaterialAnalyzer):
             in_unit_planes=in_unit_planes,
             primitive=make_primitive,
         )
+        # The cut shifts are midpoints of these coordinates: pymatgen computes them with runtime-dependent noise.
+        oriented_unit_cell = generator.oriented_unit_cell
+        generator.oriented_unit_cell = PymatgenStructure(
+            oriented_unit_cell.lattice,
+            oriented_unit_cell.species,
+            Coordinates.to_standard_coordinate(oriented_unit_cell.frac_coords),
+            site_properties=oriented_unit_cell.site_properties,
+        )
+        return generator
 
     @cached_property
     def pymatgen_slab_generator_with_vacuum(self) -> PymatgenSlabGenerator:
