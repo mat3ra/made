@@ -6,6 +6,7 @@ SI_SUPERCELL_FLIPPED_Z: Dict[str, Any] = {
         "constraints": [],
         "coordinates": [{"id": 0, "value": [0.0, 0.0, 0.0]}, {"id": 1, "value": [0.25, 0.25, 0.25]}],
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}],
+        "labels": [],
         "units": "crystal",
     },
     "lattice": {
@@ -46,6 +47,7 @@ SI_SUPERCELL_2X2X1: Dict[str, Any] = {
         ],
         "units": "crystal",
         "constraints": [],
+        "labels": [],
     },
     "lattice": {
         "a": 7.734,

@@ -52,6 +52,7 @@ SI_SLAB_001_2_ATOMS: Dict[str, Any] = {
         ],
         "units": "crystal",
         "constraints": [],
+        "labels": [],
     },
     "lattice": {
         "a": 3.867,
@@ -115,6 +116,7 @@ SI_CONVENTIONAL_SLAB_001: Dict[str, Any] = {
             {"id": 14, "value": "Si"},
             {"id": 15, "value": "Si"},
         ],
+        "labels": [],
         "units": "crystal",
     },
     "lattice": {
@@ -191,6 +193,7 @@ SLAB_SI_CONVENTIONAL_001_NO_VACUUM: Dict[str, Any] = {
             {"id": 15, "value": [0.75, 0.75, 0.750001]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -225,6 +228,7 @@ SI_PRIMITIVE_SLAB_001: Dict[str, Any] = {
             {"id": 3, "value": [0.583334, 0.583334, 0.303675808]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -291,6 +295,7 @@ SI_SLAB_DEFAULT_PARAMETERS = {
             {"id": 6, "value": "Si"},
             {"id": 7, "value": "Si"},
         ],
+        "labels": [],
         "units": "crystal",
     },
     "isDefault": False,
@@ -385,6 +390,7 @@ SI_SLAB_001_ADDED_LAYER = {
             {"id": 23, "value": [0.75, 0.75, 0.638687509]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -463,6 +469,7 @@ SI_SLAB_001_ADDED_FRACTIONAL_LAYER = {
             {"id": 27, "value": [0.75, 0.25, 0.610465607]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -506,6 +513,7 @@ SLAB_SrTiO3_011_TERMINATION_O2 = {
             {"id": 9, "value": [0, 0.999999, 0.305074946]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -549,6 +557,7 @@ SLAB_SrTiO3_011_TERMINATION_SrTiO = {
             {"id": 9, "value": [0, 0.749999, 0.457612114]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -592,6 +601,7 @@ SLAB_SrTiO3_011_TERMINATION_O2_BOTTOM = {
             {"id": 9, "value": [0, 0.999999, 0.305074946]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
     "lattice": {

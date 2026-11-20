@@ -219,12 +219,10 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
     /**
      * @param config - Partial entity input. `basis.constraints` / `hash` / `metadata` may be omitted;
      *   constraints and hash are filled here; missing `metadata` becomes `{}`.
-     * `basis.labels` win over `labels` (clones and supercells keep their own); a basis without them takes
-     *   `labels`, so pass `labels` (or `[]`) with a replacement basis.
      * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
      */
-    constructor({ labels, ...config }: NoInfer<MaterialConfig>) {
-        const basis = parseConstrainedBasis({ labels, ...config.basis });
+    constructor(config: NoInfer<MaterialConfig>) {
+        const basis = parseConstrainedBasis(config.basis);
 
         super({
             ...config,
@@ -285,14 +283,6 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
     set lattice(value: Schemas["enhancedHashed"]["lattice"]) {
         this.setProp("lattice", value);
         this.updateHash();
-    }
-
-    get labels(): Schemas["enhancedHashed"]["labels"] {
-        return this.getBasis().labels;
-    }
-
-    set labels(labels: Schemas["enhancedHashed"]["labels"]) {
-        this.setBasis({ ...this.basis, labels });
     }
 
     updateFormula() {
@@ -555,12 +545,10 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
      * {@link Material.jsonSchema} before projecting to a narrower schema.
      */
     private getFullJSON(): Schemas["enhancedHashed"] {
-        const { labels, ...basis } = this.getBasis().toJSON();
         const fullJSON = {
             ...clone(this._json),
             lattice: this.getLattice().toJSON(),
-            basis,
-            labels,
+            basis: this.getBasis().toJSON(),
             isNonPeriodic: this.isNonPeriodic,
             hash: this.hash,
         } as Schemas["enhancedHashed"];

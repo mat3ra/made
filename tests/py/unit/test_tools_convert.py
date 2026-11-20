@@ -4,6 +4,7 @@ from ase import Atoms
 from ase.build import molecule
 from ase.calculators.emt import EMT
 from ase.optimize import BFGS
+from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
@@ -86,7 +87,6 @@ def test_from_pymatgen():
     assert material_data["lattice"]["a"] == 3.84
     assert material_data["lattice"]["alpha"] == 120
     assert material_data["basis"]["elements"] == [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}]
-    assert material_data["labels"] == []
 
     converted_material = Material.create(material_data)
     default_material = Material.create_default()
@@ -106,13 +106,13 @@ def test_from_poscar():
 
 
 @pytest.mark.parametrize(
-    "labels, expected_tags",
+    "labels_array, expected_tags",
     [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0]), ([{"id": 1, "value": 1}], [0, 0])],
 )
-def test_to_ase(labels, expected_tags):
-    material_config = Material.create_default().to_dict()
-    material_config["labels"] = labels
-    ase_atoms = to_ase(material_config)
+def test_to_ase(labels_array, expected_tags):
+    material = Material.create_default()
+    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
+    ase_atoms = to_ase(material)
     assert isinstance(ase_atoms, Atoms)
     assert np.allclose(
         ase_atoms.get_cell().tolist(),
@@ -162,7 +162,7 @@ def test_from_ase(
         assertion_utils.assert_almost_equal_numbers(material_data["lattice"]["a"], expected_lattice_a, atol=1e-4)
     if expected_lattice_alpha is not None:
         assert material_data["lattice"]["alpha"] == expected_lattice_alpha
-    assert material_data["labels"] == expected_labels
+    assert material_data["basis"]["labels"] == expected_labels
     assert material_data["isNonPeriodic"] == expected_is_non_periodic
     if expected_lattice_type is not None:
         assert material_data["lattice"]["type"] == expected_lattice_type

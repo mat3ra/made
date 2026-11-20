@@ -43,6 +43,7 @@ GRAPHENE_ZIGZAG_NANORIBBON: Dict[str, Any] = {
         ],
         "units": "crystal",
         "constraints": [],
+        "labels": [],
     },
     "lattice": {
         "a": 9.869164,
@@ -113,6 +114,7 @@ GRAPHENE_ARMCHAIR_NANORIBBON = {
         ],
         "units": "crystal",
         "constraints": [],
+        "labels": [],
     },
     "lattice": {
         "a": 8.546946738,

@@ -1,10 +1,10 @@
 import hashlib
-from typing import Any, Callable, ClassVar, Dict, List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from mat3ra.code.constants import AtomicCoordinateUnits, Units
 from mat3ra.code.entity import HasDescriptionHasMetadataNamedDefaultableInMemoryEntityPydantic
 from mat3ra.esse.models.material import MaterialSchema
-from pydantic import ConfigDict, SkipValidation, computed_field, model_serializer, model_validator
+from pydantic import ConfigDict, SkipValidation, computed_field
 
 from .basis import Basis
 from .lattice import Lattice
@@ -33,6 +33,7 @@ defaultMaterialConfig = {
             },
         ],
         "units": AtomicCoordinateUnits.crystal,
+        "labels": [],
         "constraints": [],
     },
     "lattice": {
@@ -60,28 +61,8 @@ class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemory
 
     basis: Basis
     lattice: Lattice
-    # Held by the basis; the material's JSON carries them beside it
-    labels: ClassVar[property] = property(lambda self: self.basis.labels.to_dict())
     # TODO: Fix discriminator in ESSE and remove this:
     derivedProperties: Optional[SkipValidation[object]] = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def put_labels_on_basis(cls, config: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        `basis.labels` win over `labels` (supercells and clones keep their own); a basis without them takes
-        `labels`, so pass `labels` (or `[]`) with a replacement basis.
-        """
-        if "labels" not in config:
-            return config
-        return {**config, "basis": {"labels": config["labels"], **config["basis"]}}
-
-    @model_serializer(mode="wrap")
-    def put_labels_beside_basis(self, handler: Callable[[Any], Dict[str, Any]]) -> Dict[str, Any]:
-        data = handler(self)
-        if "basis" in data:
-            data["labels"] = data["basis"].pop("labels")
-        return data
 
     def model_post_init(self, __context: Any) -> None:
         if not self.name and self.formula:
@@ -128,10 +109,10 @@ class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemory
     def add_atom(self, element: str, coordinate: List[float], use_cartesian_coordinates: bool = False) -> None:
         self.basis.add_atom(element, coordinate, use_cartesian_coordinates)
 
-    def set_labels_from_list(self, labels: Optional[List[Union[int, str]]]) -> None:
+    def set_labels_from_list(self, labels: Optional[List[int]]) -> None:
         self.basis.set_labels_from_list(labels)
 
-    def set_labels_from_value(self, value: Union[int, str]) -> None:
+    def set_labels_from_value(self, value: int) -> None:
         self.basis.set_labels_from_list([value] * self.basis.number_of_atoms)
 
     def calculate_hash(self, salt: str = "", is_scaled: bool = False) -> str:

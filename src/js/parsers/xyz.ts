@@ -171,7 +171,6 @@ function fromMaterial(
     const constraints =
         "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
     const basis = new ConstrainedBasis({
-        labels: materialOrConfig.labels,
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
         constraints,

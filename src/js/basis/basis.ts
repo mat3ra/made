@@ -2,7 +2,6 @@
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import {
-    AtomicLabelsPropertySchema,
     BaseInMemoryEntitySchema,
     BasisSchema,
     Coordinate3DSchema,
@@ -43,7 +42,6 @@ interface Overlap {
 export interface BasisConfig extends BasisSchema {
     cell?: Cell;
     isEmpty?: boolean;
-    labels?: AtomicLabelsPropertySchema["values"];
 }
 
 export interface ElementsAndCoordinatesConfig {
@@ -110,7 +108,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
             coordinates: coordinatesArrayWithIdsJSON as BasisSchema["coordinates"],
             units,
             cell,
-            labels: labelsArrayWithIdsJSON as AtomicLabelsPropertySchema["values"],
+            labels: labelsArrayWithIdsJSON as BasisSchema["labels"],
         };
     }
 
@@ -159,11 +157,11 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         this._coordinates = Coordinates.fromObjects(coordinates);
     }
 
-    get labels(): AtomicLabelsPropertySchema["values"] {
-        return this._labels.toJSON() as AtomicLabelsPropertySchema["values"];
+    get labels(): BasisSchema["labels"] {
+        return this._labels.toJSON() as BasisSchema["labels"];
     }
 
-    set labels(labels: AtomicLabelsPropertySchema["values"]) {
+    set labels(labels: BasisSchema["labels"]) {
         this._labels = Labels.fromObjects(labels || []);
     }
 
@@ -175,7 +173,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
             elements: this.elements,
             coordinates: this.coordinates,
             units: this.units,
-            labels: this.labels,
+            ...(this.labels?.length ? { labels: this.labels } : {}),
         } as BasisEntitySchema<S>;
     }
 
@@ -410,15 +408,17 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         return hashString;
     }
 
-    /** Returns the value of each atom, in basis order, from per-atom entries keyed by atom id */
-    valuesByAtom<T>(entries: { id: number; value: T }[]): (T | undefined)[] {
-        const valueById = new Map(entries.map(({ id, value }) => [id, value]));
-        return this._elements.ids.map((id) => valueById.get(id));
-    }
-
     /* Returns array of atomic labels E.g., ["1", "2", "", ""] */
     get atomicLabelsArray(): string[] {
-        return this.valuesByAtom(this.labels).map((label) => label?.toString() ?? "");
+        const labelsArray = Array.from({ length: this.elements.length }, () => "");
+        // https://dev.to/maafaishal/benchmarking-for-while-forof-and-arrayforeach-using-performancenow-1jjg
+        if (this.labels?.length) {
+            for (let i = 0; i < this.labels.length; i++) {
+                // @ts-ignore
+                labelsArray[this.labels[i].id] = this.labels[i].value.toString();
+            }
+        }
+        return labelsArray;
     }
 
     /* Returns array of elements with labels E.g., ["Fe1", "Fe2", "O", "O"] */

@@ -40,6 +40,7 @@ SILICENE = {
             {"id": 1, "value": [0.249999661, 0.249999659, 0.0]},
         ],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
 }

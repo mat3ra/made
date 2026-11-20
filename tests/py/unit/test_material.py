@@ -127,6 +127,8 @@ def test_basis_cell_lattice_sync():
         ([1, 2], None, []),
         # Test normal behavior with non-empty lists
         ([], [1, 2], [1, 2]),
+        # Test string labels are stored as integers
+        ([], ["1", "2"], [1, 2]),
     ],
 )
 def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
@@ -199,14 +201,11 @@ def test_calculate_hash_feo_standata():
 
 def test_calculate_hash_without_labels():
     material = Material.create(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED)
-    assert material.hash == Material.create({**GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, "labels": []}).hash
-
-
-def test_labels_beside_basis_round_trip():
-    material_config = Material.create(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED).to_dict()
-    labels = GRAPHENE_NICKEL_INTERFACE_CONSTRAINED["labels"]
-    assert [material_config["labels"], "labels" in material_config["basis"]] == [labels, False]
-    assert Material.create(material_config).labels == labels
+    unlabeled_material_config = {
+        **GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+        "basis": {**GRAPHENE_NICKEL_INTERFACE_CONSTRAINED["basis"], "labels": []},
+    }
+    assert material.hash == Material.create(unlabeled_material_config).hash
 
 
 @pytest.mark.parametrize(

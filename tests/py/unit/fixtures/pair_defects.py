@@ -14,6 +14,7 @@ PAIR_DEFECT_VACANCY_INTERSTITIAL_BULK_PRIMITIVE_Si = {
         "elements": [{"id": 0, "value": "Si"}, {"id": 2, "value": "Ge"}],
         "coordinates": [{"id": 0, "value": [0.25, 0.25, 0.25]}, {"id": 2, "value": [0.5, 0.5, 0.5]}],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
 }
@@ -34,6 +35,7 @@ PAIR_DEFECT_SUBSTITUTION_VACANCY_BULK_PRIMITIVE_Si = {
         "elements": [{"id": 0, "value": "Ge"}],
         "coordinates": [{"id": 0, "value": [0.0, 0.0, 0.0]}],
         "units": "crystal",
+        "labels": [],
         "constraints": [],
     },
 }

@@ -30,20 +30,6 @@ describe("Material", () => {
         expect(material.toJSON().metadata).to.deep.equal({});
     });
 
-    it("should carry labels beside the basis in JSON and back onto the basis", () => {
-        const labels = [0, 1].map((value, id) => ({ id, value }));
-        const material = new Material(Silicon);
-        material.labels = labels;
-        const json = material.toJSON();
-        expect([json.labels, "labels" in json.basis]).to.be.deep.equal([labels, false]);
-        expect(new Material(json).labels).to.be.deep.equal(labels);
-    });
-
-    it("should not keep labels when the basis is replaced by one without them", () => {
-        const material = new Material({ ...Silicon, labels: [{ id: 0, value: 1 }] });
-        expect(material.getACopyWithConventionalCell().labels).to.be.deep.equal([]);
-    });
-
     describe("toJSON variants", () => {
         const material = new Material(Silicon);
 
@@ -181,7 +167,7 @@ describe("Material", () => {
 
         it("does not hash labels", () => {
             const labels = [0, 1].map((value, id) => ({ id, value }));
-            const material = new Material({ ...Silicon, labels });
+            const material = new Material({ ...Silicon, basis: { ...Silicon.basis, labels } });
             expect(material.calculateHash()).to.equal(new Material(Silicon).calculateHash());
         });
 

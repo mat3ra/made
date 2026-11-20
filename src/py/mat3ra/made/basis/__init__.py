@@ -220,7 +220,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         self.labels.filter_by_values(labels_int)
         return self.filter_atoms_by_ids(self.labels.ids)
 
-    def set_labels_from_list(self, labels: Optional[List[Union[int, str]]]) -> None:
+    def set_labels_from_list(self, labels: Optional[List[int]]) -> None:
         """
         Set the labels of the basis from a list of labels (i. e. [1,1,1] for a 3-atom basis).
             If None or [] are passed, the labels are removed (set to an empty array).
@@ -234,7 +234,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         if len(labels) != num_atoms:
             raise ValueError(f"Number of labels ({len(labels)}) must match number of atoms ({num_atoms})")
 
-        self.labels = ArrayWithIds.from_values(values=list(labels))
+        self.labels = ArrayWithIds.from_values(values=[int(label) for label in labels])
 
     def transform_by_matrix(self, matrix: Matrix3x3Schema) -> None:
         original_is_in_crystal_units = self.is_in_crystal_units

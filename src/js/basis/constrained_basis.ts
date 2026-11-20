@@ -2,7 +2,7 @@ import { AtomicConstraintsSchema, BasisConstrainedSchema } from "@mat3ra/esse/di
 
 import { Cell } from "../cell/cell";
 import { AtomicConstraints, AtomicConstraintValue, Constraint } from "../constraints/constraints";
-import { Basis, BasisConfig, ElementsAndCoordinatesConfig } from "./basis";
+import { Basis, ElementsAndCoordinatesConfig } from "./basis";
 import { AtomicCoordinateValue, Coordinate } from "./coordinates";
 import { AtomicElementValue } from "./elements";
 import { ElementWithLabel } from "./helpers";
@@ -10,7 +10,6 @@ import { ElementWithLabel } from "./helpers";
 export interface ConstrainedBasisConfig extends BasisConstrainedSchema {
     cell?: Cell;
     isEmpty?: boolean;
-    labels?: BasisConfig["labels"];
 }
 
 export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoordinatesConfig {
