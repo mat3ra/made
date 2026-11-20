@@ -39,6 +39,11 @@ describe("Material", () => {
         expect(new Material(json).labels).to.be.deep.equal(labels);
     });
 
+    it("should not keep labels when the basis is replaced by one without them", () => {
+        const material = new Material({ ...Silicon, labels: [{ id: 0, value: 1 }] });
+        expect(material.getACopyWithConventionalCell().labels).to.be.deep.equal([]);
+    });
+
     describe("toJSON variants", () => {
         const material = new Material(Silicon);
 

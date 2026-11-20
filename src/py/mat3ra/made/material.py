@@ -68,6 +68,10 @@ class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemory
     @model_validator(mode="before")
     @classmethod
     def put_labels_on_basis(cls, config: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        `basis.labels` win over `labels` (supercells and clones keep their own); a basis without them takes
+        `labels`, so pass `labels` (or `[]`) with a replacement basis.
+        """
         if "labels" not in config:
             return config
         return {**config, "basis": {"labels": config["labels"], **config["basis"]}}
@@ -75,7 +79,8 @@ class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemory
     @model_serializer(mode="wrap")
     def put_labels_beside_basis(self, handler: Callable[[Any], Dict[str, Any]]) -> Dict[str, Any]:
         data = handler(self)
-        data["labels"] = data["basis"].pop("labels")
+        if "basis" in data:
+            data["labels"] = data["basis"].pop("labels")
         return data
 
     def model_post_init(self, __context: Any) -> None:

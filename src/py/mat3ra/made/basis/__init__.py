@@ -45,9 +45,14 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     )  # Angstroms, used for checking overlapping coordinates
 
     def __convert_kwargs__(self, **kwargs: Any) -> Dict[str, Any]:
-        for field in ("elements", *PER_ATOM_FIELDS):
-            if isinstance(kwargs.get(field), list):
-                kwargs[field] = type(self).model_fields[field].annotation.from_list_of_dicts(kwargs[field])
+        if isinstance(kwargs.get("elements"), list):
+            kwargs["elements"] = ArrayWithIds.from_list_of_dicts(kwargs["elements"])
+        if isinstance(kwargs.get("coordinates"), list):
+            kwargs["coordinates"] = Coordinates.from_list_of_dicts(kwargs["coordinates"])
+        if isinstance(kwargs.get("labels"), list):
+            kwargs["labels"] = ArrayWithIds.from_list_of_dicts(kwargs["labels"])
+        if isinstance(kwargs.get("constraints"), list):
+            kwargs["constraints"] = ArrayWithIds.from_list_of_dicts(kwargs["constraints"])
         if isinstance(kwargs.get("cell"), list):
             kwargs["cell"] = Cell.from_vectors_array(kwargs["cell"])
         return kwargs
@@ -86,11 +91,11 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             constraints=ArrayWithIds.from_list_of_dicts(constraints),
         )
 
-    def values_by_atom(self, field: str, default: Any = None) -> List[Any]:
-        """Values of a per-atom field in basis order, matched by atom id; atoms without a value get the default."""
+    def values_by_atom(self, field: str) -> List[Any]:
+        """Values of a per-atom field in basis order, matched by atom id; atoms without a value get None."""
         per_atom_values = getattr(self, field)
         value_by_atom_id = dict(zip(per_atom_values.ids, per_atom_values.values))
-        return [value_by_atom_id.get(atom_id, default) for atom_id in self.elements.ids]
+        return [value_by_atom_id.get(atom_id) for atom_id in self.elements.ids]
 
     @property
     def hash_string(self) -> str:

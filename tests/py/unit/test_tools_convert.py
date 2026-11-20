@@ -86,6 +86,7 @@ def test_from_pymatgen():
     assert material_data["lattice"]["a"] == 3.84
     assert material_data["lattice"]["alpha"] == 120
     assert material_data["basis"]["elements"] == [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}]
+    assert material_data["labels"] == []
 
     converted_material = Material.create(material_data)
     default_material = Material.create_default()
@@ -110,7 +111,7 @@ def test_from_poscar():
 )
 def test_to_ase(labels, expected_tags):
     material_config = Material.create_default().to_dict()
-    material_config["basis"]["labels"] = labels
+    material_config["labels"] = labels
     ase_atoms = to_ase(material_config)
     assert isinstance(ase_atoms, Atoms)
     assert np.allclose(
@@ -161,7 +162,7 @@ def test_from_ase(
         assertion_utils.assert_almost_equal_numbers(material_data["lattice"]["a"], expected_lattice_a, atol=1e-4)
     if expected_lattice_alpha is not None:
         assert material_data["lattice"]["alpha"] == expected_lattice_alpha
-    assert material_data["basis"]["labels"] == expected_labels
+    assert material_data["labels"] == expected_labels
     assert material_data["isNonPeriodic"] == expected_is_non_periodic
     if expected_lattice_type is not None:
         assert material_data["lattice"]["type"] == expected_lattice_type

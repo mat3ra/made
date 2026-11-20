@@ -2,6 +2,7 @@
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import {
+    AtomicLabelsPropertySchema,
     BaseInMemoryEntitySchema,
     BasisSchema,
     Coordinate3DSchema,
@@ -19,6 +20,7 @@ import {
 } from "../lattice/lattice";
 import { AtomicCoordinateValue, Coordinates } from "./coordinates";
 import { AtomicElementValue, Elements } from "./elements";
+import { AtomicLabelValue, Labels } from "./labels";
 
 export interface ElementWithCoordinate {
     id?: number; // numeric id of the element (optional).
@@ -41,11 +43,13 @@ interface Overlap {
 export interface BasisConfig extends BasisSchema {
     cell?: Cell;
     isEmpty?: boolean;
+    labels?: AtomicLabelsPropertySchema["values"];
 }
 
 export interface ElementsAndCoordinatesConfig {
     elements: AtomicElementValue[];
     coordinates: AtomicCoordinateValue[];
+    labels?: AtomicLabelValue[];
     units?: BasisSchema["units"];
     cell?: Cell;
 }
@@ -89,19 +93,24 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
 
     _coordinates: Coordinates;
 
+    _labels: Labels;
+
     static _convertValuesToConfig({
         elements = [],
         coordinates = [],
         units = ATOMIC_COORD_UNITS.crystal as BasisSchema["units"],
         cell = new Cell(),
+        labels = [],
     }: ElementsAndCoordinatesConfig): BasisConfig {
         const elementsArrayWithIdsJSON = Elements.fromValues(elements).toJSON();
         const coordinatesArrayWithIdsJSON = Coordinates.fromValues(coordinates).toJSON();
+        const labelsArrayWithIdsJSON = Labels.fromValues(labels).toJSON();
         return {
             elements: elementsArrayWithIdsJSON as BasisSchema["elements"],
             coordinates: coordinatesArrayWithIdsJSON as BasisSchema["coordinates"],
             units,
             cell,
+            labels: labelsArrayWithIdsJSON as AtomicLabelsPropertySchema["values"],
         };
     }
 
@@ -110,6 +119,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         coordinates = [],
         units = ATOMIC_COORD_UNITS.crystal as BasisSchema["units"],
         cell = new Cell(),
+        labels = [],
     }: ElementsAndCoordinatesConfig): Basis {
         return new Basis(
             Basis._convertValuesToConfig({
@@ -117,6 +127,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
                 coordinates,
                 units,
                 cell,
+                labels,
             }),
         );
     }
@@ -124,11 +135,12 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
     constructor(config: NoInfer<S> = Basis.defaultConfig as NoInfer<S>) {
         super(config as BasisEntitySchema<S>);
-        const { elements, coordinates, units } = config;
+        const { elements, coordinates, units, labels } = config;
         this.cell = new Cell(config.cell);
         this.units = units || (ATOMIC_COORD_UNITS.crystal as BasisSchema["units"]);
         this._elements = Elements.fromObjects(elements);
         this._coordinates = Coordinates.fromObjects(coordinates);
+        this._labels = Labels.fromObjects(labels || []);
     }
 
     get elements(): BasisSchema["elements"] {
@@ -147,6 +159,14 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         this._coordinates = Coordinates.fromObjects(coordinates);
     }
 
+    get labels(): AtomicLabelsPropertySchema["values"] {
+        return this._labels.toJSON() as AtomicLabelsPropertySchema["values"];
+    }
+
+    set labels(labels: AtomicLabelsPropertySchema["values"]) {
+        this._labels = Labels.fromObjects(labels || []);
+    }
+
     toJSON(
         exclude: (keyof BasisEntitySchema<S>)[] = ["cell"] as (keyof BasisEntitySchema<S>)[],
     ): BasisEntitySchema<S> {
@@ -155,6 +175,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
             elements: this.elements,
             coordinates: this.coordinates,
             units: this.units,
+            labels: this.labels,
         } as BasisEntitySchema<S>;
     }
 
@@ -167,6 +188,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     removeAllAtoms() {
         this.elements = [];
         this.coordinates = [];
+        this.labels = [];
     }
 
     get cellRounded() {
@@ -386,6 +408,37 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         if (originallyInCartesianUnits) this.toCartesian();
 
         return hashString;
+    }
+
+    /** Returns the value of each atom, in basis order, from per-atom entries keyed by atom id */
+    valuesByAtom<T>(entries: { id: number; value: T }[]): (T | undefined)[] {
+        const valueById = new Map(entries.map(({ id, value }) => [id, value]));
+        return this._elements.ids.map((id) => valueById.get(id));
+    }
+
+    /* Returns array of atomic labels E.g., ["1", "2", "", ""] */
+    get atomicLabelsArray(): string[] {
+        return this.valuesByAtom(this.labels).map((label) => label?.toString() ?? "");
+    }
+
+    /* Returns array of elements with labels E.g., ["Fe1", "Fe2", "O", "O"] */
+    get elementsWithLabelsArray(): string[] {
+        return this.atomicLabelsArray.map(
+            (label, index) => `${this.getElementByIndex(index)}${label}`,
+        );
+    }
+
+    /**
+     * Returns an array of strings with chemical elements and their atomic positions.
+     * E.g., ``` ['Si 0 0 0', 'Li 0.5 0.5 0.5']```
+     */
+    get atomicPositions(): string[] {
+        return this.elementsAndCoordinatesArray.map((entry, idx) => {
+            const element = entry[0];
+            const coordinate = entry[1];
+            const atomicLabel = this.atomicLabelsArray[idx];
+            return `${element}${atomicLabel} ${coordinate}`;
+        });
     }
 
     /**

@@ -219,6 +219,8 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
     /**
      * @param config - Partial entity input. `basis.constraints` / `hash` / `metadata` may be omitted;
      *   constraints and hash are filled here; missing `metadata` becomes `{}`.
+     * `basis.labels` win over `labels` (clones and supercells keep their own); a basis without them takes
+     *   `labels`, so pass `labels` (or `[]`) with a replacement basis.
      * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
      */
     constructor({ labels, ...config }: NoInfer<MaterialConfig>) {
@@ -553,12 +555,12 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
      * {@link Material.jsonSchema} before projecting to a narrower schema.
      */
     private getFullJSON(): Schemas["enhancedHashed"] {
-        const basis = this.getBasis().toJSON();
+        const { labels, ...basis } = this.getBasis().toJSON();
         const fullJSON = {
             ...clone(this._json),
             lattice: this.getLattice().toJSON(),
             basis,
-            labels: basis.labels,
+            labels,
             isNonPeriodic: this.isNonPeriodic,
             hash: this.hash,
         } as Schemas["enhancedHashed"];

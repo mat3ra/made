@@ -31,6 +31,12 @@ export function materialSchemaMixin<T extends InMemoryEntity>(
         set basis(value: MaterialPropertiesSchema["basis"]) {
             this.setProp("basis", value);
         },
+        get labels() {
+            return this.prop("labels");
+        },
+        set labels(value: MaterialPropertiesSchema["labels"]) {
+            this.setProp("labels", value);
+        },
         get lattice() {
             return this.requiredProp("lattice");
         },

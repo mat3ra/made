@@ -5,7 +5,6 @@ import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
 import { Basis } from "../../../src/js/basis/basis";
-import { ConstrainedBasis } from "../../../src/js/basis/constrained_basis";
 import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
@@ -23,7 +22,7 @@ import {
 const { assertDeepAlmostEqual } = Utils.assertion;
 const TOLERANCE = 1e-4;
 
-const FeOAntiferromagnetic = {
+const FeOWithLabels = {
     ...FeOStandata,
     basis: {
         ...FeOStandata.basis,
@@ -205,14 +204,14 @@ describe("Basis", () => {
      */
 
     it("should return elements with labels", () => {
-        const basis = new ConstrainedBasis({ ...LiFeSiBasisLabels, constraints: [] });
+        const basis = new Basis(LiFeSiBasisLabels);
         const elementsWithLabels = basis.elementsWithLabelsArray;
         const expectedElementsWithLabels = ["Li0", "Fe1", "Si2"];
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
     });
 
     it("should keep labels on their XYZ lines after a line is deleted", () => {
-        const material = new Material(FeOAntiferromagnetic);
+        const material = new Material(FeOWithLabels);
         const lines = material.getBasisAsXyz(false).trim().split("\n");
         material.setBasis(lines.slice(1).join("\n"), "xyz", material.basis.units);
         expect(material.getBasis().labels).to.be.deep.equal([{ id: 0, value: 2 }]);
@@ -278,7 +277,8 @@ describe("Basis", () => {
     it("should return standard representation", () => {
         const basis = new Material(Na4Cl4Cartesian).getBasis();
         assertDeepAlmostEqual(basis.standardRepresentation, Na4Cl4.basis, [
-            ...ConstrainedBasis.PER_ATOM_KEYS,
+            "constraints",
+            "labels",
         ]);
     });
 

@@ -2,7 +2,6 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
-import numpy as np
 from mat3ra.made.material import Material
 from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import remove_comments_from_source_code
@@ -20,6 +19,7 @@ from .utils import (
     calculate_padded_cell_simple_cubic,
     extract_labels_from_pymatgen_structure,
     extract_metadata_from_pymatgen_structure,
+    extract_tags_from_ase_atoms,
 )
 
 
@@ -112,13 +112,12 @@ def from_pymatgen(structure: Union[PymatgenStructure, PymatgenInterface]) -> Dic
         "boundaryConditions": {"type": "pbc", "offset": 0},
     }
 
-    basis["labels"] = map_array_to_array_with_id_value(
-        extract_labels_from_pymatgen_structure(structure), remove_none=True
-    )
+    labels = map_array_to_array_with_id_value(extract_labels_from_pymatgen_structure(structure), remove_none=True)
 
     material_data = {
         "name": structure.formula,
         "basis": basis,
+        "labels": labels,
         "lattice": lattice,
         "isNonPeriodic": not structure.is_ordered,
         "_id": "",
@@ -194,8 +193,9 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     labels = material.basis.values_by_atom("labels")
+    # ASE reads a missing tag as 0, which is a label, so tags are set only when every atom has one
     if None not in labels:
-        atoms.set_array("tags", np.array(labels))
+        atoms.set_tags(labels)
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -228,8 +228,8 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     if is_molecule:
         material["lattice"]["type"] = "CUB"
 
-    tags = ase_atoms.arrays.get("tags", np.array([])).tolist()
-    material["basis"]["labels"] = map_array_to_array_with_id_value(tags, remove_none=True)
+    ase_tags = extract_tags_from_ase_atoms(ase_atoms)
+    material["labels"] = ase_tags
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:
         material["metadata"].update(ase_metadata)
