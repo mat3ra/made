@@ -12,7 +12,7 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
     create_defect_point_vacancy,
 )
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.modify import filter_by_label, interface_get_part
+from mat3ra.made.tools.modify import filter_by_label, interface_get_part, interface_label_parts_by_elements
 from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.utils import assertion as assertion_utils
 from unit.fixtures.bulk import BULK_Si_PRIMITIVE
@@ -171,6 +171,13 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             lambda material: merge([filter_by_label(material, 1), filter_by_label(material, 0)]),
             [1, 1, 0, 0, 0],
             [None, FIXED, None, None, None],
+        ),
+        (
+            lambda material: interface_label_parts_by_elements(
+                interface_get_part(material, InterfacePartsEnum.FILM), ["Ni"]
+            ),
+            [1, 1],
+            [None, FIXED],
         ),
     ],
 )
