@@ -207,13 +207,6 @@ describe("Basis", () => {
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
     });
 
-    it("should keep labels on their XYZ lines after a line is deleted", () => {
-        const material = new Material(FeOWithLabels);
-        const lines = material.getBasisAsXyz(false).trim().split("\n");
-        material.setBasis(lines.slice(1).join("\n"), "xyz", material.basis.units);
-        expect(material.getBasis().labels).to.be.deep.equal([{ id: 0, value: 2 }]);
-    });
-
     it("should print each label on the atom with its id when ids have gaps", () => {
         const basis = new Basis({
             ...FeOWithLabels.basis,

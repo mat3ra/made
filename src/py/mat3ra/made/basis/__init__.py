@@ -234,7 +234,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         if len(labels) != num_atoms:
             raise ValueError(f"Number of labels ({len(labels)}) must match number of atoms ({num_atoms})")
 
-        self.labels = ArrayWithIds.from_values(values=[int(label) for label in labels])
+        self.labels = ArrayWithIds(values=[int(label) for label in labels], ids=list(self.elements.ids))
 
     def transform_by_matrix(self, matrix: Matrix3x3Schema) -> None:
         original_is_in_crystal_units = self.is_in_crystal_units
