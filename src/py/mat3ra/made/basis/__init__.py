@@ -12,7 +12,7 @@ from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
 
-PER_ATOM_FIELDS = ("coordinates", "labels", "magneticMoments", "constraints")
+PER_ATOM_FIELDS = ("coordinates", "labels", "constraints")
 
 
 def get_overlapping_coordinates(
@@ -40,15 +40,19 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     cell: Cell = Field(Cell(), exclude=True)
     labels: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     constraints: ArrayWithIds = Field(ArrayWithIds.from_values([]))
-    magneticMoments: ArrayWithIds = Field(ArrayWithIds.from_values([]))
     DEFAULT_COORDINATE_PROXIMITY_TOLERANCE: float = Field(
         0.1, exclude=True
     )  # Angstroms, used for checking overlapping coordinates
 
     def __convert_kwargs__(self, **kwargs: Any) -> Dict[str, Any]:
-        for field in ("elements", *PER_ATOM_FIELDS):
-            if isinstance(kwargs.get(field), list):
-                kwargs[field] = type(self).model_fields[field].annotation.from_list_of_dicts(kwargs[field])
+        if isinstance(kwargs.get("elements"), list):
+            kwargs["elements"] = ArrayWithIds.from_list_of_dicts(kwargs["elements"])
+        if isinstance(kwargs.get("coordinates"), list):
+            kwargs["coordinates"] = Coordinates.from_list_of_dicts(kwargs["coordinates"])
+        if isinstance(kwargs.get("labels"), list):
+            kwargs["labels"] = ArrayWithIds.from_list_of_dicts(kwargs["labels"])
+        if isinstance(kwargs.get("constraints"), list):
+            kwargs["constraints"] = ArrayWithIds.from_list_of_dicts(kwargs["constraints"])
         if isinstance(kwargs.get("cell"), list):
             kwargs["cell"] = Cell.from_vectors_array(kwargs["cell"])
         return kwargs
@@ -87,36 +91,11 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             constraints=ArrayWithIds.from_list_of_dicts(constraints),
         )
 
-    def values_by_atom(self, field: str, default: Any = None) -> List[Any]:
-        """Values of a per-atom field in basis order, matched by atom id; atoms without a value get the default."""
+    def values_by_atom(self, field: str) -> List[Any]:
+        """Values of a per-atom field in basis order, matched by atom id; atoms without a value get None."""
         per_atom_values = getattr(self, field)
         value_by_atom_id = dict(zip(per_atom_values.ids, per_atom_values.values))
-        return [value_by_atom_id.get(atom_id, default) for atom_id in self.elements.ids]
-
-    @property
-    def unique_atomic_species(self) -> List[Dict[str, Any]]:
-        """Species per element and magnetic moment, by first appearance: Fe, Fe1, Fe2 (at most 3 characters)."""
-        species: List[Dict[str, Any]] = []
-        atoms = zip(self.elements.values, self.values_by_atom("magneticMoments", 0))
-        for element, magnetic_moment in dict.fromkeys(atoms):
-            count = sum(item["element"] == element for item in species)
-            name = f"{element}{count}" if count else element
-            if len(name) > 3:
-                raise ValueError(
-                    f"{element} has more than {count} distinct magnetic moments; "
-                    "species names are limited to 3 characters"
-                )
-            species.append({"name": name, "element": element, "magneticMoment": magnetic_moment})
-        return species
-
-    @property
-    def atomic_species_array(self) -> List[str]:
-        """Species name of each atom in basis order, e.g. ["Fe", "Fe1", "O", "O"]."""
-        name_by_species = {
-            (item["element"], item["magneticMoment"]): item["name"] for item in self.unique_atomic_species
-        }
-        atoms = zip(self.elements.values, self.values_by_atom("magneticMoments", 0))
-        return [name_by_species[atom] for atom in atoms]
+        return [value_by_atom_id.get(atom_id) for atom_id in self.elements.ids]
 
     @property
     def hash_string(self) -> str:
@@ -241,7 +220,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         self.labels.filter_by_values(labels_int)
         return self.filter_atoms_by_ids(self.labels.ids)
 
-    def set_labels_from_list(self, labels: Optional[List[Union[int, str]]]) -> None:
+    def set_labels_from_list(self, labels: Optional[List[int]]) -> None:
         """
         Set the labels of the basis from a list of labels (i. e. [1,1,1] for a 3-atom basis).
             If None or [] are passed, the labels are removed (set to an empty array).
@@ -255,7 +234,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         if len(labels) != num_atoms:
             raise ValueError(f"Number of labels ({len(labels)}) must match number of atoms ({num_atoms})")
 
-        self.labels = ArrayWithIds.from_values(values=list(labels))
+        self.labels = ArrayWithIds.from_values(values=[int(label) for label in labels])
 
     def transform_by_matrix(self, matrix: Matrix3x3Schema) -> None:
         original_is_in_crystal_units = self.is_in_crystal_units

@@ -149,18 +149,12 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
  * Create XYZ from Basis class instance.
  * @param basisClsInstance Basis class instance.
  * @param coordinatePrintFormat Output format for coordinates.
- * @param atomNames One name per atom, in basis order; default: elements with labels ("Fe1").
  * @return Basis string in XYZ format
  */
-function fromBasis(
-    basisClsInstance: ConstrainedBasis,
-    coordinatePrintFormat: string,
-    atomNames = basisClsInstance.elementsWithLabelsArray,
-): string {
+function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: string): string {
     const XYZArray = basisClsInstance.getAtomicPositionsWithConstraintsAsStrings(
         coordinatePrintFormat,
         XYZ_COORDINATE_PRECISION,
-        atomNames,
     );
     return `${XYZArray.join("\n")}\n`;
 }
@@ -171,8 +165,7 @@ function fromBasis(
  */
 function fromMaterial(
     materialOrConfig: MaterialSchema | MaterialEnhancedSchema,
-    fractional?: boolean,
-    atomNames?: string[],
+    fractional = false,
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);
     const constraints =
@@ -185,7 +178,7 @@ function fromMaterial(
     if (fractional) {
         basis.toCrystal();
     }
-    return fromBasis(basis, "%11.6f", atomNames);
+    return fromBasis(basis, "%11.6f");
 }
 
 export default {

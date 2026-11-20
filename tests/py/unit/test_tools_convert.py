@@ -5,6 +5,7 @@ from ase.build import molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms, FixCartesian
 from ase.optimize import BFGS
+from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
@@ -13,7 +14,7 @@ from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
-from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_MAGNETIZED
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -106,13 +107,13 @@ def test_from_poscar():
 
 
 @pytest.mark.parametrize(
-    "labels, expected_tags",
+    "labels_array, expected_tags",
     [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0]), ([{"id": 1, "value": 1}], [0, 0])],
 )
-def test_to_ase(labels, expected_tags):
-    material_config = Material.create_default().to_dict()
-    material_config["basis"]["labels"] = labels
-    ase_atoms = to_ase(material_config)
+def test_to_ase(labels_array, expected_tags):
+    material = Material.create_default()
+    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
+    ase_atoms = to_ase(material)
     assert isinstance(ase_atoms, Atoms)
     assert np.allclose(
         ase_atoms.get_cell().tolist(),
@@ -169,38 +170,31 @@ def test_from_ase(
 
 
 GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED = {
-    **GRAPHENE_NICKEL_INTERFACE_MAGNETIZED,
+    **GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
     "basis": {
-        **GRAPHENE_NICKEL_INTERFACE_MAGNETIZED["basis"],  # type: ignore[dict-item]
+        **GRAPHENE_NICKEL_INTERFACE_CONSTRAINED["basis"],  # type: ignore[dict-item]
         "constraints": [{"id": 0, "value": [True, False, True]}],
     },
 }
 
 
 @pytest.mark.parametrize(
-    "material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments",
+    "material_config, modify_basis, arguments, expected_labels",
     [
-        (GRAPHENE_NICKEL_INTERFACE_MAGNETIZED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, 0, 0]),
-        (GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1], [0.5, 0.5, 0, 0]),
+        (GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1]),
+        (GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1]),
     ],
 )
-def test_to_ase_from_ase_per_atom_values(
-    material_config, modify_basis, arguments, expected_labels, expected_magnetic_moments
-):
+def test_to_ase_from_ase_per_atom_values(material_config, modify_basis, arguments, expected_labels):
     material = Material.create(material_config)
     modify_basis(material.basis, *arguments)
     expected_constraints = material.basis.values_by_atom("constraints")
     atoms = to_ase(material)
-    assert atoms.get_initial_magnetic_moments().tolist() == expected_magnetic_moments
-    assert atoms.get_initial_magnetic_moments().dtype == float
-    basis = Material.create(from_ase(atoms)).basis
-    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
-    assert basis.magneticMoments.to_dict() == map_array_to_array_with_id_value(
-        expected_magnetic_moments, remove_none=True
-    )
-    assert basis.constraints.to_dict() == map_array_to_array_with_id_value(expected_constraints, remove_none=True)
     atoms.calc = EMT()
     BFGS(atoms).run(steps=2)
+    basis = Material.create(from_ase(atoms)).basis
+    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
+    assert basis.constraints.to_dict() == map_array_to_array_with_id_value(expected_constraints, remove_none=True)
 
 
 def test_from_ase_overlapping_constraints():
