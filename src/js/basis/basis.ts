@@ -410,15 +410,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
 
     /* Returns array of atomic labels E.g., ["1", "2", "", ""] */
     get atomicLabelsArray(): string[] {
-        const labelsArray = Array.from({ length: this.elements.length }, () => "");
-        // https://dev.to/maafaishal/benchmarking-for-while-forof-and-arrayforeach-using-performancenow-1jjg
-        if (this.labels?.length) {
-            for (let i = 0; i < this.labels.length; i++) {
-                // @ts-ignore
-                labelsArray[this.labels[i].id] = this.labels[i].value.toString();
-            }
-        }
-        return labelsArray;
+        return this._elements.ids.map((id) => this._labels.getElementValueById(id)?.toString() ?? "");
     }
 
     /* Returns array of elements with labels E.g., ["Fe1", "Fe2", "O", "O"] */

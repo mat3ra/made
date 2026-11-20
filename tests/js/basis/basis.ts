@@ -214,6 +214,15 @@ describe("Basis", () => {
         expect(material.getBasis().labels).to.be.deep.equal([{ id: 0, value: 2 }]);
     });
 
+    it("should print each label on the atom with its id when ids have gaps", () => {
+        const basis = new Basis({
+            ...FeOWithLabels.basis,
+            elements: FeOWithLabels.basis.elements.slice(1),
+            coordinates: FeOWithLabels.basis.coordinates.slice(1),
+        });
+        expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
+    });
+
     /**
      * Atoms
      */
