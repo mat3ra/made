@@ -1,5 +1,6 @@
 import { expect } from "chai";
 
+import { ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import { AtomicConstraints } from "../../../src/js/constraints/constraints";
 import Material from "../../../src/js/Material";
 import parsers from "../../../src/js/parsers/parsers";
@@ -92,7 +93,12 @@ direct
             ...Na4Cl4,
             basis: {
                 ...Na4Cl4.basis,
-                constraints: [4, 5].map((id) => ({ id, value: [false, false, false] })),
+                atomic_properties: [
+                    {
+                        name: ProtoPropertyEnum.atomic_constraints,
+                        values: [4, 5].map((id) => ({ id, value: [false, false, false] })),
+                    },
+                ],
             },
         });
         const isFree = [true, true, true, true, false, false, true, true];
@@ -106,7 +112,12 @@ direct
             ...Na4Cl4,
             basis: {
                 ...Na4Cl4.basis,
-                constraints: Na4Cl4.basis.elements.map(({ id }) => ({ id, value: allFree })),
+                atomic_properties: [
+                    {
+                        name: ProtoPropertyEnum.atomic_constraints,
+                        values: Na4Cl4.basis.elements.map(({ id }) => ({ id, value: allFree })),
+                    },
+                ],
             },
         });
         expect(`${material.getAsPOSCAR()}\n`).to.be.equal(Na4Cl4Poscar);

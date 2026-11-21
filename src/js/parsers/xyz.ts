@@ -1,8 +1,12 @@
 import { MaterialEnhancedSchema, MaterialSchema } from "@mat3ra/esse/dist/js/types";
-import { isEmpty, isNaN, map } from "lodash";
+import { isNaN, map } from "lodash";
 import s from "underscore.string";
 
-import { ConstrainedBasis, ConstrainedBasisConfig } from "../basis/constrained_basis";
+import { AtomicProperties, ProtoPropertyEnum } from "../basis/atomic_properties";
+import {
+    BasisWithAtomicProperties,
+    BasisWithAtomicPropertiesConfig,
+} from "../basis/basis_with_atomic_properties";
 import { AtomicCoordinateValue } from "../basis/coordinates";
 import { AtomicElementValue } from "../basis/elements";
 import { Cell } from "../cell/cell";
@@ -93,7 +97,11 @@ function _parseXYZLineAsWords(line: string): ParsedObject {
  * @param units Coordinate units
  * @param cell Basis Cell
  */
-function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): ConstrainedBasisConfig {
+function toBasisConfig(
+    txt: string,
+    units = "angstrom",
+    cell = new Cell(),
+): BasisWithAtomicPropertiesConfig {
     // @ts-ignore
     const lines: string[] = s(txt).trim().lines();
     const listOfObjects = map(lines, _parseXYZLineAsWords);
@@ -113,36 +121,23 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
         }),
         units,
         cell,
-        constraints: listOfObjects.map((elm, idx) => {
-            return {
-                id: idx,
-                value: elm.constraints,
-            };
-        }),
     };
 
-    const labels: {
-        id: number;
-        value: number;
-    }[] = [];
+    const atomicProperties = new AtomicProperties();
+    const constraints = atomicProperties.getByName(ProtoPropertyEnum.atomic_constraints);
+    const labels = atomicProperties.getByName(ProtoPropertyEnum.atomic_labels);
 
     listOfObjects.forEach((elm, idx) => {
+        constraints.addItem(elm.constraints, idx);
         if (elm.label !== undefined) {
-            labels.push({
-                id: idx,
-                value: elm.label,
-            });
+            labels.addItem(elm.label, idx);
         }
     });
 
-    if (!isEmpty(labels)) {
-        return {
-            ...basisConfig,
-            labels,
-        } as ConstrainedBasisConfig;
-    }
-
-    return basisConfig as ConstrainedBasisConfig;
+    return {
+        ...basisConfig,
+        atomic_properties: atomicProperties.toJSON(),
+    } as BasisWithAtomicPropertiesConfig;
 }
 
 /**
@@ -151,7 +146,10 @@ function toBasisConfig(txt: string, units = "angstrom", cell = new Cell()): Cons
  * @param coordinatePrintFormat Output format for coordinates.
  * @return Basis string in XYZ format
  */
-function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: string): string {
+function fromBasis(
+    basisClsInstance: BasisWithAtomicProperties,
+    coordinatePrintFormat: string,
+): string {
     const XYZArray = basisClsInstance.getAtomicPositionsWithConstraintsAsStrings(
         coordinatePrintFormat,
         XYZ_COORDINATE_PRECISION,
@@ -161,19 +159,16 @@ function fromBasis(basisClsInstance: ConstrainedBasis, coordinatePrintFormat: st
 
 /**
  * Create XYZ from Material class instance (or its JSON config).
- * Prefer fromBasis when you already have a ConstrainedBasis instance.
+ * Prefer fromBasis when you already have a BasisWithAtomicProperties instance.
  */
 function fromMaterial(
     materialOrConfig: MaterialSchema | MaterialEnhancedSchema,
     fractional = false,
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);
-    const constraints =
-        "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
-    const basis = new ConstrainedBasis({
+    const basis = new BasisWithAtomicProperties({
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
-        constraints,
     });
     if (fractional) {
         basis.toCrystal();

@@ -6,13 +6,13 @@ from mat3ra.code.constants import HASH_TOLERANCE
 from mat3ra.code.entity import InMemoryEntityPydantic
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
 from mat3ra.esse.models.material import BasisSchema, BasisUnitsEnum
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
+from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.cell import Cell
 from mat3ra.utils.rounding import round_custom
 from pydantic import Field
 from scipy.spatial import cKDTree
-
-PER_ATOM_FIELDS = ("coordinates", "labels", "constraints")
 
 
 def get_overlapping_coordinates(
@@ -38,8 +38,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     elements: ArrayWithIds
     coordinates: Coordinates
     cell: Cell = Field(Cell(), exclude=True)
-    labels: ArrayWithIds = Field(ArrayWithIds.from_values([]))
-    constraints: ArrayWithIds = Field(ArrayWithIds.from_values([]))
+    atomic_properties: AtomicProperties = Field(default_factory=AtomicProperties)
     DEFAULT_COORDINATE_PROXIMITY_TOLERANCE: float = Field(
         0.1, exclude=True
     )  # Angstroms, used for checking overlapping coordinates
@@ -49,10 +48,8 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             kwargs["elements"] = ArrayWithIds.from_list_of_dicts(kwargs["elements"])
         if isinstance(kwargs.get("coordinates"), list):
             kwargs["coordinates"] = Coordinates.from_list_of_dicts(kwargs["coordinates"])
-        if isinstance(kwargs.get("labels"), list):
-            kwargs["labels"] = ArrayWithIds.from_list_of_dicts(kwargs["labels"])
-        if isinstance(kwargs.get("constraints"), list):
-            kwargs["constraints"] = ArrayWithIds.from_list_of_dicts(kwargs["constraints"])
+        if isinstance(kwargs.get("atomic_properties"), list):
+            kwargs["atomic_properties"] = AtomicProperties.from_list_of_dicts(kwargs["atomic_properties"])
         if isinstance(kwargs.get("cell"), list):
             kwargs["cell"] = Cell.from_vectors_array(kwargs["cell"])
         return kwargs
@@ -72,6 +69,16 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def number_of_atoms(self) -> int:
         return len(self.elements.values)
 
+    @property
+    def labels(self) -> ArrayWithIds:
+        """The atomic labels, read-only; set them with set_labels_from_list."""
+        return self.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_labels)
+
+    @property
+    def per_atom_values(self) -> List[ArrayWithIds]:
+        """Elements, coordinates and each stored atomic property: every array keyed by atom id."""
+        return [self.elements, self.coordinates, *self.atomic_properties.property_by_name.values()]
+
     @classmethod
     def from_dict(
         cls,
@@ -79,22 +86,20 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         coordinates: List[Dict],
         units: str,
         cell: List[List[float]],
-        labels: Optional[List[Dict]] = ArrayWithIds.from_list_of_dicts([]),
-        constraints: Optional[List[Dict]] = ArrayWithIds.from_list_of_dicts([]),
+        atomic_properties: Optional[List[Dict]] = None,
     ) -> "Basis":
         return Basis(
             elements=ArrayWithIds.from_list_of_dicts(elements),
             coordinates=Coordinates.from_list_of_dicts(coordinates),
             units=units,
             cell=Cell.from_vectors_array(cell),
-            labels=ArrayWithIds.from_list_of_dicts(labels),
-            constraints=ArrayWithIds.from_list_of_dicts(constraints),
+            atomic_properties=AtomicProperties.from_list_of_dicts(atomic_properties or []),
         )
 
-    def values_by_atom(self, field: str) -> List[Any]:
-        """Values of a per-atom field in basis order, matched by atom id; atoms without a value get None."""
-        per_atom_values = getattr(self, field)
-        value_by_atom_id = dict(zip(per_atom_values.ids, per_atom_values.values))
+    def values_by_atom(self, name: ProtoPropertyEnum) -> List[Any]:
+        """Values of a per-atom property in basis order, matched by atom id; atoms without a value get None."""
+        values = self.atomic_properties.get_by_name(name)
+        value_by_atom_id = dict(zip(values.ids, values.values))
         return [value_by_atom_id.get(atom_id) for atom_id in self.elements.ids]
 
     @property
@@ -107,11 +112,13 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """
         original_is_in_cartesian = self.is_in_cartesian_units
         self.to_crystal()
+        labels_map = {lbl["id"]: str(lbl["value"]) for lbl in self.labels.to_dict()}
         parts = []
         for elem, coord in zip(self.elements.to_dict(), self.coordinates.to_dict()):
+            label = labels_map.get(elem["id"], "")
             stored = self.coordinates.round_array_or_number([value % 1 for value in coord["value"]])
             rounded = [f"{round_custom(value, HASH_TOLERANCE) % 1:g}" for value in stored]
-            parts.append(f"{elem['value']} {','.join(rounded)}")
+            parts.append(f"{elem['value']}{label} {','.join(rounded)}")
         if original_is_in_cartesian:
             self.to_cartesian()
         return ";".join(sorted(parts)) + ";"
@@ -186,10 +193,14 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """
 
         id_offset = max(self.elements.ids, default=-1) + 1
-        for field in ("elements", *PER_ATOM_FIELDS):
-            other_values = getattr(other_basis, field)
+        values_and_other_values = [(self.elements, other_basis.elements), (self.coordinates, other_basis.coordinates)]
+        values_and_other_values += [
+            (self.atomic_properties.get_by_name(name), other_values)
+            for name, other_values in other_basis.atomic_properties.property_by_name.items()
+        ]
+        for values, other_values in values_and_other_values:
             for value, atom_id in zip(other_values.values, other_values.ids):
-                getattr(self, field).add_item(value, atom_id + id_offset)
+                values.add_item(value, atom_id + id_offset)
 
     def remove_atom_by_id(self, id: int):
         self.filter_atoms_by_ids(id, invert=True)
@@ -206,12 +217,11 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def filter_atoms_by_ids(self, ids: Union[List[int], int], invert: bool = False, reset_ids=False) -> "Basis":
         self.elements.filter_by_ids(ids, invert)
         kept_atom_ids = self.elements.ids
-        for field in PER_ATOM_FIELDS:
-            getattr(self, field).filter_by_ids(kept_atom_ids)
+        for per_atom_values in self.per_atom_values:
+            per_atom_values.filter_by_ids(kept_atom_ids)
         if reset_ids:
             new_id_by_atom_id = {atom_id: index for index, atom_id in enumerate(kept_atom_ids)}
-            for field in ("elements", *PER_ATOM_FIELDS):
-                per_atom_values = getattr(self, field)
+            for per_atom_values in self.per_atom_values:
                 per_atom_values.ids = [new_id_by_atom_id[atom_id] for atom_id in per_atom_values.ids]
         return self
 
@@ -228,13 +238,16 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         num_atoms = len(self.elements.values)
 
         if labels is None or len(labels) == 0:
-            self.labels = ArrayWithIds.from_values([])
+            self.atomic_properties.set_by_name(ProtoPropertyEnum.atomic_labels, ArrayWithIds.from_values([]))
             return
 
         if len(labels) != num_atoms:
             raise ValueError(f"Number of labels ({len(labels)}) must match number of atoms ({num_atoms})")
 
-        self.labels = ArrayWithIds(values=[int(label) for label in labels], ids=list(self.elements.ids))
+        self.atomic_properties.set_by_name(
+            ProtoPropertyEnum.atomic_labels,
+            ArrayWithIds(values=[int(label) for label in labels], ids=list(self.elements.ids)),
+        )
 
     def transform_by_matrix(self, matrix: Matrix3x3Schema) -> None:
         original_is_in_crystal_units = self.is_in_crystal_units
