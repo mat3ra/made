@@ -1,8 +1,7 @@
 import { Coordinate3DSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
-import { Basis } from "../basis/basis";
-import { BasisWithAtomicProperties } from "../basis/basis_with_atomic_properties";
+import { Basis, BasisConfig } from "../basis/basis";
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
 import type { MaterialSchemaMap } from "../Material";
@@ -14,12 +13,12 @@ const ADD = Utils.math.add;
 /**
  * @summary Generates new basis for a supercell. For each site from basis generates shifts that are within supercell.
  */
-function generateNewBasisWithinSupercell(
-    basis: Basis | BasisWithAtomicProperties,
+function generateNewBasisWithinSupercell<S extends BasisConfig>(
+    basis: Basis<S>,
     cell: Cell,
     supercell: Cell,
     supercellMatrix: Matrix3X3Schema,
-): Basis {
+): Basis<S> {
     const oldBasis = basis.clone();
     const newBasis = basis.clone();
     newBasis.removeAllAtoms();
@@ -30,7 +29,7 @@ function generateNewBasisWithinSupercell(
     oldBasis.elements.forEach((element) => {
         const coordinate = oldBasis.getCoordinateValueById(element.id);
         const cartesianCoordinate = cell.convertPointToCartesian(coordinate);
-        const atom = oldBasis.clone().filterAtomsByIds(element.id, false, true);
+        const singleAtomBasis = oldBasis.clone().filterAtomsByIds(element.id, false, true);
         const shifts = cellTools.latticePointsInSupercell(supercellMatrix);
         shifts.forEach((combination) => {
             // "combination" is effectively a point in fractional coordinates here, hence the below
@@ -39,7 +38,7 @@ function generateNewBasisWithinSupercell(
                 supercell.convertPointToCartesian(combination),
             );
             if (supercell.isPointInsideCell(newPoint as Coordinate3DSchema)) {
-                atom.coordinates = [
+                singleAtomBasis.coordinates = [
                     {
                         id: 0,
                         value: supercell.convertPointToCrystal(
@@ -47,12 +46,12 @@ function generateNewBasisWithinSupercell(
                         ) as Coordinate3DSchema,
                     },
                 ];
-                newBasis.addAtomsFromAnotherBasis(atom);
+                newBasis.addAtomsFromAnotherBasis(singleAtomBasis);
             }
         });
     });
 
-    return newBasis as Basis;
+    return newBasis;
 }
 
 /**

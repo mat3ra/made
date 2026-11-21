@@ -273,10 +273,10 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Returns the arrays keyed by atom id: elements and coordinates.
+     * Returns the arrays keyed by atom id, by name: elements and coordinates.
      */
-    get perAtomValues(): ArrayWithIds<unknown>[] {
-        return [this._elements, this._coordinates];
+    get perAtomValuesByName(): Record<string, ArrayWithIds<unknown>> {
+        return { elements: this._elements, coordinates: this._coordinates };
     }
 
     /**
@@ -286,7 +286,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     filterAtomsByIds(ids: number | number[], invert = false, resetIds = false): this {
         this._elements.filterByIds(ids, invert);
         const keptAtomIds = this._elements.ids;
-        this.perAtomValues.forEach((values) => {
+        Object.values(this.perAtomValuesByName).forEach((values) => {
             values.filterByIds(keptAtomIds);
             if (resetIds) {
                 values.ids = values.ids.map((id) => keptAtomIds.indexOf(id));
@@ -296,15 +296,14 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Adds the atoms of another basis, in every array keyed by atom id, with ids after this basis' ids.
+     * Adds the atoms of another basis, matching arrays keyed by atom id by name, with ids after this basis' ids.
      */
-    addAtomsFromAnotherBasis(otherBasis: { perAtomValues: ArrayWithIds<unknown>[] }) {
+    addAtomsFromAnotherBasis(otherBasis: this) {
         const idOffset = Math.max(-1, ...this._elements.ids) + 1;
-        const otherPerAtomValues = otherBasis.perAtomValues;
-        this.perAtomValues.forEach((values, index) => {
-            const { values: otherValues, ids: otherIds } = otherPerAtomValues[index];
-            otherValues.forEach((value, valueIndex) =>
-                values.addItem(value, otherIds[valueIndex] + idOffset),
+        const valuesByName = this.perAtomValuesByName;
+        Object.entries(otherBasis.perAtomValuesByName).forEach(([name, otherValues]) => {
+            otherValues.values.forEach((value, index) =>
+                valuesByName[name].addItem(value, otherValues.ids[index] + idOffset),
             );
         });
     }

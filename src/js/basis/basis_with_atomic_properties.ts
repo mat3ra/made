@@ -125,7 +125,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         );
     }
 
-    override get perAtomValues(): ArrayWithIds<unknown>[] {
-        return [...super.perAtomValues, ...Object.values(this.atomicProperties.propertyByName)];
+    override get perAtomValuesByName(): Record<string, ArrayWithIds<unknown>> {
+        return { ...super.perAtomValuesByName, ...this.atomicProperties.propertyByName };
     }
 }

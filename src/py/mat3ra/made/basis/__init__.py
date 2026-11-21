@@ -77,7 +77,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     @property
     def per_atom_values(self) -> List[ArrayWithIds]:
         """Elements, coordinates and each stored atomic property: every array keyed by atom id."""
-        return [self.elements, self.coordinates, *self.atomic_properties.arrays_by_name.values()]
+        return [self.elements, self.coordinates, *self.atomic_properties.property_by_name.values()]
 
     @classmethod
     def from_dict(
@@ -196,7 +196,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         values_and_other_values = [(self.elements, other_basis.elements), (self.coordinates, other_basis.coordinates)]
         values_and_other_values += [
             (self.atomic_properties.get_by_name(name), other_values)
-            for name, other_values in other_basis.atomic_properties.arrays_by_name.items()
+            for name, other_values in other_basis.atomic_properties.property_by_name.items()
         ]
         for values, other_values in values_and_other_values:
             for value, atom_id in zip(other_values.values, other_values.ids):

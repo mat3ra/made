@@ -2,7 +2,7 @@ import { Coordinate3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { chunk, flatten } from "lodash";
 
-import { Basis } from "../basis/basis";
+import { Basis, BasisConfig } from "../basis/basis";
 import { AtomicCoordinateValue } from "../basis/coordinates";
 
 const ADD = Utils.math.add;
@@ -14,7 +14,7 @@ const MULT = Utils.math.multiply;
  * @param repetitions{Number[]} Repetition vector `[x, y, z]`, in each spatial dimension.
  * @return {Basis} New Basis.
  */
-function repeat(basis: Basis, repetitions: number[]): Basis {
+function repeat<S extends BasisConfig>(basis: Basis<S>, repetitions: number[]): Basis<S> {
     let i, j, k;
     let shiftI = 0;
     let shiftJ = 0;

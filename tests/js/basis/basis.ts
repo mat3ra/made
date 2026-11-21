@@ -13,13 +13,14 @@ import {
     C2H4,
     C2H4Translated,
     FeLiSiBasis,
-    FeO,
     FeOStandata,
     LiFeSiBasis,
     LiFeSiBasisLabels,
     Na,
     Na4Cl4,
     Na4Cl4Cartesian,
+    Si2Basis,
+    Si2BasisWithLabelAndConstraint,
 } from "../fixtures";
 
 const { assertDeepAlmostEqual } = Utils.assertion;
@@ -173,33 +174,31 @@ describe("Basis", () => {
         expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
     });
 
-    it("should drop a removed atom's entries in every array keyed by atom id", () => {
-        const basis = new BasisWithAtomicProperties(FeO.basis);
-        basis.removeAtom({ id: 1, element: "Fe", coordinate: [0.5, 0.5, 0.5] });
-        expect(basis.perAtomValues.map(({ ids }) => ids)).to.be.deep.equal([
-            [0, 2, 3],
-            [0, 2, 3],
-            [0, 2, 3],
-            [0],
-        ]);
+    it("should drop a removed atom's label and constraint, so an atom added in its place has none", () => {
+        const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
+        basis.removeAtom({ id: 1, element: "Si", coordinate: [0.5, 0.5, 0.5] });
+        basis.addAtom({ element: "Si", coordinate: [0.5, 0.5, 0.5] });
+        assertDeepAlmostEqual(basis.toJSON(), {
+            ...Si2Basis,
+            units: "crystal",
+            atomic_properties: [],
+        });
     });
 
-    it("should renumber every array keyed by atom id when removing with id reset", () => {
-        const basis = new BasisWithAtomicProperties(FeO.basis).filterAtomsByIds(0, true, true);
-        expect(basis.perAtomValues.map(({ ids }) => ids)).to.be.deep.equal([
-            [0, 1, 2],
-            [0, 1, 2],
-            [0, 1, 2],
-            [0],
-        ]);
-        expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
-    });
-
-    it("should not give an added atom the label of a removed one", () => {
-        const basis = new BasisWithAtomicProperties(LiFeSiBasisLabels);
-        basis.removeAtom({ id: 2, element: "Si", coordinate: [0, 0, 0] });
-        basis.addAtom({ element: "Si", coordinate: [0, 0, 0] });
-        expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Li0", "Fe1", "Si"]);
+    it("should renumber labels and constraints with the atoms when removing with id reset", () => {
+        const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
+        assertDeepAlmostEqual(basis.filterAtomsByIds(0, true, true).toJSON(), {
+            elements: [{ id: 0, value: "Si" }],
+            coordinates: [{ id: 0, value: [0.5, 0.5, 0.5] }],
+            units: "crystal",
+            atomic_properties: [
+                {
+                    name: ProtoPropertyEnum.atomic_constraints,
+                    values: [{ id: 0, value: [false, false, true] }],
+                },
+                { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
+            ],
+        });
     });
 
     /**
