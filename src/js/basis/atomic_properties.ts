@@ -18,7 +18,7 @@ interface AtomicPropertyByName {
  * Per-atom properties of a basis, each keyed by atom id and stored under its proto-property name.
  */
 export class AtomicProperties {
-    private propertyByName: AtomicPropertyByName;
+    readonly propertyByName: AtomicPropertyByName;
 
     /**
      * @param properties - the ESSE list of `{ name, values }` entries.

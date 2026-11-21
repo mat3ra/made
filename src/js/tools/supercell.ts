@@ -30,6 +30,7 @@ function generateNewBasisWithinSupercell(
     oldBasis.elements.forEach((element) => {
         const coordinate = oldBasis.getCoordinateValueById(element.id);
         const cartesianCoordinate = cell.convertPointToCartesian(coordinate);
+        const atom = oldBasis.clone().filterAtomsByIds(element.id, false, true);
         const shifts = cellTools.latticePointsInSupercell(supercellMatrix);
         shifts.forEach((combination) => {
             // "combination" is effectively a point in fractional coordinates here, hence the below
@@ -38,12 +39,15 @@ function generateNewBasisWithinSupercell(
                 supercell.convertPointToCartesian(combination),
             );
             if (supercell.isPointInsideCell(newPoint as Coordinate3DSchema)) {
-                newBasis.addAtom({
-                    element: element.value,
-                    coordinate: supercell.convertPointToCrystal(
-                        newPoint as Coordinate3DSchema,
-                    ) as Coordinate3DSchema,
-                });
+                atom.coordinates = [
+                    {
+                        id: 0,
+                        value: supercell.convertPointToCrystal(
+                            newPoint as Coordinate3DSchema,
+                        ) as Coordinate3DSchema,
+                    },
+                ];
+                newBasis.addAtomsFromAnotherBasis(atom);
             }
         });
     });

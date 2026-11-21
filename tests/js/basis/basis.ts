@@ -13,6 +13,7 @@ import {
     C2H4,
     C2H4Translated,
     FeLiSiBasis,
+    FeO,
     FeOStandata,
     LiFeSiBasis,
     LiFeSiBasisLabels,
@@ -170,6 +171,35 @@ describe("Basis", () => {
             coordinates: FeOWithLabels.basis.coordinates.slice(1),
         });
         expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
+    });
+
+    it("should drop a removed atom's entries in every array keyed by atom id", () => {
+        const basis = new BasisWithAtomicProperties(FeO.basis);
+        basis.removeAtom({ id: 1, element: "Fe", coordinate: [0.5, 0.5, 0.5] });
+        expect(basis.perAtomValues.map(({ ids }) => ids)).to.be.deep.equal([
+            [0, 2, 3],
+            [0, 2, 3],
+            [0, 2, 3],
+            [0],
+        ]);
+    });
+
+    it("should renumber every array keyed by atom id when removing with id reset", () => {
+        const basis = new BasisWithAtomicProperties(FeO.basis).filterAtomsByIds(0, true, true);
+        expect(basis.perAtomValues.map(({ ids }) => ids)).to.be.deep.equal([
+            [0, 1, 2],
+            [0, 1, 2],
+            [0, 1, 2],
+            [0],
+        ]);
+        expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
+    });
+
+    it("should not give an added atom the label of a removed one", () => {
+        const basis = new BasisWithAtomicProperties(LiFeSiBasisLabels);
+        basis.removeAtom({ id: 2, element: "Si", coordinate: [0, 0, 0] });
+        basis.addAtom({ element: "Si", coordinate: [0, 0, 0] });
+        expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Li0", "Fe1", "Si"]);
     });
 
     /**

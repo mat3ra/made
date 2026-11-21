@@ -38,13 +38,12 @@ function toPoscar(
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
     });
     const BasisLines: string[] = [];
-    let addSelectiveDynamics = false;
+    const addSelectiveDynamics = !omitConstraints && !basis.AtomicConstraints.areUnconstrained;
     basis._elements.values.forEach((item, idx) => {
         const coord = basis.getCoordinateValueByIndex(idx).map((x) => _print(x));
-        const constraintsAsString = omitConstraints
-            ? ""
-            : basis.AtomicConstraints.getAsStringByIndex(idx, atomicConstraintsCharFromBool);
-        if (constraintsAsString && !omitConstraints) addSelectiveDynamics = true;
+        const constraintsAsString = addSelectiveDynamics
+            ? basis.getConstraintByIndex(idx).map(atomicConstraintsCharFromBool).join(" ")
+            : "";
         BasisLines.push([coord.join(" "), constraintsAsString, item].join(" "));
     });
     const basisContent = BasisLines.join("\n");

@@ -1,5 +1,6 @@
 // @ts-ignore
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
+import { ArrayWithIds } from "@mat3ra/code";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import {
     BaseInMemoryEntitySchema,
@@ -165,8 +166,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     removeAllAtoms() {
-        this.elements = [];
-        this.coordinates = [];
+        this.filterAtomsByIds([]);
     }
 
     get cellRounded() {
@@ -268,10 +268,45 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      */
     removeAtom({ element, coordinate, id }: ElementWithCoordinate) {
         if (element && coordinate) {
-            const coordinateId = this._coordinates.getElementIdByValue(coordinate) || -1;
-            this._elements.removeItem(coordinateId, id);
-            this._coordinates.removeItem(coordinateId, id);
+            this.filterAtomsByIds(id ?? this._coordinates.getElementIdByValue(coordinate) ?? [], true);
         }
+    }
+
+    /**
+     * Returns the arrays keyed by atom id: elements and coordinates.
+     */
+    get perAtomValues(): ArrayWithIds<unknown>[] {
+        return [this._elements, this._coordinates];
+    }
+
+    /**
+     * Keeps the atoms with the given ids, or all others when inverted, in every array keyed by atom id.
+     * With resetIds the remaining atoms are renumbered 0, 1, ...
+     */
+    filterAtomsByIds(ids: number | number[], invert = false, resetIds = false): this {
+        this._elements.filterByIds(ids, invert);
+        const keptAtomIds = this._elements.ids;
+        this.perAtomValues.forEach((values) => {
+            values.filterByIds(keptAtomIds);
+            if (resetIds) {
+                values.ids = values.ids.map((id) => keptAtomIds.indexOf(id));
+            }
+        });
+        return this;
+    }
+
+    /**
+     * Adds the atoms of another basis, in every array keyed by atom id, with ids after this basis' ids.
+     */
+    addAtomsFromAnotherBasis(otherBasis: { perAtomValues: ArrayWithIds<unknown>[] }) {
+        const idOffset = Math.max(-1, ...this._elements.ids) + 1;
+        const otherPerAtomValues = otherBasis.perAtomValues;
+        this.perAtomValues.forEach((values, index) => {
+            const { values: otherValues, ids: otherIds } = otherPerAtomValues[index];
+            otherValues.forEach((value, valueIndex) =>
+                values.addItem(value, otherIds[valueIndex] + idOffset),
+            );
+        });
     }
 
     /**

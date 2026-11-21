@@ -1,3 +1,4 @@
+import { ArrayWithIds } from "@mat3ra/code";
 import { BasisWithAtomicPropertiesSchema } from "@mat3ra/esse/dist/js/types";
 
 import { Cell } from "../cell/cell";
@@ -55,7 +56,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
     }
 
     getConstraintByIndex(idx: number): AtomicConstraintValue {
-        return this.AtomicConstraints.getElementValueByIndex(idx) || [true, true, true];
+        return this.getConstraintById(this._elements.ids[idx]);
     }
 
     getConstraintById(id: number): AtomicConstraintValue {
@@ -124,8 +125,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         );
     }
 
-    removeAllAtoms() {
-        super.removeAllAtoms();
-        this.atomicProperties = new AtomicProperties();
+    override get perAtomValues(): ArrayWithIds<unknown>[] {
+        return [...super.perAtomValues, ...Object.values(this.atomicProperties.propertyByName)];
     }
 }
