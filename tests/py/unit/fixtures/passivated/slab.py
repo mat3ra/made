@@ -42,8 +42,6 @@ PASSIVATED_SI_CONVENTIONAL_SLAB_001 = {
             {"id": 17, "value": [0, 0.5, 0.693353943]},
         ],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.468763846,

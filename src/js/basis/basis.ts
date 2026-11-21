@@ -1,5 +1,6 @@
 // @ts-ignore
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
+import { ArrayWithIds } from "@mat3ra/code";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import {
     BaseInMemoryEntitySchema,
@@ -19,7 +20,6 @@ import {
 } from "../lattice/lattice";
 import { AtomicCoordinateValue, Coordinates } from "./coordinates";
 import { AtomicElementValue, Elements } from "./elements";
-import { AtomicLabelValue, Labels } from "./labels";
 
 export interface ElementWithCoordinate {
     id?: number; // numeric id of the element (optional).
@@ -47,7 +47,6 @@ export interface BasisConfig extends BasisSchema {
 export interface ElementsAndCoordinatesConfig {
     elements: AtomicElementValue[];
     coordinates: AtomicCoordinateValue[];
-    labels?: AtomicLabelValue[];
     units?: BasisSchema["units"];
     cell?: Cell;
 }
@@ -91,24 +90,19 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
 
     _coordinates: Coordinates;
 
-    _labels: Labels;
-
     static _convertValuesToConfig({
         elements = [],
         coordinates = [],
         units = ATOMIC_COORD_UNITS.crystal as BasisSchema["units"],
         cell = new Cell(),
-        labels = [],
     }: ElementsAndCoordinatesConfig): BasisConfig {
         const elementsArrayWithIdsJSON = Elements.fromValues(elements).toJSON();
         const coordinatesArrayWithIdsJSON = Coordinates.fromValues(coordinates).toJSON();
-        const labelsArrayWithIdsJSON = Labels.fromValues(labels).toJSON();
         return {
             elements: elementsArrayWithIdsJSON as BasisSchema["elements"],
             coordinates: coordinatesArrayWithIdsJSON as BasisSchema["coordinates"],
             units,
             cell,
-            labels: labelsArrayWithIdsJSON as BasisSchema["labels"],
         };
     }
 
@@ -117,7 +111,6 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         coordinates = [],
         units = ATOMIC_COORD_UNITS.crystal as BasisSchema["units"],
         cell = new Cell(),
-        labels = [],
     }: ElementsAndCoordinatesConfig): Basis {
         return new Basis(
             Basis._convertValuesToConfig({
@@ -125,7 +118,6 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
                 coordinates,
                 units,
                 cell,
-                labels,
             }),
         );
     }
@@ -133,12 +125,11 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     // NoInfer: keep default S (or an explicit type arg) instead of inferring S from the config literal.
     constructor(config: NoInfer<S> = Basis.defaultConfig as NoInfer<S>) {
         super(config as BasisEntitySchema<S>);
-        const { elements, coordinates, units, labels } = config;
+        const { elements, coordinates, units } = config;
         this.cell = new Cell(config.cell);
         this.units = units || (ATOMIC_COORD_UNITS.crystal as BasisSchema["units"]);
         this._elements = Elements.fromObjects(elements);
         this._coordinates = Coordinates.fromObjects(coordinates);
-        this._labels = Labels.fromObjects(labels || []);
     }
 
     get elements(): BasisSchema["elements"] {
@@ -157,14 +148,6 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         this._coordinates = Coordinates.fromObjects(coordinates);
     }
 
-    get labels(): BasisSchema["labels"] {
-        return this._labels.toJSON() as BasisSchema["labels"];
-    }
-
-    set labels(labels: BasisSchema["labels"]) {
-        this._labels = Labels.fromObjects(labels || []);
-    }
-
     toJSON(
         exclude: (keyof BasisEntitySchema<S>)[] = ["cell"] as (keyof BasisEntitySchema<S>)[],
     ): BasisEntitySchema<S> {
@@ -173,7 +156,6 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
             elements: this.elements,
             coordinates: this.coordinates,
             units: this.units,
-            ...(this.labels?.length ? { labels: this.labels } : {}),
         } as BasisEntitySchema<S>;
     }
 
@@ -184,9 +166,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     removeAllAtoms() {
-        this.elements = [];
-        this.coordinates = [];
-        this.labels = [];
+        this.filterAtomsByIds([]);
     }
 
     get cellRounded() {
@@ -288,10 +268,44 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      */
     removeAtom({ element, coordinate, id }: ElementWithCoordinate) {
         if (element && coordinate) {
-            const coordinateId = this._coordinates.getElementIdByValue(coordinate) || -1;
-            this._elements.removeItem(coordinateId, id);
-            this._coordinates.removeItem(coordinateId, id);
+            this.filterAtomsByIds(id ?? this._coordinates.getElementIdByValue(coordinate) ?? [], true);
         }
+    }
+
+    /**
+     * Returns the arrays keyed by atom id, by name: elements and coordinates.
+     */
+    get perAtomValuesByName(): Record<string, ArrayWithIds<unknown>> {
+        return { elements: this._elements, coordinates: this._coordinates };
+    }
+
+    /**
+     * Keeps the atoms with the given ids, or all others when inverted, in every array keyed by atom id.
+     * With resetIds the remaining atoms are renumbered 0, 1, ...
+     */
+    filterAtomsByIds(ids: number | number[], invert = false, resetIds = false): this {
+        this._elements.filterByIds(ids, invert);
+        const keptAtomIds = this._elements.ids;
+        Object.values(this.perAtomValuesByName).forEach((values) => {
+            values.filterByIds(keptAtomIds);
+            if (resetIds) {
+                values.ids = values.ids.map((id) => keptAtomIds.indexOf(id));
+            }
+        });
+        return this;
+    }
+
+    /**
+     * Adds the atoms of another basis, matching arrays keyed by atom id by name, with ids after this basis' ids.
+     */
+    addAtomsFromAnotherBasis(otherBasis: this) {
+        const idOffset = Math.max(-1, ...this._elements.ids) + 1;
+        const valuesByName = this.perAtomValuesByName;
+        Object.entries(otherBasis.perAtomValuesByName).forEach(([name, otherValues]) => {
+            otherValues.values.forEach((value, index) =>
+                valuesByName[name].addItem(value, otherValues.ids[index] + idOffset),
+            );
+        });
     }
 
     /**
@@ -370,22 +384,6 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Returns a nested array with elements and their corresponding coordinates with labels
-     * @example Output: [ ["Si", [0,0,0], ['1']], ["Si", [0.5,0.5,0.5]] , ['2']]
-     */
-    get elementsAndCoordinatesAndLabelsArray(): [
-        AtomicElementValue,
-        AtomicCoordinateValue,
-        AtomicLabelValue,
-    ][] {
-        return this._elements.values.map((element, idx) => {
-            const coordinate = this.getCoordinateValueByIndex(idx);
-            const atomicLabel = this.atomicLabelsArray[idx];
-            return [element, coordinate, atomicLabel];
-        });
-    }
-
-    /**
      * @summary Concatenates elements and sorts them in alphanumeric order.
      * E.g.,
      * ```
@@ -398,14 +396,13 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      */
     getAsSortedString(): string {
         const storedBasis = new Basis(this.clone().standardRepresentation);
-        const standardRep = storedBasis.elementsAndCoordinatesAndLabelsArray.map((entry) => {
-            const element = entry[0];
+        const { siteNames } = this;
+        const standardRep = storedBasis.elementsAndCoordinatesArray.map((entry, idx) => {
             const coordinate = entry[1];
-            const atomicLabel = entry[2];
             const toleratedCoordinate = coordinate.map((x) =>
                 Utils.math.mod(Utils.math.roundCustom(x, HASH_TOLERANCE), 0),
             );
-            return `${element}${atomicLabel} ${toleratedCoordinate.join()}`;
+            return `${siteNames[idx]} ${toleratedCoordinate.join()}`;
         });
         return `${standardRep.sort().join(";")};`;
     }
@@ -425,25 +422,11 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         return hashString;
     }
 
-    /* Returns array of atomic labels E.g., ["1", "2", "", ""] */
-    get atomicLabelsArray(): string[] {
-        const labelsArray = Array.from({ length: this.elements.length }, () => "");
-        // https://dev.to/maafaishal/benchmarking-for-while-forof-and-arrayforeach-using-performancenow-1jjg
-        if (this.labels?.length) {
-            for (let i = 0; i < this.labels.length; i++) {
-                // @ts-ignore
-                labelsArray[this.labels[i].id] = this.labels[i].value.toString();
-            }
-        }
-        return labelsArray;
-    }
-
-    /* Returns array of elements with labels E.g., ["Fe1", "Fe2", "O", "O"] */
-    get elementsWithLabelsArray(): string[] {
-        return this.elements.map((element, i) => {
-            const label = this.labels?.[i]?.value || "";
-            return `${element.value}${label}`;
-        });
+    /**
+     * Returns the name of each site in atomic positions and the hash, E.g., ["Fe", "Fe", "O", "O"]
+     */
+    get siteNames(): string[] {
+        return this._elements.values;
     }
 
     /**
@@ -451,11 +434,10 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      * E.g., ``` ['Si 0 0 0', 'Li 0.5 0.5 0.5']```
      */
     get atomicPositions(): string[] {
-        return this.elementsAndCoordinatesAndLabelsArray.map((entry, idx) => {
-            const element = entry[0];
+        const { siteNames } = this;
+        return this.elementsAndCoordinatesArray.map((entry, idx) => {
             const coordinate = entry[1];
-            const atomicLabel = this.atomicLabelsArray[idx];
-            return `${element}${atomicLabel} ${coordinate}`;
+            return `${siteNames[idx]} ${coordinate}`;
         });
     }
 

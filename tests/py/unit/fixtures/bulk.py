@@ -14,10 +14,8 @@ BULK_Cu = Materials.get_by_name_first_match("Copper")
 BULK_Si_PRIMITIVE: Dict[str, Any] = {
     "name": "Silicon FCC",
     "basis": {
-        "constraints": [],
         "coordinates": [{"id": 0, "value": [0.0, 0.0, 0.0]}, {"id": 1, "value": [0.25, 0.25, 0.25]}],
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}],
-        "labels": [],
         "units": "crystal",
     },
     "lattice": {
@@ -39,8 +37,6 @@ BULK_Si_PRIMITIVIZED = {
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}],
         "coordinates": [{"id": 0, "value": [0.5, 0.5, 0.5]}, {"id": 1, "value": [0.75, 0.75, 0.75]}],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 3.867,
@@ -79,8 +75,6 @@ BULK_Si_CONVENTIONAL: Dict[str, Any] = {
             {"id": 7, "value": [0.75, 0.75, 0.75]},
         ],
         "units": "crystal",
-        "constraints": [],
-        "labels": [],
     },
     "lattice": {
         "a": 5.468763846,
@@ -108,8 +102,6 @@ BULK_Si_CONVENTIONAL_FILTERED: Dict[str, Any] = {
             {"id": 2, "value": [0.5, 0.5, 0.5]},
         ],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.468763846,
@@ -147,7 +139,6 @@ BULK_Ge_CONVENTIONAL: Dict[str, Any] = {
             {"id": 6, "value": [0.75, 0.25, 0.75]},
             {"id": 7, "value": [0.25, 0.75, 0.75]},
         ],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.67099638511611,

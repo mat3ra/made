@@ -2,13 +2,19 @@ import numpy as np
 import pytest
 from ase import Atoms
 from ase.build import molecule
+from ase.calculators.emt import EMT
+from ase.optimize import BFGS
 from mat3ra.code.array_with_ids import ArrayWithIds
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
+from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
 from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -35,28 +41,46 @@ direct
 
 
 @pytest.mark.parametrize(
-    "material_config, expected_lattice_params, expected_species, expected_frac_coords",
+    "material_config, expected_lattice_params, expected_species, expected_frac_coords, expected_labels",
     [
         (
             Material.__default_config__,
             {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
             [Element("Si"), Element("Si")],
             [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
+            ["Si", "Si"],
+        ),
+        (
+            {
+                **Material.__default_config__,
+                "basis": {
+                    **Material.__default_config__["basis"],
+                    "atomic_properties": [
+                        {"name": ProtoPropertyEnum.atomic_labels.value, "values": [{"id": 1, "value": 1}]}
+                    ],
+                },
+            },
+            {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
+            [Element("Si"), Element("Si")],
+            [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
+            ["Si", "Si"],
         ),
         (
             GRAPHENE,
             {"a": 2.467291, "b": 2.467291, "c": 20.0, "alpha": 90, "beta": 90, "gamma": 120},
             [Element("C"), Element("C")],
             [[0.0, 0.0, 0.0], [0.333333, 0.666667, 0.0]],
+            ["C", "C"],
         ),
     ],
 )
-def test_to_pymatgen(material_config, expected_lattice_params, expected_species, expected_frac_coords):
+def test_to_pymatgen(material_config, expected_lattice_params, expected_species, expected_frac_coords, expected_labels):
     material = Material.create(material_config)
     structure = to_pymatgen(material)
     assert isinstance(structure, Structure)
     assert np.allclose(structure.lattice.parameters, tuple(expected_lattice_params.values()), atol=1e-6)
     assert structure.species == expected_species
+    assert structure.labels == expected_labels
     assert np.allclose(structure.frac_coords, expected_frac_coords, atol=1e-6)
 
     structure_to_poscar_str = structure.to(fmt="poscar")
@@ -87,10 +111,15 @@ def test_from_poscar():
     assert material_data["lattice"]["alpha"] == 60
 
 
-def test_to_ase():
+@pytest.mark.parametrize(
+    "labels_array, expected_tags",
+    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0]), ([{"id": 1, "value": 1}], [0, 0])],
+)
+def test_to_ase(labels_array, expected_tags):
     material = Material.create_default()
-    labels_array = [{"id": 0, "value": 0}, {"id": 1, "value": 1}]
-    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
+    material.basis.atomic_properties.set_by_name(
+        ProtoPropertyEnum.atomic_labels, ArrayWithIds.from_list_of_dicts(labels_array)
+    )
     ase_atoms = to_ase(material)
     assert isinstance(ase_atoms, Atoms)
     assert np.allclose(
@@ -103,7 +132,7 @@ def test_to_ase():
     )
     assert ase_atoms.get_chemical_symbols() == ["Si", "Si"]
     assert np.allclose(ase_atoms.get_scaled_positions().tolist(), [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]])
-    assert ase_atoms.get_tags().tolist() == [0, 1]
+    assert ase_atoms.get_tags().tolist() == expected_tags
 
 
 @pytest.mark.parametrize(
@@ -141,10 +170,26 @@ def test_from_ase(
         assertion_utils.assert_almost_equal_numbers(material_data["lattice"]["a"], expected_lattice_a, atol=1e-4)
     if expected_lattice_alpha is not None:
         assert material_data["lattice"]["alpha"] == expected_lattice_alpha
-    assert material_data["basis"]["labels"] == expected_labels
+    assert Basis(**material_data["basis"]).labels.to_dict() == expected_labels
     assert material_data["isNonPeriodic"] == expected_is_non_periodic
     if expected_lattice_type is not None:
         assert material_data["lattice"]["type"] == expected_lattice_type
+
+
+@pytest.mark.parametrize(
+    "material_config, modify_basis, arguments, expected_labels",
+    [
+        (GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, Basis.remove_atom_by_id, [1], [0, 0, 1, 1]),
+    ],
+)
+def test_to_ase_from_ase_per_atom_values(material_config, modify_basis, arguments, expected_labels):
+    material = Material.create(material_config)
+    modify_basis(material.basis, *arguments)
+    atoms = to_ase(material)
+    atoms.calc = EMT()
+    BFGS(atoms).run(steps=2)
+    basis = Material.create(from_ase(atoms)).basis
+    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
 
 
 TOLERANCE = 1e-4

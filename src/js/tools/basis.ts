@@ -2,8 +2,8 @@ import { Coordinate3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { chunk, flatten } from "lodash";
 
-import { Basis } from "../basis/basis";
-import { AtomicCoordinateValue, Coordinate } from "../basis/coordinates";
+import { Basis, BasisConfig } from "../basis/basis";
+import { AtomicCoordinateValue } from "../basis/coordinates";
 
 const ADD = Utils.math.add;
 const MULT = Utils.math.multiply;
@@ -14,7 +14,7 @@ const MULT = Utils.math.multiply;
  * @param repetitions{Number[]} Repetition vector `[x, y, z]`, in each spatial dimension.
  * @return {Basis} New Basis.
  */
-function repeat(basis: Basis, repetitions: number[]): Basis {
+function repeat<S extends BasisConfig>(basis: Basis<S>, repetitions: number[]): Basis<S> {
     let i, j, k;
     let shiftI = 0;
     let shiftJ = 0;
@@ -30,24 +30,12 @@ function repeat(basis: Basis, repetitions: number[]): Basis {
     for (i = 1; i <= repetitions[0]; i += 1) {
         for (j = 1; j <= repetitions[1]; j += 1) {
             for (k = 1; k <= repetitions[2]; k += 1) {
-                // for each atom in original basis add one with a repetition
-                // eslint-disable-next-line no-loop-func
-                basisCloneInCrystalCoordinates.elements.forEach((element, index) => {
-                    const coord = basisCloneInCrystalCoordinates.getCoordinateValueByIndex(index);
-                    // only add atoms if shifts are non-zero
-                    if (shiftI || shiftJ || shiftK) {
-                        const coordinateInstance = Coordinate.fromValueAndId(coord);
-                        const translatedCoordinateInstance = coordinateInstance.translateByVector([
-                            shiftI,
-                            shiftJ,
-                            shiftK,
-                        ]);
-                        newBasis.addAtom({
-                            element: element.value,
-                            coordinate: translatedCoordinateInstance.value,
-                        });
-                    }
-                });
+                // only add atoms if shifts are non-zero
+                if (shiftI || shiftJ || shiftK) {
+                    const repetition = basisCloneInCrystalCoordinates.clone();
+                    repetition.translateByVector([shiftI, shiftJ, shiftK]);
+                    newBasis.addAtomsFromAnotherBasis(repetition);
+                }
                 shiftK += 1;
             }
             shiftK = 0;
@@ -114,7 +102,7 @@ function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps = 1) 
         const intermediateBasis = initialBasis.clone();
         intermediateBasis.coordinates = intermediateCoordinatesAsNestedArray.map(
             (coordinate, index) => ({
-                id: index,
+                id: initialBasisCopy._coordinates.ids[index],
                 value: coordinate as AtomicCoordinateValue,
             }),
         );

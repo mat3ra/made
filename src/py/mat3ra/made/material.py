@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Union
 
 from mat3ra.code.constants import AtomicCoordinateUnits, Units
 from mat3ra.code.entity import HasDescriptionHasMetadataNamedDefaultableInMemoryEntityPydantic
-from mat3ra.esse.models.material import MaterialSchema
+from mat3ra.esse.models.material_enhanced import MaterialEnhancedSchema
 from pydantic import ConfigDict, SkipValidation, computed_field
 
 from .basis import Basis
@@ -33,8 +33,6 @@ defaultMaterialConfig = {
             },
         ],
         "units": AtomicCoordinateUnits.crystal,
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 3.867,
@@ -53,11 +51,11 @@ defaultMaterialConfig = {
 
 
 # TODO: replace `-Pydantic` with actual class in the next PR
-class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemoryEntityPydantic):
+class Material(MaterialEnhancedSchema, HasDescriptionHasMetadataNamedDefaultableInMemoryEntityPydantic):
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
     __default_config__ = defaultMaterialConfig
-    __schema__ = MaterialSchema
+    __schema__ = MaterialEnhancedSchema
 
     basis: Basis
     lattice: Lattice
@@ -109,10 +107,10 @@ class Material(MaterialSchema, HasDescriptionHasMetadataNamedDefaultableInMemory
     def add_atom(self, element: str, coordinate: List[float], use_cartesian_coordinates: bool = False) -> None:
         self.basis.add_atom(element, coordinate, use_cartesian_coordinates)
 
-    def set_labels_from_list(self, labels: Optional[List[Union[int, str]]]) -> None:
+    def set_labels_from_list(self, labels: Optional[List[int]]) -> None:
         self.basis.set_labels_from_list(labels)
 
-    def set_labels_from_value(self, value: Union[int, str]) -> None:
+    def set_labels_from_value(self, value: int) -> None:
         self.basis.set_labels_from_list([value] * self.basis.number_of_atoms)
 
     def calculate_hash(self, salt: str = "", is_scaled: bool = False) -> str:

@@ -3,13 +3,25 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
+from mat3ra.made.tools.build import MaterialWithBuildMetadata
+from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.helpers import (
+    create_defect_point_substitution,
+    create_defect_point_vacancy,
+)
+from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from mat3ra.made.tools.modify import filter_by_label, interface_get_part, interface_label_parts_by_elements
+from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.utils import assertion as assertion_utils
 from unit.fixtures.bulk import BULK_Si_PRIMITIVE
+from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
+
+FIXED = [False, False, False]
 
 FIXTURES_DIR = Path(__file__).parents[2] / "fixtures"
 HASH_KEY = "hash"
@@ -116,6 +128,8 @@ def test_basis_cell_lattice_sync():
         ([1, 2], None, []),
         # Test normal behavior with non-empty lists
         ([], [1, 2], [1, 2]),
+        # Test string labels are stored as integers
+        ([], ["1", "2"], [1, 2]),
     ],
 )
 def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
@@ -130,6 +144,49 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
 
     assert len(material.basis.labels.values) == len(expected_final)
     assert material.basis.labels.values == expected_final
+
+
+@pytest.mark.parametrize(
+    "operation, expected_labels, expected_constraints",
+    [
+        (
+            lambda material: create_defect_point_vacancy(
+                material, material.basis.coordinates.values[1], "closest_site"
+            ),
+            [0, 0, 1, 1],
+            [None, None, None, FIXED],
+        ),
+        (
+            lambda material: create_defect_point_substitution(
+                material, material.basis.coordinates.values[3], "Ge", "closest_site"
+            ),
+            [0, 0, 0, 1, 1],
+            [None, None, None, FIXED, None],
+        ),
+        (
+            lambda material: interface_get_part(material, InterfacePartsEnum.SUBSTRATE),
+            [0, 0, 0],
+            [None, None, None],
+        ),
+        (
+            lambda material: merge([filter_by_label(material, 1), filter_by_label(material, 0)]),
+            [1, 1, 0, 0, 0],
+            [None, FIXED, None, None, None],
+        ),
+        (
+            lambda material: interface_label_parts_by_elements(
+                interface_get_part(material, InterfacePartsEnum.FILM), ["Ni"]
+            ),
+            [1, 1],
+            [None, FIXED],
+        ),
+    ],
+)
+def test_per_atom_values_follow_atom_ids(operation, expected_labels, expected_constraints):
+    basis = operation(MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED)).basis
+    assert basis.values_by_atom(ProtoPropertyEnum.atomic_labels) == expected_labels
+    assert basis.values_by_atom(ProtoPropertyEnum.atomic_constraints) == expected_constraints
+    assert all(set(per_atom_values.ids) <= set(basis.elements.ids) for per_atom_values in basis.per_atom_values)
 
 
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
@@ -148,6 +205,12 @@ def test_calculate_hash_feo_standata():
     material = Material.create(data)
     assert material.hash == expected_hashes["hash"]
     assert material.scaled_hash == expected_hashes["scaledHash"]
+
+
+def test_calculate_hash_with_labels():
+    material = Material.create(load_fixture("si-standata.json"))
+    material.set_labels_from_list([0, 1])
+    assert material.hash == load_fixture("hashes.json")["SiliconWithLabels"]["hash"]
 
 
 @pytest.mark.parametrize(

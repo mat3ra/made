@@ -4,22 +4,43 @@ import { Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
+import { ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import { Basis } from "../../../src/js/basis/basis";
+import { BasisWithAtomicProperties } from "../../../src/js/basis/basis_with_atomic_properties";
 import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
     C2H4,
     C2H4Translated,
     FeLiSiBasis,
+    FeOStandata,
     LiFeSiBasis,
     LiFeSiBasisLabels,
     Na,
     Na4Cl4,
     Na4Cl4Cartesian,
+    Si2Basis,
+    Si2BasisWithLabelAndConstraint,
 } from "../fixtures";
 
 const { assertDeepAlmostEqual } = Utils.assertion;
 const TOLERANCE = 1e-4;
+
+const FeOWithLabels = {
+    ...FeOStandata,
+    basis: {
+        ...FeOStandata.basis,
+        atomic_properties: [
+            {
+                name: ProtoPropertyEnum.atomic_labels as const,
+                values: [
+                    { id: 0, value: 1 },
+                    { id: 1, value: 2 },
+                ],
+            },
+        ],
+    },
+};
 
 describe("Basis", () => {
     it("should return true if basises are equal", () => {
@@ -131,10 +152,53 @@ describe("Basis", () => {
      */
 
     it("should return elements with labels", () => {
-        const basis = new Basis(LiFeSiBasisLabels);
+        const basis = new BasisWithAtomicProperties(LiFeSiBasisLabels);
         const elementsWithLabels = basis.elementsWithLabelsArray;
         const expectedElementsWithLabels = ["Li0", "Fe1", "Si2"];
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
+    });
+
+    it("should get the labels stored under their name", () => {
+        const { atomicProperties } = new BasisWithAtomicProperties(FeOWithLabels.basis);
+        expect(
+            atomicProperties.getByName(ProtoPropertyEnum.atomic_labels).toJSON(),
+        ).to.be.deep.equal(FeOWithLabels.basis.atomic_properties[0].values);
+    });
+
+    it("should print each label on the atom with its id when ids have gaps", () => {
+        const basis = new BasisWithAtomicProperties({
+            ...FeOWithLabels.basis,
+            elements: FeOWithLabels.basis.elements.slice(1),
+            coordinates: FeOWithLabels.basis.coordinates.slice(1),
+        });
+        expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
+    });
+
+    it("should drop a removed atom's label and constraint, so an atom added in its place has none", () => {
+        const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
+        basis.removeAtom({ id: 1, element: "Si", coordinate: [0.5, 0.5, 0.5] });
+        basis.addAtom({ element: "Si", coordinate: [0.5, 0.5, 0.5] });
+        assertDeepAlmostEqual(basis.toJSON(), {
+            ...Si2Basis,
+            units: "crystal",
+            atomic_properties: [],
+        });
+    });
+
+    it("should renumber labels and constraints with the atoms when removing with id reset", () => {
+        const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
+        assertDeepAlmostEqual(basis.filterAtomsByIds(0, true, true).toJSON(), {
+            elements: [{ id: 0, value: "Si" }],
+            coordinates: [{ id: 0, value: [0.5, 0.5, 0.5] }],
+            units: "crystal",
+            atomic_properties: [
+                {
+                    name: ProtoPropertyEnum.atomic_constraints,
+                    values: [{ id: 0, value: [false, false, true] }],
+                },
+                { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
+            ],
+        });
     });
 
     /**

@@ -31,7 +31,6 @@ from .utils import assert_two_entities_deep_almost_equal
 
 COMMON_PART = {
     "units": "crystal",
-    "labels": [],
 }
 
 expected_basis_layers_section = {
@@ -216,7 +215,7 @@ def test_displace_interface():
         {"id": 4, "value": [0.660425493, 0.759826552, 0.366525839]},
     ]
 
-    expected_labels = GRAPHENE_NICKEL_INTERFACE["basis"]["labels"]
+    expected_labels = GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"][0]["values"]
     displaced_material = interface_displace_part(
         material, [0.1, 0.2, 0.3], InterfacePartsEnum.FILM, use_cartesian_coordinates=True
     )
@@ -235,7 +234,7 @@ def test_displace_interface_optimized():
         {"id": 3, "value": [0.11112456, 0.181143574, 0.351561882]},
         {"id": 4, "value": [0.77779056, 0.847810574, 0.351561882]},
     ]
-    expected_labels = GRAPHENE_NICKEL_INTERFACE["basis"]["labels"]
+    expected_labels = GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"][0]["values"]
 
     optimal_displacement = get_optimal_film_displacement(
         material,
@@ -253,12 +252,12 @@ def test_displace_interface_optimized():
 @pytest.mark.parametrize(
     "substrate_elements, expected_labels",
     [
-        (["Ni"], GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["labels"]),
+        (["Ni"], GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["atomic_properties"][0]["values"]),
         (
             ["C"],
             [
                 {"id": label["id"], "value": 1 - label["value"]}
-                for label in GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["labels"]
+                for label in GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["atomic_properties"][0]["values"]
             ],
         ),
     ],

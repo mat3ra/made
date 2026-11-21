@@ -17,7 +17,6 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
 )
 from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.types import PointDefectDict
 from unit.fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_PRIMITIVE
-from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
 from unit.fixtures.point_defects import (
     INTERSTITIAL_DEFECT_BULK_PRIMITIVE_Si,
     INTERSTITIAL_VORONOI_DEFECT_BULK_PRIMITIVE_Si,
@@ -33,19 +32,6 @@ from unit.utils import assert_two_entities_deep_almost_equal, get_platform_speci
 # custom coordinate tolerance (atol=1e-4) to verify that the generated coordinate is
 # within a reasonable tolerance of any of the valid symmetrical Voronoi sites.
 UPDATED_COORDINATE_TOLERANCE = 1e-4
-
-FILM_LABEL = 1
-SUBSTRATE_LABEL = 0
-SUBSTITUTION_ELEMENT = "Ge"
-INTERFACE_SUBSTITUTION_PLACEMENT_METHOD = SubstitutionPlacementMethodEnum.CLOSEST_SITE.value
-
-
-def _film_atom_coordinate(material: Material) -> list:
-    labels_by_id = {entry["id"]: entry["value"] for entry in material.basis.labels.to_dict()}
-    for coordinate_entry in material.basis.coordinates.to_dict():
-        if labels_by_id.get(coordinate_entry["id"]) == FILM_LABEL:
-            return coordinate_entry["value"]
-    raise ValueError("No film atom found in fixture material")
 
 
 @pytest.mark.parametrize(
@@ -126,23 +112,6 @@ def test_point_defect_helpers(material_config, defect_params, expected_material_
             expected_material_config.basis.coordinates.values[2] = actual_coord
 
     assert_two_entities_deep_almost_equal(defect, expected_material_config)
-
-
-@pytest.mark.parametrize(
-    "expected_label_count, expected_unique_labels",
-    [(5, {SUBSTRATE_LABEL, FILM_LABEL})],
-)
-def test_create_defect_point_substitution_preserves_interface_labels(expected_label_count, expected_unique_labels):
-    material = Material.create(GRAPHENE_NICKEL_INTERFACE)
-    coordinate = _film_atom_coordinate(material)
-
-    defect_material = create_defect_point_substitution(
-        material, coordinate, SUBSTITUTION_ELEMENT, INTERFACE_SUBSTITUTION_PLACEMENT_METHOD
-    )
-
-    assert len(defect_material.basis.elements.values) == expected_label_count
-    assert len(defect_material.basis.labels.values) == expected_label_count
-    assert set(defect_material.basis.labels.values) == expected_unique_labels
 
 
 @pytest.mark.parametrize(

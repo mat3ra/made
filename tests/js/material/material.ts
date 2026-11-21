@@ -1,5 +1,6 @@
 import { expect } from "chai";
 
+import { ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import Material from "../../../src/js/Material";
 import { FeOStandata, Graphene, Na4Cl4, Silicon } from "../fixtures";
 
@@ -33,33 +34,33 @@ describe("Material", () => {
     describe("toJSON variants", () => {
         const material = new Material(Silicon);
 
-        it("toJSONPure omits hash and basis.constraints", () => {
+        it("toJSONPure omits hash and basis.atomic_properties", () => {
             const json = material.toJSONPure();
             expect(json).to.not.have.property("hash");
             expect(json).to.not.have.property("scaledHash");
-            expect(json.basis).to.not.have.property("constraints");
+            expect(json.basis).to.not.have.property("atomic_properties");
             expect(json.name).to.equal(Silicon.name);
         });
 
-        it("toJSONEnhanced includes basis.constraints and omits hash", () => {
+        it("toJSONEnhanced includes basis.atomic_properties and omits hash", () => {
             const json = material.toJSONEnhanced();
             expect(json).to.not.have.property("hash");
             expect(json).to.not.have.property("scaledHash");
-            expect(json.basis).to.have.property("constraints").that.is.an("array");
+            expect(json.basis).to.have.property("atomic_properties").that.is.an("array");
         });
 
-        it("toJSONHashed includes hash and omits basis.constraints", () => {
+        it("toJSONHashed includes hash and omits basis.atomic_properties", () => {
             const json = material.toJSONHashed();
             expect(json.hash).to.be.a("string");
             expect(json.hash.length).to.be.greaterThan(0);
-            expect(json.basis).to.not.have.property("constraints");
+            expect(json.basis).to.not.have.property("atomic_properties");
         });
 
-        it("toJSONEnhancedHashed includes hash and basis.constraints", () => {
+        it("toJSONEnhancedHashed includes hash and basis.atomic_properties", () => {
             const json = material.toJSONEnhancedHashed();
             expect(json.hash).to.be.a("string");
             expect(json.hash.length).to.be.greaterThan(0);
-            expect(json.basis.constraints).to.be.an("array");
+            expect(json.basis.atomic_properties).to.be.an("array");
         });
 
         it("toJSON equals toJSONEnhancedHashed", () => {
@@ -80,9 +81,14 @@ describe("Material", () => {
                     { id: 1, value: [0.25, 0.25, 0.25] },
                 ],
                 units: "crystal",
-                constraints: [
-                    { id: 0, value: [true, true, false] },
-                    { id: 1, value: [true, true, true] },
+                atomic_properties: [
+                    {
+                        name: ProtoPropertyEnum.atomic_constraints,
+                        values: [
+                            { id: 0, value: [true, true, false] },
+                            { id: 1, value: [true, true, true] },
+                        ],
+                    },
                 ],
             },
             lattice: Silicon.lattice,
@@ -92,7 +98,7 @@ describe("Material", () => {
         expect(xyz).to.match(/Li\s+0\.000000\s+0\.000000\s+0\.000000\s+1\s+1\s+0/);
         expect(xyz).to.match(/Li\s+0\.250000\s+0\.250000\s+0\.250000\s+1\s+1\s+1/);
         // Regression: toJSONPure strips constraints — must not be used for XYZ display.
-        expect(material.toJSONPure().basis).to.not.have.property("constraints");
+        expect(material.toJSONPure().basis).to.not.have.property("atomic_properties");
     });
 
     describe("calculateHash", () => {
@@ -163,6 +169,20 @@ describe("Material", () => {
                 expect(standardBasis.coordinates[0].value).to.deep.equal(standardCoordinate);
                 expect(stored.calculateHash()).to.equal(material.calculateHash());
             });
+        });
+
+        it("hashes labels as main did, from atomic_properties", () => {
+            const values = [0, 1].map((value, id) => ({ id, value }));
+            const material = new Material({
+                ...Silicon,
+                basis: {
+                    ...Silicon.basis,
+                    atomic_properties: [{ name: ProtoPropertyEnum.atomic_labels, values }],
+                },
+            });
+            // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
+            const expectedHashes = require("../../fixtures/hashes.json");
+            expect(material.calculateHash()).to.equal(expectedHashes.SiliconWithLabels.hash);
         });
 
         it("stores InChI hash for non-periodic materials when InChI is present", () => {

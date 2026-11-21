@@ -1,4 +1,6 @@
+import { AtomicProperties, ProtoPropertyEnum } from "./basis/atomic_properties";
 import { Basis } from "./basis/basis";
+import { BasisWithAtomicProperties } from "./basis/basis_with_atomic_properties";
 import { Cell } from "./cell/cell";
 import { ATOMIC_COORD_UNITS, coefficients, tolerance, units } from "./constants";
 import { AtomicConstraints } from "./constraints/constraints";
@@ -31,7 +33,10 @@ export const Made = {
     molecularLatticePaddingFactor,
     ReciprocalLattice,
     Basis,
+    BasisWithAtomicProperties,
     AtomicConstraints,
+    AtomicProperties,
+    ProtoPropertyEnum,
 
     parsers,
     tools,
@@ -54,7 +59,10 @@ export {
     molecularLatticePaddingFactor,
     ReciprocalLattice,
     Basis,
+    BasisWithAtomicProperties,
     AtomicConstraints,
+    AtomicProperties,
+    ProtoPropertyEnum,
     parsers,
     tools,
     LATTICE_TYPE_CONFIGS,

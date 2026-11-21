@@ -1,6 +1,7 @@
 import {
     AtomicConstraintsSchema,
     BasisSchema,
+    BasisWithAtomicPropertiesSchema,
     MaterialHashedSchema,
     MaterialSchema,
 } from "@mat3ra/esse/dist/js/types";
@@ -8,6 +9,7 @@ import { MaterialStandata } from "@mat3ra/standata";
 import fs from "fs";
 import path from "path";
 
+import { ProtoPropertyEnum } from "../../src/js/basis/atomic_properties";
 import AsGeBasis_JSON from "../fixtures/AsGe-basis.json";
 import atomicConstraints_JSON from "../fixtures/atomic-constraints.json";
 import C2H4_JSON from "../fixtures/C2H4.json";
@@ -69,7 +71,61 @@ const Ge2Basis = Ge2Basis_JSON as BasisSchema;
 const AsGeBasis = AsGeBasis_JSON as BasisSchema;
 const FeLiSiBasis = FeLiSiBasis_JSON as BasisSchema;
 const LiFeSiBasis = LiFeSiBasis_JSON as BasisSchema;
-const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as BasisSchema;
+const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as unknown as BasisWithAtomicPropertiesSchema;
+const Si2BasisWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
+    ...Si2Basis,
+    atomic_properties: [
+        {
+            name: ProtoPropertyEnum.atomic_constraints,
+            values: [{ id: 1, value: [false, false, true] }],
+        },
+        { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 1, value: 1 }] },
+    ],
+};
+const Si2BasisWithIdGap: BasisSchema = {
+    elements: [
+        { id: 0, value: "Si" },
+        { id: 2, value: "Si" },
+    ],
+    coordinates: [
+        { id: 0, value: [0, 0, 0] },
+        { id: 2, value: [0.5, 0.5, 0.5] },
+    ],
+    units: "crystal",
+};
+const Si2BasisWithIdGapDisplaced: BasisSchema = {
+    ...Si2BasisWithIdGap,
+    coordinates: [
+        { id: 0, value: [0, 0, 0] },
+        { id: 2, value: [0.5, 0.5, 0.7] },
+    ],
+};
+const Si2BasisWithIdGapHalfway: BasisSchema = {
+    ...Si2BasisWithIdGap,
+    coordinates: [
+        { id: 0, value: [0, 0, 0] },
+        { id: 2, value: [0.5, 0.5, 0.6] },
+    ],
+};
+const Si2BasisRepeatedWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
+    ...Si2BasisRepeated,
+    atomic_properties: [
+        {
+            name: ProtoPropertyEnum.atomic_constraints,
+            values: [
+                { id: 1, value: [false, false, true] },
+                { id: 3, value: [false, false, true] },
+            ],
+        },
+        {
+            name: ProtoPropertyEnum.atomic_labels,
+            values: [
+                { id: 1, value: 1 },
+                { id: 3, value: 1 },
+            ],
+        },
+    ],
+};
 
 // Other
 const atomicConstraints = atomicConstraints_JSON as AtomicConstraintsSchema;
@@ -85,6 +141,11 @@ export {
     SiSlab111NoVacuum,
     Si2Basis,
     Si2BasisRepeated,
+    Si2BasisWithLabelAndConstraint,
+    Si2BasisRepeatedWithLabelAndConstraint,
+    Si2BasisWithIdGap,
+    Si2BasisWithIdGapDisplaced,
+    Si2BasisWithIdGapHalfway,
     // Other
     FeO,
     FeOStandata,
