@@ -2,6 +2,7 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
+import numpy as np
 from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis
@@ -13,6 +14,8 @@ from mat3ra.utils.mixins import RoundNumericValuesMixin
 
 from ..third_party import (
     ASEAtoms,
+    ASEFixAtoms,
+    ASEFixCartesian,
     PymatgenAseAtomsAdaptor,
     PymatgenInterface,
     PymatgenLattice,
@@ -21,6 +24,7 @@ from ..third_party import (
 )
 from .utils import (
     calculate_padded_cell_simple_cubic,
+    extract_constraints_from_ase_atoms,
     extract_labels_from_pymatgen_structure,
     extract_metadata_from_pymatgen_structure,
     extract_tags_from_ase_atoms,
@@ -200,10 +204,19 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     structure = to_pymatgen(material_config)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
-    tags = Basis(**material_config["basis"]).values_by_atom(ProtoPropertyEnum.atomic_labels)
+    basis = Basis(**material_config["basis"])
+    tags = basis.values_by_atom(ProtoPropertyEnum.atomic_labels)
     # ASE reads a missing tag as 0, which is a label, so tags are set only when every atom has one
     if None not in tags:
         atoms.set_tags(tags)
+    if basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints).values:
+        atoms.set_constraint(
+            [
+                ASEFixAtoms([atom_index]) if not any(is_free) else ASEFixCartesian(atom_index, np.logical_not(is_free))
+                for atom_index, is_free in enumerate(basis.values_by_atom(ProtoPropertyEnum.atomic_constraints))
+                if is_free is not None and not all(is_free)
+            ]
+        )
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -237,8 +250,14 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
         material["lattice"]["type"] = "CUB"
 
     ase_tags = extract_tags_from_ase_atoms(ase_atoms)
+    is_free_by_atom = extract_constraints_from_ase_atoms(ase_atoms)
     material["basis"]["atomic_properties"] = AtomicProperties(
-        property_by_name={ProtoPropertyEnum.atomic_labels: ArrayWithIds.from_list_of_dicts(ase_tags)}
+        property_by_name={
+            ProtoPropertyEnum.atomic_labels: ArrayWithIds.from_list_of_dicts(ase_tags),
+            ProtoPropertyEnum.atomic_constraints: ArrayWithIds.from_list_of_dicts(
+                map_array_to_array_with_id_value(is_free_by_atom, remove_none=True)
+            ),
+        }
     ).to_dict()
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:
