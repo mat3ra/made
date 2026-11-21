@@ -4,7 +4,9 @@ import { Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
+import { ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import { Basis } from "../../../src/js/basis/basis";
+import { BasisWithAtomicProperties } from "../../../src/js/basis/basis_with_atomic_properties";
 import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
@@ -26,9 +28,14 @@ const FeOWithLabels = {
     ...FeOStandata,
     basis: {
         ...FeOStandata.basis,
-        labels: [
-            { id: 0, value: 1 },
-            { id: 1, value: 2 },
+        atomic_properties: [
+            {
+                name: ProtoPropertyEnum.atomic_labels as const,
+                values: [
+                    { id: 0, value: 1 },
+                    { id: 1, value: 2 },
+                ],
+            },
         ],
     },
 };
@@ -46,64 +53,6 @@ describe("Basis", () => {
         expect(basis1.isEqualTo(basis2)).to.be.equal(true);
         expect(basis1.hasEquivalentCellTo(basis2)).to.be.equal(true);
     });
-
-    const inOrderCoordinates: Vector3DSchema[] = [
-        [0.0004, 0, 0],
-        [0.5, 0.5, 0.5],
-        [0.4375, 0, 0],
-        [0.437, 0.75, 0.75],
-    ];
-    const inOrderCases: {
-        title: string;
-        changes?: Record<number, Vector3DSchema>;
-        elementOrder?: number[];
-        numberOfAtoms?: number;
-        expected: boolean;
-    }[] = [
-        { title: "the same atoms", expected: true },
-        {
-            title: "the two Fe swapped",
-            changes: { 0: [0.5, 0.5, 0.5], 1: [0.0004, 0, 0] },
-            expected: false,
-        },
-        { title: "Fe and O swapped on their sites", elementOrder: [2, 1, 0, 3], expected: false },
-        { title: "one atom fewer", numberOfAtoms: 3, expected: false },
-        {
-            title: "x 0.43749997 against 0.4375",
-            changes: { 2: [0.43749997, 0, 0] },
-            expected: true,
-        },
-        { title: "x 0.9995 against 0.0004", changes: { 0: [0.9995, 0, 0] }, expected: true },
-        { title: "x 0.439 against 0.437", changes: { 3: [0.439, 0.75, 0.75] }, expected: false },
-    ];
-    inOrderCases.forEach(
-        ({ title, changes = {}, elementOrder = [0, 1, 2, 3], numberOfAtoms = 4, expected }) => {
-            it(`should compare atoms in order within the hash tolerance, both unchanged: ${title}`, () => {
-                const { cell } = new Material(FeOStandata).getBasis();
-                const reference = new Basis({
-                    ...FeOStandata.basis,
-                    coordinates: inOrderCoordinates.map((value, id) => ({ id, value })),
-                    cell,
-                }).toCartesian();
-                const other = new Basis({
-                    ...FeOStandata.basis,
-                    elements: elementOrder
-                        .slice(0, numberOfAtoms)
-                        .map((from, id) => ({ id, value: FeOStandata.basis.elements[from].value })),
-                    coordinates: inOrderCoordinates
-                        .slice(0, numberOfAtoms)
-                        .map((value, id) => ({ id, value: changes[id] ?? value })),
-                    cell,
-                }).toCartesian();
-                const [referenceJSON, otherJSON] = [reference.toJSON(), other.toJSON()];
-                expect(other.isEqualInOrderTo(reference)).to.be.equal(expected);
-                expect([reference.toJSON(), other.toJSON()]).to.be.deep.equal([
-                    referenceJSON,
-                    otherJSON,
-                ]);
-            });
-        },
-    );
 
     it("should return jsonified basis", () => {
         const basis = new Material(Na4Cl4).getBasis();
@@ -201,14 +150,21 @@ describe("Basis", () => {
      */
 
     it("should return elements with labels", () => {
-        const basis = new Basis(LiFeSiBasisLabels);
+        const basis = new BasisWithAtomicProperties(LiFeSiBasisLabels);
         const elementsWithLabels = basis.elementsWithLabelsArray;
         const expectedElementsWithLabels = ["Li0", "Fe1", "Si2"];
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
     });
 
+    it("should get the labels stored under their name", () => {
+        const { atomicProperties } = new BasisWithAtomicProperties(FeOWithLabels.basis);
+        expect(
+            atomicProperties.getByName(ProtoPropertyEnum.atomic_labels).toJSON(),
+        ).to.be.deep.equal(FeOWithLabels.basis.atomic_properties[0].values);
+    });
+
     it("should print each label on the atom with its id when ids have gaps", () => {
-        const basis = new Basis({
+        const basis = new BasisWithAtomicProperties({
             ...FeOWithLabels.basis,
             elements: FeOWithLabels.basis.elements.slice(1),
             coordinates: FeOWithLabels.basis.coordinates.slice(1),

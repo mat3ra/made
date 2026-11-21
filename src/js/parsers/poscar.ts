@@ -8,7 +8,7 @@ import {
 import { Utils } from "@mat3ra/utils";
 import s from "underscore.string";
 
-import { ConstrainedBasis } from "../basis/constrained_basis";
+import { BasisWithAtomicProperties } from "../basis/basis_with_atomic_properties";
 import { AtomicCoordinateValue } from "../basis/coordinates";
 import { AtomicElementValue } from "../basis/elements";
 import { Cell } from "../cell/cell";
@@ -33,12 +33,9 @@ function toPoscar(
 ): string {
     const lattice = new Lattice(materialOrConfig.lattice);
     const vectorsAsString = _latticeVectorsToString(lattice.vectorArrays);
-    const constraints =
-        "constraints" in materialOrConfig.basis ? materialOrConfig.basis.constraints : [];
-    const basis = new ConstrainedBasis({
+    const basis = new BasisWithAtomicProperties({
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
-        constraints: omitConstraints ? [] : constraints,
     });
     const BasisLines: string[] = [];
     let addSelectiveDynamics = false;
@@ -146,7 +143,7 @@ function fromPoscar(fileContent: string): MaterialConfig {
         lines[4].trim().split(/\s+/).map(Number) as Vector3DSchema,
     ]);
 
-    const basis = ConstrainedBasis.fromElementsCoordinatesAndConstraints({
+    const basis = BasisWithAtomicProperties.fromElementsCoordinatesAndConstraints({
         elements,
         coordinates,
         units:

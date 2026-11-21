@@ -2,7 +2,7 @@ import { Coordinate3DSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types"
 import { Utils } from "@mat3ra/utils";
 
 import { Basis } from "../basis/basis";
-import { ConstrainedBasis } from "../basis/constrained_basis";
+import { BasisWithAtomicProperties } from "../basis/basis_with_atomic_properties";
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
 import type { MaterialSchemaMap } from "../Material";
@@ -15,7 +15,7 @@ const ADD = Utils.math.add;
  * @summary Generates new basis for a supercell. For each site from basis generates shifts that are within supercell.
  */
 function generateNewBasisWithinSupercell(
-    basis: Basis | ConstrainedBasis,
+    basis: Basis | BasisWithAtomicProperties,
     cell: Cell,
     supercell: Cell,
     supercellMatrix: Matrix3X3Schema,

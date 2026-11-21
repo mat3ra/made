@@ -5,6 +5,7 @@ from ase.build import molecule
 from ase.calculators.emt import EMT
 from ase.optimize import BFGS
 from mat3ra.code.array_with_ids import ArrayWithIds
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
@@ -52,7 +53,12 @@ direct
         (
             {
                 **Material.__default_config__,
-                "basis": {**Material.__default_config__["basis"], "labels": [{"id": 1, "value": 1}]},
+                "basis": {
+                    **Material.__default_config__["basis"],
+                    "atomic_properties": [
+                        {"name": ProtoPropertyEnum.atomic_labels.value, "values": [{"id": 1, "value": 1}]}
+                    ],
+                },
             },
             {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
             [Element("Si"), Element("Si")],
@@ -111,7 +117,9 @@ def test_from_poscar():
 )
 def test_to_ase(labels_array, expected_tags):
     material = Material.create_default()
-    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
+    material.basis.atomic_properties.set_by_name(
+        ProtoPropertyEnum.atomic_labels, ArrayWithIds.from_list_of_dicts(labels_array)
+    )
     ase_atoms = to_ase(material)
     assert isinstance(ase_atoms, Atoms)
     assert np.allclose(
@@ -162,7 +170,7 @@ def test_from_ase(
         assertion_utils.assert_almost_equal_numbers(material_data["lattice"]["a"], expected_lattice_a, atol=1e-4)
     if expected_lattice_alpha is not None:
         assert material_data["lattice"]["alpha"] == expected_lattice_alpha
-    assert material_data["basis"]["labels"] == expected_labels
+    assert Basis(**material_data["basis"]).labels.to_dict() == expected_labels
     assert material_data["isNonPeriodic"] == expected_is_non_periodic
     if expected_lattice_type is not None:
         assert material_data["lattice"]["type"] == expected_lattice_type

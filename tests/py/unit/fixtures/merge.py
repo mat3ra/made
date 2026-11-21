@@ -29,8 +29,6 @@ MERGED_BULK_Si_Ge = {
                                     {"id": 7, "value": [0.75, 0.75, 0.75]},
                                 ],
                                 "units": "crystal",
-                                "labels": [],
-                                "constraints": [],
                             },
                             "lattice": {
                                 "a": 5.468763846,
@@ -67,8 +65,6 @@ MERGED_BULK_Si_Ge = {
                                     {"id": 7, "value": [0.25, 0.75, 0.75]},
                                 ],
                                 "units": "crystal",
-                                "labels": [],
-                                "constraints": [],
                             },
                             "lattice": {
                                 "a": 5.67099638511611,
@@ -131,8 +127,6 @@ MERGED_BULK_Si_Ge = {
             {"id": 15, "value": [0.25, 0.75, 0.75]},
         ],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.468763846,

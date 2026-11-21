@@ -3,7 +3,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from mat3ra.made.basis import PER_ATOM_FIELDS, Basis, Coordinates
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
+from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
@@ -183,9 +184,9 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
 )
 def test_per_atom_values_follow_atom_ids(operation, expected_labels, expected_constraints):
     basis = operation(MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED)).basis
-    assert basis.values_by_atom("labels") == expected_labels
-    assert basis.values_by_atom("constraints") == expected_constraints
-    assert all(set(getattr(basis, field).ids) <= set(basis.elements.ids) for field in PER_ATOM_FIELDS)
+    assert basis.values_by_atom(ProtoPropertyEnum.atomic_labels) == expected_labels
+    assert basis.values_by_atom(ProtoPropertyEnum.atomic_constraints) == expected_constraints
+    assert all(set(per_atom_values.ids) <= set(basis.elements.ids) for per_atom_values in basis.per_atom_values)
 
 
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
@@ -206,13 +207,10 @@ def test_calculate_hash_feo_standata():
     assert material.scaled_hash == expected_hashes["scaledHash"]
 
 
-def test_calculate_hash_without_labels():
-    material = Material.create(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED)
-    unlabeled_material_config = {
-        **GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
-        "basis": {**GRAPHENE_NICKEL_INTERFACE_CONSTRAINED["basis"], "labels": []},
-    }
-    assert material.hash == Material.create(unlabeled_material_config).hash
+def test_calculate_hash_with_labels():
+    material = Material.create(load_fixture("si-standata.json"))
+    material.set_labels_from_list([0, 1])
+    assert material.hash == load_fixture("hashes.json")["SiliconWithLabels"]["hash"]
 
 
 @pytest.mark.parametrize(

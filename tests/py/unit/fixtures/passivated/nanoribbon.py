@@ -54,7 +54,6 @@ GRAPHENE_ZIGZAG_NANORIBBON_PASSIVATED = {
             {"id": 23, "value": [0.812499933, 0.771862307, 0.5]},
         ],
         "units": "crystal",
-        "labels": [],
     },
     "lattice": {
         "a": 9.869164,

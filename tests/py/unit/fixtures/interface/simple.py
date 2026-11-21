@@ -1,6 +1,5 @@
 INTERFACE_Si_001_Ge_001 = {
     "basis": {
-        "constraints": [],
         "coordinates": [
             {"id": 0, "value": [0.5, 0.0, 0.184096594]},
             {"id": 1, "value": [0.25, 0.25, 0.122731226]},

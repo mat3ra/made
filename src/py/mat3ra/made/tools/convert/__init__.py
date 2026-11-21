@@ -2,8 +2,12 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
+from mat3ra.code.array_with_ids import ArrayWithIds
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
+from mat3ra.made.basis import Basis
+from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.material import Material
-from mat3ra.made.utils import map_array_to_array_with_id_value, map_array_with_id_value_to_array
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import remove_comments_from_source_code
 from mat3ra.utils.mixins import RoundNumericValuesMixin
 
@@ -51,8 +55,8 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     basis = material_data["basis"]
     elements = [element["value"] for element in basis["elements"]]
     coordinates = [coord["value"] for coord in basis["coordinates"]]
-    labels_data = basis.get("labels", []) or []
-    labels = [label["value"] for label in labels_data] if len(labels_data) == len(elements) else []
+    labels_by_atom = Basis(**basis).values_by_atom(ProtoPropertyEnum.atomic_labels)
+    labels = labels_by_atom if None not in labels_by_atom else []
     # Assuming that the basis units are fractional since it's a crystal basis
     coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
 
@@ -87,7 +91,6 @@ def from_pymatgen(structure: Union[PymatgenStructure, PymatgenInterface]) -> Dic
         "units": "crystal",
         # `cell` is assigned by the `lattice` object during Material initialization
         # "cell": __round__(structure.lattice.matrix.tolist()),
-        "constraints": [],
     }
 
     lattice = {
@@ -113,9 +116,10 @@ def from_pymatgen(structure: Union[PymatgenStructure, PymatgenInterface]) -> Dic
         "boundaryConditions": {"type": "pbc", "offset": 0},
     }
 
-    basis["labels"] = map_array_to_array_with_id_value(
-        extract_labels_from_pymatgen_structure(structure), remove_none=True
-    )
+    labels = map_array_to_array_with_id_value(extract_labels_from_pymatgen_structure(structure), remove_none=True)
+    basis["atomic_properties"] = AtomicProperties(
+        arrays_by_name={ProtoPropertyEnum.atomic_labels: ArrayWithIds.from_list_of_dicts(labels)}
+    ).to_dict()
 
     material_data = {
         "name": structure.formula,
@@ -196,10 +200,10 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     structure = to_pymatgen(material_config)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
-    atomic_labels = material_config["basis"].get("labels", [])
+    tags = Basis(**material_config["basis"]).values_by_atom(ProtoPropertyEnum.atomic_labels)
     # ASE reads a missing tag as 0, which is a label, so tags are set only when every atom has one
-    if len(atomic_labels) == len(atoms):
-        atoms.set_tags(map_array_with_id_value_to_array(atomic_labels))
+    if None not in tags:
+        atoms.set_tags(tags)
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
@@ -233,7 +237,9 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
         material["lattice"]["type"] = "CUB"
 
     ase_tags = extract_tags_from_ase_atoms(ase_atoms)
-    material["basis"]["labels"] = ase_tags
+    material["basis"]["atomic_properties"] = AtomicProperties(
+        arrays_by_name={ProtoPropertyEnum.atomic_labels: ArrayWithIds.from_list_of_dicts(ase_tags)}
+    ).to_dict()
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:
         material["metadata"].update(ase_metadata)

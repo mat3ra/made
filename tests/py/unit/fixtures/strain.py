@@ -24,8 +24,6 @@ BULK_Si_CONVENTIONAL_STRAINED: Final = {
             {"id": 7, "value": [0.75, 0.75, 0.75]},
         ],
         "units": "crystal",
-        "constraints": [],
-        "labels": [],
     },
     "lattice": {
         "a": 6.01564,
