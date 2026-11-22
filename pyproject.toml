@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "mat3ra-code",
-    "mat3ra-esse @ git+https://github.com/mat3ra/esse@b4b462667d6dc60a8c0d34ce094e1657ec64cffd",
+    "mat3ra-esse @ git+https://github.com/mat3ra/esse@d45a08e16892faf2b345104e4bcdc070919f0461",
     "mat3ra-utils>=2026.7.8.post0",
     "numpy",
     # basis/__init__.py imports scipy.spatial at load time, and material.py
