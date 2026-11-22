@@ -4,7 +4,7 @@ from typing import Final, Tuple
 import numpy as np
 import pytest
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.esse.models.materials_category_components.entities.auxiliary.two_dimensional.supercell_matrix_2d import (
     SupercellMatrix2DSchema,
 )

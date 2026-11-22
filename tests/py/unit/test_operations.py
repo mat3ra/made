@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build_components.operations.core.modifications.perturb import (
     SineWavePerturbationFunctionHolder,

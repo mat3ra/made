@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Literal, Union
 
 import numpy as np
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.made.material import Material
 
 # TODO: move to mat3ra-code
