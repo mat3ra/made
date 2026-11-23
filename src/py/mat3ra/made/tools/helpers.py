@@ -1,3 +1,5 @@
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
+
 # Analyzers
 from .analyze.crystal_site.enums import SurfaceSiteTypesEnum
 from .analyze.crystal_site.helpers import get_film_buckling, get_film_site_occupation
@@ -163,6 +165,7 @@ __all__ = [
     # Entities
     "CoordinateCondition",
     # Enums
+    "AxisEnum",
     "EdgeTypesEnum",
     "SurfaceTypesEnum",
     "SurfaceSiteTypesEnum",
