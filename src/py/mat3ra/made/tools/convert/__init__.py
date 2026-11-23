@@ -52,7 +52,7 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     elements = [element["value"] for element in basis["elements"]]
     coordinates = [coord["value"] for coord in basis["coordinates"]]
     labels_data = basis.get("labels", []) or []
-    labels = [label["value"] for label in labels_data]
+    labels = [label["value"] for label in labels_data] if len(labels_data) == len(elements) else []
     # Assuming that the basis units are fractional since it's a crystal basis
     coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
 
@@ -197,7 +197,7 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     atomic_labels = material_config["basis"].get("labels", [])
-    if atomic_labels:
+    if atomic_labels and len(atomic_labels) == len(atoms):
         atoms.set_tags(map_array_with_id_value_to_array(atomic_labels))
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
