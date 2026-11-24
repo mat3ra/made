@@ -45,10 +45,7 @@ def _get_non_periodic_lattice_size(
 def extract_labels_from_pymatgen_structure(structure: PymatgenStructure) -> List[Optional[int]]:
     if isinstance(structure, PymatgenInterface):
         return list(map(lambda s: INTERFACE_LABELS_MAP[s.properties["interface_label"]], structure.sites))
-    return [
-        None if site.label in (site.species_string, str(UNLABELED_ATOM_LABEL)) else int(site.label)
-        for site in structure.sites
-    ]
+    return [int(site.label) if site.label.isdigit() else None for site in structure.sites]
 
 
 def extract_metadata_from_pymatgen_structure(structure: PymatgenStructure) -> Dict[str, Any]:

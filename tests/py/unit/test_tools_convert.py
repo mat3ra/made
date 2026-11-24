@@ -10,6 +10,7 @@ from mat3ra.standata.materials import Materials
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -21,6 +22,9 @@ from .fixtures.thrid_party.ase_atoms import (
 
 PYMATGEN_LATTICE = Lattice.from_parameters(a=3.84, b=3.84, c=3.84, alpha=120, beta=90, gamma=60)
 PYMATGEN_STRUCTURE = Structure(PYMATGEN_LATTICE, ["Si", "Si"], [[0, 0, 0], [0.75, 0.5, 0.75]])
+PYMATGEN_STRUCTURE_WITH_CIF_LABELS = Structure(
+    PYMATGEN_LATTICE, ["Si", "Si"], [[0, 0, 0], [0.75, 0.5, 0.75]], labels=["Si1", "Si2"]
+)
 
 POSCAR_CONTENT = """Si2
 1.0
@@ -68,11 +72,13 @@ def test_to_pymatgen(material_config, expected_lattice_params, expected_species,
     assert structure_to_poscar_str == material_to_poscar_str
 
 
-def test_from_pymatgen():
-    material_data = from_pymatgen(PYMATGEN_STRUCTURE)
+@pytest.mark.parametrize("structure", [PYMATGEN_STRUCTURE, PYMATGEN_STRUCTURE_WITH_CIF_LABELS])
+def test_from_pymatgen(structure):
+    material_data = from_pymatgen(structure)
     assert material_data["lattice"]["a"] == 3.84
     assert material_data["lattice"]["alpha"] == 120
     assert material_data["basis"]["elements"] == [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}]
+    assert material_data["basis"]["labels"] == []
 
     converted_material = Material.create(material_data)
     default_material = Material.create_default()
@@ -157,48 +163,61 @@ def test_from_ase(
 FESE = Materials.get_by_name_first_match("FeSe")
 FESE_LABELS = [{"id": 0, "value": 1}, {"id": 1, "value": 2}]
 FESE_LABELS_WITH_ZERO = [{"id": 0, "value": 0}, {"id": 1, "value": 2}]
+FESE_WITH_LABELS = {**FESE, "basis": {**FESE["basis"], "labels": FESE_LABELS}}
+FESE_WITH_LABELS_WITH_ZERO = {**FESE, "basis": {**FESE["basis"], "labels": FESE_LABELS_WITH_ZERO}}
+interface_with_id_gap = Material.create(GRAPHENE_NICKEL_INTERFACE)
+interface_with_id_gap.basis.remove_atom_by_id(1)
+GRAPHENE_NICKEL_INTERFACE_WITH_ID_GAP = interface_with_id_gap.to_dict()
 IDENTITY_MATRIX = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 SUPERCELL_MATRIX_2X1X1 = [[2, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 
 @pytest.mark.parametrize(
-    "labels_array, supercell_matrix, expected_tags, expected_labels",
+    "material_config, supercell_matrix, expected_tags, expected_labels",
     [
-        (FESE_LABELS, IDENTITY_MATRIX, [1, 2, -1, -1], FESE_LABELS),
-        (FESE_LABELS_WITH_ZERO, IDENTITY_MATRIX, [0, 2, -1, -1], FESE_LABELS_WITH_ZERO),
+        (FESE_WITH_LABELS, IDENTITY_MATRIX, [1, 2, -1, -1], FESE_LABELS),
+        (FESE_WITH_LABELS_WITH_ZERO, IDENTITY_MATRIX, [0, 2, -1, -1], FESE_LABELS_WITH_ZERO),
         (
-            FESE_LABELS,
+            GRAPHENE_NICKEL_INTERFACE_WITH_ID_GAP,
+            IDENTITY_MATRIX,
+            [0, 0, 1, 1],
+            [{"id": 0, "value": 0}, {"id": 1, "value": 0}, {"id": 2, "value": 1}, {"id": 3, "value": 1}],
+        ),
+        (
+            FESE_WITH_LABELS,
             SUPERCELL_MATRIX_2X1X1,
             [1, 2, -1, -1, 1, 2, -1, -1],
             [{"id": 0, "value": 1}, {"id": 1, "value": 2}, {"id": 4, "value": 1}, {"id": 5, "value": 2}],
         ),
     ],
 )
-def test_from_ase_round_trip(labels_array, supercell_matrix, expected_tags, expected_labels):
-    material = Material.create(FESE)
-    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
-    ase_atoms = make_supercell(to_ase(material), supercell_matrix)
+def test_from_ase_round_trip(material_config, supercell_matrix, expected_tags, expected_labels):
+    ase_atoms = make_supercell(to_ase(Material.create(material_config)), supercell_matrix)
     assert ase_atoms.get_tags().tolist() == expected_tags
     assert from_ase(ase_atoms)["basis"]["labels"] == expected_labels
 
 
 @pytest.mark.parametrize(
-    "labels_array, supercell_matrix, expected_site_labels, expected_labels",
+    "material_config, supercell_matrix, expected_site_labels, expected_labels",
     [
-        (FESE_LABELS, IDENTITY_MATRIX, ["1", "2", "-1", "-1"], FESE_LABELS),
-        (FESE_LABELS_WITH_ZERO, IDENTITY_MATRIX, ["0", "2", "-1", "-1"], FESE_LABELS_WITH_ZERO),
+        (FESE_WITH_LABELS, IDENTITY_MATRIX, ["1", "2", "-1", "-1"], FESE_LABELS),
+        (FESE_WITH_LABELS_WITH_ZERO, IDENTITY_MATRIX, ["0", "2", "-1", "-1"], FESE_LABELS_WITH_ZERO),
         (
-            FESE_LABELS,
+            GRAPHENE_NICKEL_INTERFACE_WITH_ID_GAP,
+            IDENTITY_MATRIX,
+            ["0", "0", "1", "1"],
+            [{"id": 0, "value": 0}, {"id": 1, "value": 0}, {"id": 2, "value": 1}, {"id": 3, "value": 1}],
+        ),
+        (
+            FESE_WITH_LABELS,
             SUPERCELL_MATRIX_2X1X1,
             ["1", "1", "2", "2", "-1", "-1", "-1", "-1"],
             [{"id": 0, "value": 1}, {"id": 1, "value": 1}, {"id": 2, "value": 2}, {"id": 3, "value": 2}],
         ),
     ],
 )
-def test_from_pymatgen_round_trip(labels_array, supercell_matrix, expected_site_labels, expected_labels):
-    material = Material.create(FESE)
-    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
-    structure = to_pymatgen(material)
+def test_from_pymatgen_round_trip(material_config, supercell_matrix, expected_site_labels, expected_labels):
+    structure = to_pymatgen(Material.create(material_config))
     structure.make_supercell(supercell_matrix)
     assert structure.labels == expected_site_labels
     assert from_pymatgen(structure)["basis"]["labels"] == expected_labels

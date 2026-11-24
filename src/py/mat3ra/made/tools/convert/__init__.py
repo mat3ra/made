@@ -57,7 +57,7 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     labels = []
     if labels_data:
         labels_by_atom = ArrayWithIds.from_list_of_dicts(labels_data).to_padded_array_of_values(
-            len(elements), UNLABELED_ATOM_LABEL
+            [element["id"] for element in basis["elements"]], UNLABELED_ATOM_LABEL
         )
         labels = [str(label) for label in labels_by_atom]
     # Assuming that the basis units are fractional since it's a crystal basis
@@ -206,7 +206,9 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atomic_labels = material_config["basis"].get("labels", [])
     if atomic_labels:
         atoms.set_tags(
-            ArrayWithIds.from_list_of_dicts(atomic_labels).to_padded_array_of_values(len(atoms), UNLABELED_ATOM_LABEL)
+            ArrayWithIds.from_list_of_dicts(atomic_labels).to_padded_array_of_values(
+                [element["id"] for element in material_config["basis"]["elements"]], UNLABELED_ATOM_LABEL
+            )
         )
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
