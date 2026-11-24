@@ -2,7 +2,7 @@ import math
 from typing import List, Optional
 
 import numpy as np
-from mat3ra.code.constants import HASH_TOLERANCE
+from mat3ra.code.constants import HASH_TOLERANCE, Tolerance
 from mat3ra.code.entity import InMemoryEntityPydantic
 from mat3ra.esse.models.properties_directory.structural.lattice import (
     LatticeSchema,
@@ -17,7 +17,14 @@ from .cell.conventional_cell import PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS
 from .cell.primitive_cell import PRIMITIVE_CELLS
 
 COORDINATE_TOLERANCE = 6
-ORIENTATION_TOLERANCE = 1e-6
+
+
+def cell_distances(vectors: np.ndarray) -> np.ndarray:
+    """
+    The lengths of the three cell vectors and of their three pairwise differences.
+    """
+    first, second, third = vectors
+    return np.linalg.norm([first, second, third, first - second, first - third, second - third], axis=1)
 
 
 class LatticeVectors(Cell):
@@ -151,20 +158,27 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
         axes along x, y and z, where programs that look for symmetry only about the Cartesian
         axes, such as Quantum ESPRESSO's pw.x, find the full point group.
 
-        The rotation R solves vectors · R = standard and is used only when it is proper and
-        exact, so a lattice not shaped like its type keeps `vector_arrays`. A rotation changes
-        no lengths or angles, so fractional coordinates stay valid; Cartesian coordinates
-        follow `vector_arrays`, which is unchanged.
+        The standard cell is returned only when it is a rotation of `vector_arrays` (see
+        `is_rotation_of`), so a lattice not shaped like its type keeps `vector_arrays`. A
+        rotation changes no lengths or angles, so fractional coordinates stay valid; Cartesian
+        coordinates follow `vector_arrays`, which is unchanged.
         """
         if self.type_value not in PRIMITIVE_CELLS:
             return self.vector_arrays
-        vectors = np.array(self.vector_arrays)
-        standard = np.array(PRIMITIVE_CELLS[self.type_value](self.conventional_lattice_parameters))
-        rotation = np.linalg.solve(vectors, standard)
-        is_orthogonal = np.allclose(rotation.T @ rotation, np.eye(3), rtol=0, atol=ORIENTATION_TOLERANCE)
-        if not is_orthogonal or np.linalg.det(rotation) <= 0:
-            return self.vector_arrays
-        return standard.tolist()
+        standard = PRIMITIVE_CELLS[self.type_value](self.conventional_lattice_parameters)
+        return standard if self.is_rotation_of(standard) else self.vector_arrays
+
+    def is_rotation_of(self, vectors: List[List[float]]) -> bool:
+        """
+        Whether `vectors` are a proper rotation of `vector_arrays`.
+
+        Two cells are related by a rotation when their three vector lengths and the three
+        lengths of their pairwise differences agree, which fixes the metric, and their
+        handedness is the same; lengths agree within `Tolerance.lengthAngstrom`.
+        """
+        first, second = np.array(self.vector_arrays), np.array(vectors)
+        same_lengths = np.allclose(cell_distances(first), cell_distances(second), rtol=0, atol=Tolerance.lengthAngstrom)
+        return same_lengths and np.sign(np.linalg.det(first)) == np.sign(np.linalg.det(second))
 
     @property
     def cell_volume(self) -> float:

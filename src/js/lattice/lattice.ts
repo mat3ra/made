@@ -18,6 +18,22 @@ import { LATTICE_TYPE_CONFIGS } from "./lattice_types";
 import { UnitCell, UnitCellProps } from "./unit_cell";
 
 const { HASH_TOLERANCE } = Utils.constants;
+const LENGTH_TOLERANCE = Utils.constants.tolerance.lengthAngstrom;
+
+/**
+ * The lengths of the three cell vectors and of their three pairwise differences.
+ */
+function getCellDistances([first, second, third]: Matrix3X3Schema): number[] {
+    const difference = (a: number[], b: number[]) => Utils.math.subtract(a, b) as number[];
+    return [
+        first,
+        second,
+        third,
+        difference(first, second),
+        difference(first, third),
+        difference(second, third),
+    ].map((vector) => Utils.math.vlen(vector));
+}
 /**
  * Scaling factor used to calculate the new lattice size for non-periodic systems.
  * The scaling factor ensures that a non-periodic structure will have have a lattice greater than the structures size.
@@ -186,26 +202,36 @@ export class Lattice extends InMemoryEntity<LatticeEntitySchema> implements Latt
      * axes along x, y and z, where programs that look for symmetry only about the Cartesian
      * axes, such as Quantum ESPRESSO's pw.x, find the full point group.
      *
-     * The rotation R solves vectors · R = standard and is used only when it is proper and
-     * exact, so a lattice not shaped like its type keeps `vectorArrays`. A rotation changes
-     * no lengths or angles, so fractional coordinates stay valid; Cartesian coordinates
-     * follow `vectorArrays`, which is unchanged.
+     * The standard cell is returned only when it is a rotation of `vectorArrays` (see
+     * `isRotationOf`), so a lattice not shaped like its type keeps `vectorArrays`. A
+     * rotation changes no lengths or angles, so fractional coordinates stay valid;
+     * Cartesian coordinates follow `vectorArrays`, which is unchanged.
      */
     get vectorArraysInStandardOrientation(): Matrix3X3Schema {
-        const vectors = this.vectorArrays;
-        if (!(this.type in PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS)) return vectors;
+        if (!(this.type in PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS)) return this.vectorArrays;
         const standard = getPrimitiveLatticeVectorsFromConfig(
             this.getConventionalLatticeParameters(),
         );
-        const rotation = Utils.math.multiply(Utils.math.inv(vectors), standard) as Matrix3X3Schema;
-        const deviation = Utils.math.subtract(
-            Utils.math.multiply(Utils.math.transpose(rotation), rotation),
-            Utils.math.identity(3),
+        return this.isRotationOf(standard) ? standard : this.vectorArrays;
+    }
+
+    /**
+     * Whether `vectors` are a proper rotation of `vectorArrays`.
+     *
+     * Two cells are related by a rotation when their three vector lengths and the three
+     * lengths of their pairwise differences agree, which fixes the metric, and their
+     * handedness is the same; lengths agree within `tolerance.lengthAngstrom`.
+     */
+    isRotationOf(vectors: Matrix3X3Schema): boolean {
+        const first = getCellDistances(this.vectorArrays);
+        const second = getCellDistances(vectors);
+        const sameLengths = first.every(
+            (distance, index) => Math.abs(distance - second[index]) <= LENGTH_TOLERANCE,
         );
-        const isOrthogonal =
-            (Utils.math.norm(deviation as Matrix3X3Schema, "fro") as number) <= 1e-6;
-        const isProper = (Utils.math.det(rotation) as number) > 0;
-        return isOrthogonal && isProper ? standard : vectors;
+        const sameHandedness =
+            Math.sign(Utils.math.det(this.vectorArrays) as number) ===
+            Math.sign(Utils.math.det(vectors) as number);
+        return sameLengths && sameHandedness;
     }
 
     get vectorArraysRounded(): Matrix3X3Schema {
