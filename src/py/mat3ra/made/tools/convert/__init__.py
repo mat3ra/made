@@ -56,10 +56,10 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     labels_data = basis.get("labels", []) or []
     labels = []
     if labels_data:
-        labels_by_atom = ArrayWithIds.from_list_of_dicts(labels_data).to_padded_array_of_values(
+        labels_in_atom_order = ArrayWithIds.from_list_of_dicts(labels_data).to_padded_array_of_values(
             [element["id"] for element in basis["elements"]], UNLABELED_ATOM_LABEL
         )
-        labels = [str(label) for label in labels_by_atom]
+        labels = [str(label) for label in labels_in_atom_order]
     # Assuming that the basis units are fractional since it's a crystal basis
     coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
 
