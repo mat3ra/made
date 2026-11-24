@@ -3,7 +3,6 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 from mat3ra.made.cell.primitive_cell import PRIMITIVE_CELLS
-from mat3ra.made.cell.standard_orientation import get_vectors_in_standard_orientation
 from mat3ra.made.lattice import Lattice
 
 # Conventional parameters per type, generic enough to have no accidental extra symmetry.
@@ -71,6 +70,10 @@ def test_the_generic_vectors_are_unchanged():
     assert vector_c[:2] == [0.0, 0.0]
 
 
-def test_an_unknown_type_keeps_the_vectors():
-    vectors = [[1.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 3.0]]
-    assert get_vectors_in_standard_orientation(vectors, "UNKNOWN") == vectors
+@pytest.mark.parametrize(
+    ("lattice_type", "conventional"),
+    [("FCC", dict(a=4.0, b=4.0, c=4.0)), ("ORCC", dict(a=3.0, b=3.6, c=4.3)), ("MCLC", dict(a=3.0, b=3.6, c=4.3))],
+)
+def test_conventional_lattice_parameters(lattice_type, conventional):
+    parameters = lattice_from_parameters(lattice_type).conventional_lattice_parameters
+    assert [parameters.a, parameters.b, parameters.c] == pytest.approx(list(conventional.values()), abs=1e-9)

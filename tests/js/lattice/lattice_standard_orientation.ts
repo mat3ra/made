@@ -87,6 +87,13 @@ describe("Lattice vectors in standard orientation", () => {
         expectClose(lattice.vectorArraysInStandardOrientation, lattice.vectorArrays);
     });
 
+    it("use the conventional lattice parameters of the type", () => {
+        const conventional = latticeFromParameters("ORCC").getConventionalLatticeParameters();
+        expect(conventional.a).to.be.closeTo(3.0, TOLERANCE);
+        expect(conventional.b).to.be.closeTo(3.6, TOLERANCE);
+        expect(conventional.c).to.be.closeTo(4.3, TOLERANCE);
+    });
+
     it("leave the generic vectors as they are", () => {
         const [vectorA, , vectorC] = latticeFromParameters("FCC").vectorArrays;
         expect(vectorA[1]).to.equal(0);

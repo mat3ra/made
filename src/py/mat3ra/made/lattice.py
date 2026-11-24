@@ -13,9 +13,11 @@ from mat3ra.utils.mixins import RoundNumericValuesMixin
 from pydantic import BaseModel
 
 from .cell import Cell
-from .cell.standard_orientation import get_vectors_in_standard_orientation
+from .cell.conventional_cell import PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS
+from .cell.primitive_cell import PRIMITIVE_CELLS
 
 COORDINATE_TOLERANCE = 6
+ORIENTATION_TOLERANCE = 1e-6
 
 
 class LatticeVectors(Cell):
@@ -122,15 +124,47 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
         return self.vectors.vector_arrays_rounded
 
     @property
+    def type_value(self) -> str:
+        return getattr(self.type, "value", self.type)
+
+    @property
+    def conventional_lattice_parameters(self) -> "Lattice":
+        """
+        The conventional cell of this primitive lattice, as lattice parameters.
+
+        The conventional vectors are the type's multiplier times the primitive ones (Setyawan
+        and Curtarolo, doi:10.1016/j.commatsci.2010.05.010); alpha is the angle between the
+        second and third, as the monoclinic standard cells use it.
+        """
+        multiplier = np.array(PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS[self.type_value])
+        conventional_vectors = multiplier @ np.array(self.vector_arrays)
+        return Lattice.from_vectors_array(conventional_vectors.tolist(), type=self.type)
+
+    @property
     def vector_arrays_in_standard_orientation(self) -> List[List[float]]:
         """
         `vector_arrays` rotated into the standard orientation of the lattice type.
 
-        The same cell, so the same fractional coordinates, with the conventional axes along
-        x, y and z as in the standard primitive cells; see `cell.standard_orientation`.
-        `vector_arrays` keeps the generic orientation, and Cartesian coordinates follow it.
+        Lattice parameters fix a cell's shape but not its orientation. `vector_arrays` puts the
+        third vector along z for every type, which leaves the symmetry axes of most centred
+        lattices tilted; the standard primitive cells (`PRIMITIVE_CELLS`) have the conventional
+        axes along x, y and z, where programs that look for symmetry only about the Cartesian
+        axes, such as Quantum ESPRESSO's pw.x, find the full point group.
+
+        The rotation R solves vectors · R = standard and is used only when it is proper and
+        exact, so a lattice not shaped like its type keeps `vector_arrays`. A rotation changes
+        no lengths or angles, so fractional coordinates stay valid; Cartesian coordinates
+        follow `vector_arrays`, which is unchanged.
         """
-        return get_vectors_in_standard_orientation(self.vector_arrays, getattr(self.type, "value", self.type))
+        if self.type_value not in PRIMITIVE_CELLS:
+            return self.vector_arrays
+        vectors = np.array(self.vector_arrays)
+        standard = np.array(PRIMITIVE_CELLS[self.type_value](self.conventional_lattice_parameters))
+        rotation = np.linalg.solve(vectors, standard)
+        is_orthogonal = np.allclose(rotation.T @ rotation, np.eye(3), rtol=0, atol=ORIENTATION_TOLERANCE)
+        if not is_orthogonal or np.linalg.det(rotation) <= 0:
+            return self.vector_arrays
+        return standard.tolist()
 
     @property
     def cell_volume(self) -> float:
