@@ -13,6 +13,7 @@ from mat3ra.utils.mixins import RoundNumericValuesMixin
 from pydantic import BaseModel
 
 from .cell import Cell
+from .cell.standard_orientation import get_vectors_in_standard_orientation
 
 COORDINATE_TOLERANCE = 6
 
@@ -119,6 +120,17 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
     @property
     def vector_arrays_rounded(self) -> List[List[float]]:
         return self.vectors.vector_arrays_rounded
+
+    @property
+    def vector_arrays_in_standard_orientation(self) -> List[List[float]]:
+        """
+        `vector_arrays` rotated into the standard orientation of the lattice type.
+
+        The same cell, so the same fractional coordinates, with the conventional axes along
+        x, y and z as in the standard primitive cells; see `cell.standard_orientation`.
+        `vector_arrays` keeps the generic orientation, and Cartesian coordinates follow it.
+        """
+        return get_vectors_in_standard_orientation(self.vector_arrays, getattr(self.type, "value", self.type))
 
     @property
     def cell_volume(self) -> float:

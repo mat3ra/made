@@ -13,6 +13,7 @@ import * as lodash from "lodash";
 
 import { Cell } from "../cell/cell";
 import { getPrimitiveLatticeVectorsFromConfig } from "../cell/primitive_cell";
+import { getVectorsInStandardOrientation } from "../cell/standard_orientation";
 import { LATTICE_TYPE_CONFIGS } from "./lattice_types";
 import { UnitCell, UnitCellProps } from "./unit_cell";
 
@@ -158,6 +159,17 @@ export class Lattice extends InMemoryEntity<LatticeEntitySchema> implements Latt
 
     get vectorArrays(): Matrix3X3Schema {
         return this.vectors.vectorArrays;
+    }
+
+    /**
+     * `vectorArrays` rotated into the standard orientation of the lattice type.
+     *
+     * The same cell, so the same fractional coordinates, with the conventional axes along
+     * x, y and z as in the standard primitive cells; see `cell/standard_orientation`.
+     * `vectorArrays` keeps the generic orientation, and Cartesian coordinates follow it.
+     */
+    get vectorArraysInStandardOrientation(): Matrix3X3Schema {
+        return getVectorsInStandardOrientation(this.vectorArrays, this.type);
     }
 
     get vectorArraysRounded(): Matrix3X3Schema {
