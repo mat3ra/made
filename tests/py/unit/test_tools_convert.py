@@ -1,11 +1,12 @@
 import numpy as np
 import pytest
 from ase import Atoms
-from ase.build import molecule
+from ase.build import make_supercell, molecule
 from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
 from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
+from mat3ra.standata.materials import Materials
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
@@ -39,16 +40,6 @@ direct
     [
         (
             Material.__default_config__,
-            {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
-            [Element("Si"), Element("Si")],
-            [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
-            ["Si", "Si"],
-        ),
-        (
-            {
-                **Material.__default_config__,
-                "basis": {**Material.__default_config__["basis"], "labels": [{"id": 1, "value": 1}]},
-            },
             {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
             [Element("Si"), Element("Si")],
             [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
@@ -102,7 +93,7 @@ def test_from_poscar():
 
 @pytest.mark.parametrize(
     "labels_array, expected_tags",
-    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([{"id": 1, "value": 1}], [0, 0])],
+    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0])],
 )
 def test_to_ase(labels_array, expected_tags):
     material = Material.create_default()
@@ -161,6 +152,56 @@ def test_from_ase(
     assert material_data["isNonPeriodic"] == expected_is_non_periodic
     if expected_lattice_type is not None:
         assert material_data["lattice"]["type"] == expected_lattice_type
+
+
+FESE = Materials.get_by_name_first_match("FeSe")
+FESE_LABELS = [{"id": 0, "value": 1}, {"id": 1, "value": 2}]
+FESE_LABELS_WITH_ZERO = [{"id": 0, "value": 0}, {"id": 1, "value": 2}]
+IDENTITY_MATRIX = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+SUPERCELL_MATRIX_2X1X1 = [[2, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+
+@pytest.mark.parametrize(
+    "labels_array, supercell_matrix, expected_tags, expected_labels",
+    [
+        (FESE_LABELS, IDENTITY_MATRIX, [1, 2, -1, -1], FESE_LABELS),
+        (FESE_LABELS_WITH_ZERO, IDENTITY_MATRIX, [0, 2, -1, -1], FESE_LABELS_WITH_ZERO),
+        (
+            FESE_LABELS,
+            SUPERCELL_MATRIX_2X1X1,
+            [1, 2, -1, -1, 1, 2, -1, -1],
+            [{"id": 0, "value": 1}, {"id": 1, "value": 2}, {"id": 4, "value": 1}, {"id": 5, "value": 2}],
+        ),
+    ],
+)
+def test_from_ase_round_trip(labels_array, supercell_matrix, expected_tags, expected_labels):
+    material = Material.create(FESE)
+    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
+    ase_atoms = make_supercell(to_ase(material), supercell_matrix)
+    assert ase_atoms.get_tags().tolist() == expected_tags
+    assert from_ase(ase_atoms)["basis"]["labels"] == expected_labels
+
+
+@pytest.mark.parametrize(
+    "labels_array, supercell_matrix, expected_site_labels, expected_labels",
+    [
+        (FESE_LABELS, IDENTITY_MATRIX, ["1", "2", "-1", "-1"], FESE_LABELS),
+        (FESE_LABELS_WITH_ZERO, IDENTITY_MATRIX, ["0", "2", "-1", "-1"], FESE_LABELS_WITH_ZERO),
+        (
+            FESE_LABELS,
+            SUPERCELL_MATRIX_2X1X1,
+            ["1", "1", "2", "2", "-1", "-1", "-1", "-1"],
+            [{"id": 0, "value": 1}, {"id": 1, "value": 1}, {"id": 2, "value": 2}, {"id": 3, "value": 2}],
+        ),
+    ],
+)
+def test_from_pymatgen_round_trip(labels_array, supercell_matrix, expected_site_labels, expected_labels):
+    material = Material.create(FESE)
+    material.basis.labels = ArrayWithIds.from_list_of_dicts(labels_array)
+    structure = to_pymatgen(material)
+    structure.make_supercell(supercell_matrix)
+    assert structure.labels == expected_site_labels
+    assert from_pymatgen(structure)["basis"]["labels"] == expected_labels
 
 
 TOLERANCE = 1e-4

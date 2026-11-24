@@ -2,8 +2,9 @@ import inspect
 from functools import wraps
 from typing import Any, Callable, Dict, Union
 
+from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.made.material import Material
-from mat3ra.made.utils import map_array_to_array_with_id_value, map_array_with_id_value_to_array
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import remove_comments_from_source_code
 from mat3ra.utils.mixins import RoundNumericValuesMixin
 
@@ -16,6 +17,7 @@ from ..third_party import (
     PymatgenStructure,
 )
 from .utils import (
+    UNLABELED_ATOM_LABEL,
     calculate_padded_cell_simple_cubic,
     extract_labels_from_pymatgen_structure,
     extract_metadata_from_pymatgen_structure,
@@ -52,7 +54,12 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     elements = [element["value"] for element in basis["elements"]]
     coordinates = [coord["value"] for coord in basis["coordinates"]]
     labels_data = basis.get("labels", []) or []
-    labels = [label["value"] for label in labels_data] if len(labels_data) == len(elements) else []
+    labels = []
+    if labels_data:
+        labels_by_atom = ArrayWithIds.from_list_of_dicts(labels_data).to_padded_array_of_values(
+            len(elements), UNLABELED_ATOM_LABEL
+        )
+        labels = [str(label) for label in labels_by_atom]
     # Assuming that the basis units are fractional since it's a crystal basis
     coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
 
@@ -197,8 +204,10 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     atomic_labels = material_config["basis"].get("labels", [])
-    if atomic_labels and len(atomic_labels) == len(atoms):
-        atoms.set_tags(map_array_with_id_value_to_array(atomic_labels))
+    if atomic_labels:
+        atoms.set_tags(
+            ArrayWithIds.from_list_of_dicts(atomic_labels).to_padded_array_of_values(len(atoms), UNLABELED_ATOM_LABEL)
+        )
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 
