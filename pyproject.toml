@@ -15,7 +15,7 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
-    "mat3ra-code",
+    "mat3ra-code>=2026.11.24.post0",
     "mat3ra-esse",
     "mat3ra-utils>=2026.7.8.post0",
     "numpy",
