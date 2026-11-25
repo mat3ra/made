@@ -17,10 +17,9 @@ from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.made.tools.modify import filter_by_label, interface_get_part, interface_label_parts_by_elements
 from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.utils import assertion as assertion_utils
-from unit.fixtures.bulk import BULK_Si_PRIMITIVE
+from unit.fixtures.bulk import BULK_FeSe_WITH_LABELS, BULK_Si_PRIMITIVE
 from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
-from unit.test_tools_convert import FESE_WITH_LABELS
 from unit.utils import assert_two_entities_deep_almost_equal
 
 FIXED = [False, False, False]
@@ -188,7 +187,7 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             [None, FIXED],
         ),
         (
-            FESE_WITH_LABELS,
+            BULK_FeSe_WITH_LABELS,
             lambda material: create_defect_point_substitution(
                 material, material.basis.coordinates.values[2], "S", "closest_site"
             ),
@@ -196,7 +195,7 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             [None, None, None, None],
         ),
         (
-            FESE_WITH_LABELS,
+            BULK_FeSe_WITH_LABELS,
             lambda material: create_solid_solution(material, "Fe", "Co", 0.5, seed=42),
             [2, None, None, 1],
             [None, None, None, None],

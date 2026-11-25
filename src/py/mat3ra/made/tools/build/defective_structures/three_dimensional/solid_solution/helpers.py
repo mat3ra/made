@@ -1,16 +1,12 @@
 from typing import Optional, Union
 
-from mat3ra.esse.models.materials_category_components.entities.core.zero_dimensional.atom import AtomSchema
 from mat3ra.esse.models.materials_category_components.operations.core.combinations.merge import MergeMethodsEnum
 from mat3ra.made.material import Material
 
 from .....analyze.solid_solution_analyzer import SolidSolutionAnalyzer
 from .....build_components import MaterialWithBuildMetadata
-from .....build_components.entities.auxiliary.zero_dimensional.point_defect_site.configuration import (
-    PointDefectSiteConfiguration,
-)
 from .....build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
-from ...zero_dimensional.point_defect.substitutional.configuration import _host_atom_label_at_coordinate
+from ...zero_dimensional.point_defect.substitutional.configuration import SubstitutionalDefectConfiguration
 from .builder import SolidSolutionBuilder
 from .configuration import SolidSolutionConfiguration
 from .enums import SiteSelectionMethodEnum
@@ -58,12 +54,9 @@ def create_solid_solution(
     supercell = create_supercell(material, scaling_factor=analyzer.optimal_supercell_dimensions)
     coordinates = supercell.basis.coordinates.values
     site_configurations = [
-        PointDefectSiteConfiguration(
-            crystal=supercell,
-            coordinate=coordinates[site_index],
-            element=AtomSchema(chemical_element=target_element),
-            host_atom_label=_host_atom_label_at_coordinate(supercell, coordinates[site_index]),
-        )
+        SubstitutionalDefectConfiguration.from_parameters(
+            crystal=supercell, coordinate=coordinates[site_index], element=target_element
+        ).merge_components[1]
         for site_index in analyzer.selected_site_indices
     ]
     configuration = SolidSolutionConfiguration(
