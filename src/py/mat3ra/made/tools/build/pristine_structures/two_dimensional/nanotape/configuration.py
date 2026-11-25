@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.esse.models.materials_category.pristine_structures.two_dimensional.nanotape import (
     NanoTapeConfigurationSchema,
 )

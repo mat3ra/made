@@ -1,6 +1,6 @@
 from typing import Optional
 
-from mat3ra.esse.models.materials_category.defective_structures.two_dimensional.base_configuration import (
+from mat3ra.esse.models.materials_category_components.entities.reusable.two_dimensional.atomic_layers_unique_repeated import (
     AtomicLayersUniqueRepeatedSchema,
 )
 
