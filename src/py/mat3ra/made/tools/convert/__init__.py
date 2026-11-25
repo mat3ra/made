@@ -23,6 +23,7 @@ from ..third_party import (
     PymatgenStructure,
 )
 from .utils import (
+    UNLABELED_ATOM_LABEL,
     calculate_padded_cell_simple_cubic,
     extract_constraints_from_ase_atoms,
     extract_labels_from_pymatgen_structure,
@@ -59,8 +60,13 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
     basis = material_data["basis"]
     elements = [element["value"] for element in basis["elements"]]
     coordinates = [coord["value"] for coord in basis["coordinates"]]
-    labels_by_atom = Basis(**basis).values_by_atom(ProtoPropertyEnum.atomic_labels)
-    labels = labels_by_atom if None not in labels_by_atom else []
+    atomic_labels = Basis(**basis).labels
+    labels = []
+    if atomic_labels.ids:
+        labels_in_atom_order = atomic_labels.to_padded_array_of_values(
+            [element["id"] for element in basis["elements"]], UNLABELED_ATOM_LABEL
+        )
+        labels = [str(label) for label in labels_in_atom_order]
     # Assuming that the basis units are fractional since it's a crystal basis
     coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
 
@@ -205,15 +211,19 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     basis = Basis(**material_config["basis"])
-    tags = basis.values_by_atom(ProtoPropertyEnum.atomic_labels)
-    # ASE reads a missing tag as 0, which is a label, so tags are set only when every atom has one
-    if None not in tags:
-        atoms.set_tags(tags)
-    if basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints).values:
+    atomic_labels = basis.labels
+    if atomic_labels.ids:
+        atoms.set_tags(
+            atomic_labels.to_padded_array_of_values(
+                [element["id"] for element in material_config["basis"]["elements"]], UNLABELED_ATOM_LABEL
+            )
+        )
+    constraints = basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
+    if constraints.values:
         atoms.set_constraint(
             [
                 ASEFixAtoms([atom_index]) if not any(is_free) else ASEFixCartesian(atom_index, np.logical_not(is_free))
-                for atom_index, is_free in enumerate(basis.values_by_atom(ProtoPropertyEnum.atomic_constraints))
+                for atom_index, is_free in enumerate(constraints.to_padded_array_of_values(basis.elements.ids, None))
                 if is_free is not None and not all(is_free)
             ]
         )

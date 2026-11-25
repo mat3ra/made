@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from ase import Atoms
-from ase.build import molecule
+from ase.build import make_supercell, molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms, FixCartesian
 from ase.optimize import BFGS
@@ -11,7 +11,9 @@ from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
 from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
+from mat3ra.made.tools.modify import filter_by_ids
 from mat3ra.made.utils import map_array_to_array_with_id_value
+from mat3ra.standata.materials import Materials
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
@@ -27,6 +29,9 @@ from .fixtures.thrid_party.ase_atoms import (
 
 PYMATGEN_LATTICE = Lattice.from_parameters(a=3.84, b=3.84, c=3.84, alpha=120, beta=90, gamma=60)
 PYMATGEN_STRUCTURE = Structure(PYMATGEN_LATTICE, ["Si", "Si"], [[0, 0, 0], [0.75, 0.5, 0.75]])
+PYMATGEN_STRUCTURE_WITH_CIF_LABELS = Structure(
+    PYMATGEN_LATTICE, ["Si", "Si"], [[0, 0, 0], [0.75, 0.5, 0.75]], labels=["Si1", "Si2"]
+)
 
 POSCAR_CONTENT = """Si2
 1.0
@@ -46,21 +51,6 @@ direct
     [
         (
             Material.__default_config__,
-            {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
-            [Element("Si"), Element("Si")],
-            [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
-            ["Si", "Si"],
-        ),
-        (
-            {
-                **Material.__default_config__,
-                "basis": {
-                    **Material.__default_config__["basis"],
-                    "atomic_properties": [
-                        {"name": ProtoPropertyEnum.atomic_labels.value, "values": [{"id": 1, "value": 1}]}
-                    ],
-                },
-            },
             {"a": 3.867, "b": 3.867, "c": 3.867, "alpha": 60, "beta": 60, "gamma": 60},
             [Element("Si"), Element("Si")],
             [[0.0, 0.0, 0.0], [0.25, 0.25, 0.25]],
@@ -89,11 +79,13 @@ def test_to_pymatgen(material_config, expected_lattice_params, expected_species,
     assert structure_to_poscar_str == material_to_poscar_str
 
 
-def test_from_pymatgen():
-    material_data = from_pymatgen(PYMATGEN_STRUCTURE)
+@pytest.mark.parametrize("structure", [PYMATGEN_STRUCTURE, PYMATGEN_STRUCTURE_WITH_CIF_LABELS])
+def test_from_pymatgen(structure):
+    material_data = from_pymatgen(structure)
     assert material_data["lattice"]["a"] == 3.84
     assert material_data["lattice"]["alpha"] == 120
     assert material_data["basis"]["elements"] == [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}]
+    assert Basis(**material_data["basis"]).labels.to_dict() == []
 
     converted_material = Material.create(material_data)
     default_material = Material.create_default()
@@ -114,7 +106,7 @@ def test_from_poscar():
 
 @pytest.mark.parametrize(
     "labels_array, expected_tags",
-    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0]), ([{"id": 1, "value": 1}], [0, 0])],
+    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0])],
 )
 def test_to_ase(labels_array, expected_tags):
     material = Material.create_default()
@@ -187,6 +179,46 @@ GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED = {
         ],
     },
 }
+FESE = Materials.get_by_name_first_match("FeSe")
+FESE_LABELS = [{"id": 0, "value": 1}, {"id": 1, "value": 2}]
+FESE_LABELS_WITH_ZERO_AND_NEGATIVE = [{"id": 0, "value": 0}, {"id": 1, "value": -2}]
+FESE_WITH_LABELS = {
+    **FESE,
+    "basis": {
+        **FESE["basis"],
+        "atomic_properties": [{"name": ProtoPropertyEnum.atomic_labels.value, "values": FESE_LABELS}],
+    },
+}
+FESE_WITH_LABELS_WITH_ZERO_AND_NEGATIVE = {
+    **FESE,
+    "basis": {
+        **FESE["basis"],
+        "atomic_properties": [
+            {"name": ProtoPropertyEnum.atomic_labels.value, "values": FESE_LABELS_WITH_ZERO_AND_NEGATIVE}
+        ],
+    },
+}
+FESE_WITH_ID_GAP = filter_by_ids(
+    Material.create(
+        {
+            **FESE,
+            "basis": {
+                **FESE["basis"],
+                "atomic_properties": [
+                    {
+                        "name": ProtoPropertyEnum.atomic_labels.value,
+                        "values": [{"id": 0, "value": 1}, {"id": 3, "value": 2}],
+                    }
+                ],
+            },
+        }
+    ),
+    [1],
+    invert=True,
+).to_dict()
+FESE_WITH_ID_GAP_LABELS = [{"id": 0, "value": 1}, {"id": 2, "value": 2}]
+IDENTITY_MATRIX = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
+SUPERCELL_MATRIX_2X1X1 = [[2, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 
 @pytest.mark.parametrize(
@@ -199,7 +231,9 @@ GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED = {
 def test_to_ase_from_ase_per_atom_values(material_config, modify_basis, arguments, expected_labels):
     material = Material.create(material_config)
     modify_basis(material.basis, *arguments)
-    expected_constraints = material.basis.values_by_atom(ProtoPropertyEnum.atomic_constraints)
+    expected_constraints = material.basis.atomic_properties.get_by_name(
+        ProtoPropertyEnum.atomic_constraints
+    ).to_padded_array_of_values(material.basis.elements.ids, None)
     atoms = to_ase(material)
     atoms.calc = EMT()
     BFGS(atoms).run(steps=2)
@@ -217,6 +251,52 @@ def test_from_ase_overlapping_constraints():
     assert basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints).to_dict() == [
         {"id": 0, "value": [False, False, False]}
     ]
+
+
+@pytest.mark.parametrize(
+    "material_config, supercell_matrix, expected_tags, expected_labels",
+    [
+        (FESE_WITH_LABELS, IDENTITY_MATRIX, [1, 2, -1, -1], FESE_LABELS),
+        (FESE_WITH_LABELS_WITH_ZERO_AND_NEGATIVE, IDENTITY_MATRIX, [0, -2, -1, -1], FESE_LABELS_WITH_ZERO_AND_NEGATIVE),
+        (FESE_WITH_ID_GAP, IDENTITY_MATRIX, [1, -1, 2], FESE_WITH_ID_GAP_LABELS),
+        (
+            FESE_WITH_LABELS,
+            SUPERCELL_MATRIX_2X1X1,
+            [1, 2, -1, -1, 1, 2, -1, -1],
+            [{"id": 0, "value": 1}, {"id": 1, "value": 2}, {"id": 4, "value": 1}, {"id": 5, "value": 2}],
+        ),
+    ],
+)
+def test_from_ase_round_trip(material_config, supercell_matrix, expected_tags, expected_labels):
+    ase_atoms = make_supercell(to_ase(Material.create(material_config)), supercell_matrix)
+    assert ase_atoms.get_tags().tolist() == expected_tags
+    assert Basis(**from_ase(ase_atoms)["basis"]).labels.to_dict() == expected_labels
+
+
+@pytest.mark.parametrize(
+    "material_config, supercell_matrix, expected_site_labels, expected_labels",
+    [
+        (FESE_WITH_LABELS, IDENTITY_MATRIX, ["1", "2", "-1", "-1"], FESE_LABELS),
+        (
+            FESE_WITH_LABELS_WITH_ZERO_AND_NEGATIVE,
+            IDENTITY_MATRIX,
+            ["0", "-2", "-1", "-1"],
+            FESE_LABELS_WITH_ZERO_AND_NEGATIVE,
+        ),
+        (FESE_WITH_ID_GAP, IDENTITY_MATRIX, ["1", "-1", "2"], FESE_WITH_ID_GAP_LABELS),
+        (
+            FESE_WITH_LABELS,
+            SUPERCELL_MATRIX_2X1X1,
+            ["1", "1", "2", "2", "-1", "-1", "-1", "-1"],
+            [{"id": 0, "value": 1}, {"id": 1, "value": 1}, {"id": 2, "value": 2}, {"id": 3, "value": 2}],
+        ),
+    ],
+)
+def test_from_pymatgen_round_trip(material_config, supercell_matrix, expected_site_labels, expected_labels):
+    structure = to_pymatgen(Material.create(material_config))
+    structure.make_supercell(supercell_matrix)
+    assert structure.labels == expected_site_labels
+    assert Basis(**from_pymatgen(structure)["basis"]).labels.to_dict() == expected_labels
 
 
 TOLERANCE = 1e-4

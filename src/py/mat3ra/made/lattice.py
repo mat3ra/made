@@ -2,7 +2,7 @@ import math
 from typing import List, Optional
 
 import numpy as np
-from mat3ra.code.constants import HASH_TOLERANCE
+from mat3ra.code.constants import HASH_TOLERANCE, Tolerance
 from mat3ra.code.entity import InMemoryEntityPydantic
 from mat3ra.esse.models.properties_directory.structural.lattice import (
     LatticeSchema,
@@ -13,8 +13,18 @@ from mat3ra.utils.mixins import RoundNumericValuesMixin
 from pydantic import BaseModel
 
 from .cell import Cell
+from .cell.conventional_cell import PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS
+from .cell.primitive_cell import PRIMITIVE_CELLS
 
 COORDINATE_TOLERANCE = 6
+
+
+def cell_distances(vectors: np.ndarray) -> np.ndarray:
+    """
+    The lengths of the three cell vectors and of their three pairwise differences.
+    """
+    first, second, third = vectors
+    return np.linalg.norm([first, second, third, first - second, first - third, second - third], axis=1)
 
 
 class LatticeVectors(Cell):
@@ -119,6 +129,56 @@ class Lattice(RoundNumericValuesMixin, LatticeSchemaVectorless, InMemoryEntityPy
     @property
     def vector_arrays_rounded(self) -> List[List[float]]:
         return self.vectors.vector_arrays_rounded
+
+    @property
+    def type_value(self) -> str:
+        return getattr(self.type, "value", self.type)
+
+    @property
+    def conventional_lattice_parameters(self) -> "Lattice":
+        """
+        The conventional cell of this primitive lattice, as lattice parameters.
+
+        The conventional vectors are the type's multiplier times the primitive ones (Setyawan
+        and Curtarolo, doi:10.1016/j.commatsci.2010.05.010); alpha is the angle between the
+        second and third, as the monoclinic standard cells use it.
+        """
+        multiplier = np.array(PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS[self.type_value])
+        conventional_vectors = multiplier @ np.array(self.vector_arrays)
+        return Lattice.from_vectors_array(conventional_vectors.tolist(), type=self.type)
+
+    @property
+    def vector_arrays_in_standard_orientation(self) -> List[List[float]]:
+        """
+        `vector_arrays` rotated into the standard orientation of the lattice type.
+
+        Lattice parameters fix a cell's shape but not its orientation. `vector_arrays` puts the
+        third vector along z for every type, which leaves the symmetry axes of most centred
+        lattices tilted; the standard primitive cells (`PRIMITIVE_CELLS`) have the conventional
+        axes along x, y and z, where programs that look for symmetry only about the Cartesian
+        axes, such as Quantum ESPRESSO's pw.x, find the full point group.
+
+        The standard cell is returned only when it is a rotation of `vector_arrays` (see
+        `is_rotation_of`), so a lattice not shaped like its type keeps `vector_arrays`. A
+        rotation changes no lengths or angles, so fractional coordinates stay valid; Cartesian
+        coordinates follow `vector_arrays`, which is unchanged.
+        """
+        if self.type_value not in PRIMITIVE_CELLS:
+            return self.vector_arrays
+        standard = PRIMITIVE_CELLS[self.type_value](self.conventional_lattice_parameters)
+        return standard if self.is_rotation_of(standard) else self.vector_arrays
+
+    def is_rotation_of(self, vectors: List[List[float]]) -> bool:
+        """
+        Whether `vectors` are a proper rotation of `vector_arrays`.
+
+        Two cells are related by a rotation when their three vector lengths and the three
+        lengths of their pairwise differences agree, which fixes the metric, and their
+        handedness is the same; lengths agree within `Tolerance.lengthAngstrom`.
+        """
+        first, second = np.array(self.vector_arrays), np.array(vectors)
+        same_lengths = np.allclose(cell_distances(first), cell_distances(second), rtol=0, atol=Tolerance.lengthAngstrom)
+        return same_lengths and np.sign(np.linalg.det(first)) == np.sign(np.linalg.det(second))
 
     @property
     def cell_volume(self) -> float:

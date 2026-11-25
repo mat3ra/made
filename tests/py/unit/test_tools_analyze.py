@@ -54,10 +54,8 @@ def test_calculate_average_interlayer_distance(material_config, layer_indices, e
     ],
 )
 def test_interface_parts_need_a_label_on_every_atom(function, arguments):
-    material = Material.create(GRAPHENE_NICKEL_INTERFACE)
-    material.basis.add_atom("C", [0.5, 0.5, 0.9])
     with pytest.raises(ValueError, match="Interface parts need a label on every atom"):
-        function(to_ase(material), *arguments)
+        function(to_ase(Material.create_default()), *arguments)
 
 
 @pytest.mark.parametrize(

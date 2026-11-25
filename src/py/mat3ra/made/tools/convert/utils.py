@@ -17,6 +17,8 @@ with open(_CONSTANTS_FILE) as _f:
 DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE = _CONSTANTS["molecule"]["nonPeriodicMinimumLatticeSize"]
 DIATOMIC_LATTICE_PADDING_FACTOR = _CONSTANTS["molecule"]["diatomicLatticePaddingFactor"]
 MOLECULAR_LATTICE_PADDING_FACTOR = _CONSTANTS["molecule"]["molecularLatticePaddingFactor"]
+# Label of an atom without a label, in ASE tags and pymatgen site labels (0 is a real label)
+UNLABELED_ATOM_LABEL = -1
 
 
 def _get_non_periodic_lattice_padding_factor(max_distance: float, min_distance: float) -> float:
@@ -41,11 +43,18 @@ def _get_non_periodic_lattice_size(
     return max(default_min_size, max_distance * padding_factor)
 
 
-def extract_labels_from_pymatgen_structure(structure: PymatgenStructure) -> List[int]:
-    labels = []
+def extract_labels_from_pymatgen_structure(structure: PymatgenStructure) -> List[Optional[int]]:
+    """
+    Reads the interface part labels of an interface, otherwise the integer site labels written by `to_pymatgen`.
+    A site labelled `str(UNLABELED_ATOM_LABEL)`, a site with pymatgen's default label (its species) and a site with any
+    other non-integer label, such as CIF's "Fe1", get None (no label).
+    """
     if isinstance(structure, PymatgenInterface):
-        labels = list(map(lambda s: INTERFACE_LABELS_MAP[s.properties["interface_label"]], structure.sites))
-    return labels
+        return list(map(lambda s: INTERFACE_LABELS_MAP[s.properties["interface_label"]], structure.sites))
+    return [
+        int(site.label) if site.label.removeprefix("-").isdigit() and site.label != str(UNLABELED_ATOM_LABEL) else None
+        for site in structure.sites
+    ]
 
 
 def extract_constraints_from_ase_atoms(ase_atoms: ASEAtoms) -> List[Optional[List[bool]]]:
@@ -77,7 +86,9 @@ def extract_metadata_from_pymatgen_structure(structure: PymatgenStructure) -> Di
 def extract_tags_from_ase_atoms(atoms: ASEAtoms) -> List[Union[str, int]]:
     result = []
     if "tags" in atoms.arrays:
-        int_tags = [int(tag) for tag in atoms.arrays["tags"] if tag is not None]
+        int_tags = [
+            None if tag == UNLABELED_ATOM_LABEL else int(tag) for tag in atoms.arrays["tags"] if tag is not None
+        ]
         result = map_array_to_array_with_id_value(int_tags, remove_none=True)
     return result
 
