@@ -184,8 +184,9 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
 )
 def test_per_atom_values_follow_atom_ids(operation, expected_labels, expected_constraints):
     basis = operation(MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED)).basis
-    assert basis.values_by_atom(ProtoPropertyEnum.atomic_labels) == expected_labels
-    assert basis.values_by_atom(ProtoPropertyEnum.atomic_constraints) == expected_constraints
+    constraints = basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
+    assert basis.labels.to_padded_array_of_values(basis.elements.ids, None) == expected_labels
+    assert constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
     assert all(set(per_atom_values.ids) <= set(basis.elements.ids) for per_atom_values in basis.per_atom_values)
 
 

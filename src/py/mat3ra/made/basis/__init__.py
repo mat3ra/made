@@ -96,12 +96,6 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
             atomic_properties=AtomicProperties.from_list_of_dicts(atomic_properties or []),
         )
 
-    def values_by_atom(self, name: ProtoPropertyEnum) -> List[Any]:
-        """Values of a per-atom property in basis order, matched by atom id; atoms without a value get None."""
-        values = self.atomic_properties.get_by_name(name)
-        value_by_atom_id = dict(zip(values.ids, values.values))
-        return [value_by_atom_id.get(atom_id) for atom_id in self.elements.ids]
-
     @property
     def hash_string(self) -> str:
         """
