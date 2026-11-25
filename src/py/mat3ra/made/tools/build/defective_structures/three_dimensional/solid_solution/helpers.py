@@ -10,6 +10,7 @@ from .....build_components.entities.auxiliary.zero_dimensional.point_defect_site
     PointDefectSiteConfiguration,
 )
 from .....build_components.entities.reusable.three_dimensional.supercell.helpers import create_supercell
+from ...zero_dimensional.point_defect.substitutional.configuration import _host_atom_label_at_coordinate
 from .builder import SolidSolutionBuilder
 from .configuration import SolidSolutionConfiguration
 from .enums import SiteSelectionMethodEnum
@@ -61,6 +62,7 @@ def create_solid_solution(
             crystal=supercell,
             coordinate=coordinates[site_index],
             element=AtomSchema(chemical_element=target_element),
+            host_atom_label=_host_atom_label_at_coordinate(supercell, coordinates[site_index]),
         )
         for site_index in analyzer.selected_site_indices
     ]

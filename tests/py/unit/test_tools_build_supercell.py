@@ -5,11 +5,13 @@ from mat3ra.made.tools.build_components.entities.reusable.three_dimensional.supe
 from mat3ra.made.tools.build_components.metadata import MaterialWithBuildMetadata
 from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
 from unit.fixtures.supercell import SI_SUPERCELL_2X2X1
+from unit.test_tools_convert import FESE_WITH_LABELS
 
 from .fixtures.bulk import BULK_Si_PRIMITIVE
 from .utils import assert_two_entities_deep_almost_equal
 
 SUPERCELL_MATRIX_2X2X1 = [[2, 0, 0], [0, 2, 0], [0, 0, 1]]
+SUPERCELL_MATRIX_SQRT2 = [[1, 1, 0], [-1, 1, 0], [0, 0, 1]]
 
 
 @pytest.mark.parametrize(
@@ -45,3 +47,12 @@ def test_create_supercell_preserves_prior_build_metadata():
     assert supercell_material.metadata.to_dict().get("boundaryConditions") == material.metadata.to_dict().get(
         "boundaryConditions"
     )
+
+
+@pytest.mark.parametrize(
+    "material_config, supercell_matrix, expected_labels",
+    [(FESE_WITH_LABELS, SUPERCELL_MATRIX_SQRT2, [1, 2, None, None] * 2)],
+)
+def test_create_supercell_preserves_labels(material_config, supercell_matrix, expected_labels):
+    basis = create_supercell(Material.create(material_config), supercell_matrix).basis
+    assert basis.labels.to_padded_array_of_values(basis.elements.ids, None) == expected_labels
