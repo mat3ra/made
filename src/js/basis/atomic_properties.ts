@@ -18,13 +18,13 @@ interface AtomicPropertyByName {
  * Per-atom properties of a basis, each keyed by atom id and stored under its proto-property name.
  */
 export class AtomicProperties {
-    readonly propertyByName: AtomicPropertyByName;
+    properties: { name: string; values: AtomicConstraints | Labels }[];
 
     /**
      * @param properties - the ESSE list of `{ name, values }` entries.
      */
     constructor(properties: AtomicPropertiesSchema = []) {
-        this.propertyByName = {
+        this.properties = Object.entries({
             [ProtoPropertyEnum.atomic_constraints]: AtomicConstraints.fromObjects(
                 properties.flatMap((property) =>
                     property.name === ProtoPropertyEnum.atomic_constraints ? property.values : [],
@@ -35,21 +35,27 @@ export class AtomicProperties {
                     property.name === ProtoPropertyEnum.atomic_labels ? property.values : [],
                 ),
             ),
-        };
+        }).map(([name, values]) => ({ name, values }));
+    }
+
+    get propertyByName(): Record<string, AtomicConstraints | Labels> {
+        return Object.fromEntries(this.properties.map(({ name, values }) => [name, values]));
     }
 
     /**
      * Returns the stored property, so that changes made to it are kept.
      */
     getByName<Name extends keyof AtomicPropertyByName>(name: Name): AtomicPropertyByName[Name] {
-        return this.propertyByName[name];
+        return this.propertyByName[name] as AtomicPropertyByName[Name];
     }
 
     setByName<Name extends keyof AtomicPropertyByName>(
         name: Name,
         property: AtomicPropertyByName[Name],
     ) {
-        this.propertyByName[name] = property;
+        this.properties = this.properties.map((item) =>
+            item.name === name ? { name, values: property } : item,
+        );
     }
 
     /**

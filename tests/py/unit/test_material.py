@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis, Coordinates
+from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
@@ -208,6 +209,11 @@ def test_per_atom_values_follow_atom_ids(material_config, operation, expected_la
     assert basis.labels.to_padded_array_of_values(basis.elements.ids, None) == expected_labels
     assert constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
     assert all(set(per_atom_values.ids) <= set(basis.elements.ids) for per_atom_values in basis.per_atom_values)
+
+
+@pytest.mark.parametrize("properties", [GRAPHENE_NICKEL_INTERFACE_CONSTRAINED["basis"]["atomic_properties"]])
+def test_atomic_properties_from_list_of_dicts(properties):
+    assert [item.model_dump(mode="json") for item in AtomicProperties.from_list_of_dicts(properties).root] == properties
 
 
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])

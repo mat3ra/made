@@ -4,7 +4,7 @@ import { Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
-import { ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
+import { AtomicProperties, ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import { Basis } from "../../../src/js/basis/basis";
 import { BasisWithAtomicProperties } from "../../../src/js/basis/basis_with_atomic_properties";
 import Material from "../../../src/js/Material";
@@ -156,6 +156,12 @@ describe("Basis", () => {
         const elementsWithLabels = basis.elementsWithLabelsArray;
         const expectedElementsWithLabels = ["Li0", "Fe1", "Si2"];
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
+    });
+
+    it("should hold the ESSE list of atomic properties", () => {
+        const { atomic_properties: atomicProperties } = Si2BasisWithLabelAndConstraint;
+        const { properties } = new AtomicProperties(atomicProperties);
+        expect(JSON.parse(JSON.stringify(properties))).to.be.deep.equal(atomicProperties);
     });
 
     it("should get the labels stored under their name", () => {
