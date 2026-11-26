@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple, Union
 
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.esse.models.materials_category.pristine_structures.two_dimensional.slab import SlabConfigurationSchema
 from mat3ra.made.material import Material
 from .termination_utils import select_slab_termination

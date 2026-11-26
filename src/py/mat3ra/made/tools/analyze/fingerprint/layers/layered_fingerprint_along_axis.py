@@ -1,7 +1,7 @@
 from itertools import cycle, islice
 from typing import List
 
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.made.tools.analyze.fingerprint.layers.unique_element_string_per_layer import UniqueElementStringsPerLayer
 from mat3ra.utils.array import jaccard_similarity_for_strings
 from pydantic import BaseModel, Field
