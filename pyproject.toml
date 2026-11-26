@@ -16,7 +16,7 @@ classifiers = [
 ]
 dependencies = [
     "mat3ra-code",
-    "mat3ra-esse @ git+https://github.com/mat3ra/esse.git@9798fcee1bf4eb799710c799d6f192e917ac97d0",
+    "mat3ra-esse @ git+https://github.com/mat3ra/esse.git@df9ce03bce33b313709143da20db3573aed5fbbf",
     "mat3ra-utils>=2026.7.8.post0",
     "numpy",
     # basis/__init__.py imports scipy.spatial at load time, and material.py
@@ -75,7 +75,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-git_describe_command = "git describe --tags --long"
+git_describe_command = "git describe --tags --long --match [v0-9]*"
 
 [tool.setuptools.packages.find]
 where = ["src/py"]

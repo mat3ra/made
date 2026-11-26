@@ -3,13 +3,13 @@ import math
 import numpy as np
 import pytest
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build_components.operations.core.modifications.perturb import (
     SineWavePerturbationFunctionHolder,
 )
 from mat3ra.made.tools.operations.core.binary import stack_two_materials
-from mat3ra.made.tools.operations.core.unary import perturb, strain, translate_atoms
+from mat3ra.made.tools.operations.core.unary import edit_cell, perturb, strain, translate_atoms
 from mat3ra.made.tools.operations.reusable.unary import transform_material_by_matrix
 from unit.fixtures.bulk import BULK_Si_CONVENTIONAL
 from unit.fixtures.strain import BULK_Si_CONVENTIONAL_STRAINED
@@ -33,6 +33,16 @@ def test_strain(material_config, strain_matrix, expected_material_config):
     strained_material = strain(material, strain_matrix_obj)
 
     assert_two_entities_deep_almost_equal(strained_material, expected_material)
+
+
+@pytest.mark.parametrize(
+    "material_config, lattice_vectors",
+    [(BULK_Si_PRIMITIVE, [[4.0, 0.0, 0.0], [0.0, 4.0, 0.0], [0.0, 0.0, 4.0]])],
+)
+def test_edit_cell(material_config, lattice_vectors):
+    material = Material.create(material_config)
+    edit_cell(material, lattice_vectors)
+    assert_two_entities_deep_almost_equal(material.lattice, material_config["lattice"])
 
 
 @pytest.mark.parametrize(

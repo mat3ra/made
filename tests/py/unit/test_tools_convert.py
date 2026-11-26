@@ -13,10 +13,10 @@ from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_a
 from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
 from mat3ra.made.tools.modify import filter_by_ids
 from mat3ra.made.utils import map_array_to_array_with_id_value
-from mat3ra.standata.materials import Materials
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
+from .fixtures.bulk import BULK_FeSe, BULK_FeSe_LABELS, BULK_FeSe_WITH_LABELS
 from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE, GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
@@ -179,20 +179,11 @@ GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED = {
         ],
     },
 }
-FESE = Materials.get_by_name_first_match("FeSe")
-FESE_LABELS = [{"id": 0, "value": 1}, {"id": 1, "value": 2}]
 FESE_LABELS_WITH_ZERO_AND_NEGATIVE = [{"id": 0, "value": 0}, {"id": 1, "value": -2}]
-FESE_WITH_LABELS = {
-    **FESE,
-    "basis": {
-        **FESE["basis"],
-        "atomic_properties": [{"name": ProtoPropertyEnum.atomic_labels.value, "values": FESE_LABELS}],
-    },
-}
 FESE_WITH_LABELS_WITH_ZERO_AND_NEGATIVE = {
-    **FESE,
+    **BULK_FeSe,
     "basis": {
-        **FESE["basis"],
+        **BULK_FeSe["basis"],
         "atomic_properties": [
             {"name": ProtoPropertyEnum.atomic_labels.value, "values": FESE_LABELS_WITH_ZERO_AND_NEGATIVE}
         ],
@@ -201,9 +192,9 @@ FESE_WITH_LABELS_WITH_ZERO_AND_NEGATIVE = {
 FESE_WITH_ID_GAP = filter_by_ids(
     Material.create(
         {
-            **FESE,
+            **BULK_FeSe,
             "basis": {
-                **FESE["basis"],
+                **BULK_FeSe["basis"],
                 "atomic_properties": [
                     {
                         "name": ProtoPropertyEnum.atomic_labels.value,
@@ -256,11 +247,11 @@ def test_from_ase_overlapping_constraints():
 @pytest.mark.parametrize(
     "material_config, supercell_matrix, expected_tags, expected_labels",
     [
-        (FESE_WITH_LABELS, IDENTITY_MATRIX, [1, 2, -1, -1], FESE_LABELS),
+        (BULK_FeSe_WITH_LABELS, IDENTITY_MATRIX, [1, 2, -1, -1], BULK_FeSe_LABELS),
         (FESE_WITH_LABELS_WITH_ZERO_AND_NEGATIVE, IDENTITY_MATRIX, [0, -2, -1, -1], FESE_LABELS_WITH_ZERO_AND_NEGATIVE),
         (FESE_WITH_ID_GAP, IDENTITY_MATRIX, [1, -1, 2], FESE_WITH_ID_GAP_LABELS),
         (
-            FESE_WITH_LABELS,
+            BULK_FeSe_WITH_LABELS,
             SUPERCELL_MATRIX_2X1X1,
             [1, 2, -1, -1, 1, 2, -1, -1],
             [{"id": 0, "value": 1}, {"id": 1, "value": 2}, {"id": 4, "value": 1}, {"id": 5, "value": 2}],
@@ -276,7 +267,7 @@ def test_from_ase_round_trip(material_config, supercell_matrix, expected_tags, e
 @pytest.mark.parametrize(
     "material_config, supercell_matrix, expected_site_labels, expected_labels",
     [
-        (FESE_WITH_LABELS, IDENTITY_MATRIX, ["1", "2", "-1", "-1"], FESE_LABELS),
+        (BULK_FeSe_WITH_LABELS, IDENTITY_MATRIX, ["1", "2", "-1", "-1"], BULK_FeSe_LABELS),
         (
             FESE_WITH_LABELS_WITH_ZERO_AND_NEGATIVE,
             IDENTITY_MATRIX,
@@ -285,7 +276,7 @@ def test_from_ase_round_trip(material_config, supercell_matrix, expected_tags, e
         ),
         (FESE_WITH_ID_GAP, IDENTITY_MATRIX, ["1", "-1", "2"], FESE_WITH_ID_GAP_LABELS),
         (
-            FESE_WITH_LABELS,
+            BULK_FeSe_WITH_LABELS,
             SUPERCELL_MATRIX_2X1X1,
             ["1", "1", "2", "2", "-1", "-1", "-1", "-1"],
             [{"id": 0, "value": 1}, {"id": 1, "value": 1}, {"id": 2, "value": 2}, {"id": 3, "value": 2}],

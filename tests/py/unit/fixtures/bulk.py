@@ -1,5 +1,6 @@
 from typing import Any, Dict
 
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.standata.materials import Materials
 
 BULK_SrTiO3 = Materials.get_by_name_first_match("SrTiO3")
@@ -10,6 +11,15 @@ BULK_TiN = Materials.get_by_name_first_match("TiN")
 BULK_Ni_PRIMITIVE = Materials.get_by_name_first_match("Nickel")
 BULK_GRAPHENE = Materials.get_by_name_first_match("Graphene")
 BULK_Cu = Materials.get_by_name_first_match("Copper")
+BULK_FeSe = Materials.get_by_name_first_match("FeSe")
+BULK_FeSe_LABELS = [{"id": 0, "value": 1}, {"id": 1, "value": 2}]
+BULK_FeSe_WITH_LABELS = {
+    **BULK_FeSe,
+    "basis": {
+        **BULK_FeSe["basis"],
+        "atomic_properties": [{"name": ProtoPropertyEnum.atomic_labels.value, "values": BULK_FeSe_LABELS}],
+    },
+}
 
 BULK_Si_PRIMITIVE: Dict[str, Any] = {
     "name": "Silicon FCC",

@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple, Union
 
 from mat3ra.code.array_with_ids import ArrayWithIds
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 
 from mat3ra.made.material import Material
 from .. import InterfaceBuilder, InterfaceConfiguration

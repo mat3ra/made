@@ -8,6 +8,7 @@ from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
+from mat3ra.made.tools.build.defective_structures.three_dimensional.solid_solution.helpers import create_solid_solution
 from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.helpers import (
     create_defect_point_substitution,
     create_defect_point_vacancy,
@@ -16,7 +17,7 @@ from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.made.tools.modify import filter_by_label, interface_get_part, interface_label_parts_by_elements
 from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.utils import assertion as assertion_utils
-from unit.fixtures.bulk import BULK_Si_PRIMITIVE
+from unit.fixtures.bulk import BULK_FeSe_WITH_LABELS, BULK_Si_PRIMITIVE
 from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
@@ -147,9 +148,10 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
 
 
 @pytest.mark.parametrize(
-    "operation, expected_labels, expected_constraints",
+    "material_config, operation, expected_labels, expected_constraints",
     [
         (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
             lambda material: create_defect_point_vacancy(
                 material, material.basis.coordinates.values[1], "closest_site"
             ),
@@ -157,6 +159,7 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             [None, None, None, FIXED],
         ),
         (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
             lambda material: create_defect_point_substitution(
                 material, material.basis.coordinates.values[3], "Ge", "closest_site"
             ),
@@ -164,26 +167,43 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             [None, None, None, FIXED, None],
         ),
         (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
             lambda material: interface_get_part(material, InterfacePartsEnum.SUBSTRATE),
             [0, 0, 0],
             [None, None, None],
         ),
         (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
             lambda material: merge([filter_by_label(material, 1), filter_by_label(material, 0)]),
             [1, 1, 0, 0, 0],
             [None, FIXED, None, None, None],
         ),
         (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
             lambda material: interface_label_parts_by_elements(
                 interface_get_part(material, InterfacePartsEnum.FILM), ["Ni"]
             ),
             [1, 1],
             [None, FIXED],
         ),
+        (
+            BULK_FeSe_WITH_LABELS,
+            lambda material: create_defect_point_substitution(
+                material, material.basis.coordinates.values[2], "S", "closest_site"
+            ),
+            [1, 2, None, None],
+            [None, None, None, None],
+        ),
+        (
+            BULK_FeSe_WITH_LABELS,
+            lambda material: create_solid_solution(material, "Fe", "Co", 0.5, seed=42),
+            [2, None, None, 1],
+            [None, None, None, None],
+        ),
     ],
 )
-def test_per_atom_values_follow_atom_ids(operation, expected_labels, expected_constraints):
-    basis = operation(MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED)).basis
+def test_per_atom_values_follow_atom_ids(material_config, operation, expected_labels, expected_constraints):
+    basis = operation(MaterialWithBuildMetadata.create(material_config)).basis
     constraints = basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
     assert basis.labels.to_padded_array_of_values(basis.elements.ids, None) == expected_labels
     assert constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
