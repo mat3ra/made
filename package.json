@@ -39,7 +39,7 @@
         "@babel/runtime-corejs3": "^7.29.15",
         "@mat3ra/eslint-config": "^2026.7.12-0",
         "@mat3ra/code": "^2026.11.25-0",
-        "@mat3ra/esse": "https://github.com/mat3ra/esse/releases/download/wip-df9ce03/esse.tgz",
+        "@mat3ra/esse": "^2026.11.26-1",
         "@mat3ra/standata": "2026.11.20-0",
         "@mat3ra/tsconfig": "^2024.6.3-0",
         "@mat3ra/utils": "2026.11.6-0",
