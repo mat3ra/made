@@ -6,7 +6,7 @@ import numpy as np
 from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis
-from mat3ra.made.basis.atomic_properties import AtomicProperties
+from mat3ra.made.basis.atomic_properties import AtomicProperties, AtomicProperty
 from mat3ra.made.material import Material
 from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import remove_comments_from_source_code
@@ -128,7 +128,7 @@ def from_pymatgen(structure: Union[PymatgenStructure, PymatgenInterface]) -> Dic
 
     labels = map_array_to_array_with_id_value(extract_labels_from_pymatgen_structure(structure), remove_none=True)
     basis["atomic_properties"] = AtomicProperties(
-        property_by_name={ProtoPropertyEnum.atomic_labels: ArrayWithIds.from_list_of_dicts(labels)}
+        [AtomicProperty(name=ProtoPropertyEnum.atomic_labels, values=ArrayWithIds.from_list_of_dicts(labels))]
     ).to_dict()
 
     material_data = {
@@ -262,12 +262,15 @@ def from_ase(ase_atoms: ASEAtoms) -> Dict[str, Any]:
     ase_tags = extract_tags_from_ase_atoms(ase_atoms)
     is_free_by_atom = extract_constraints_from_ase_atoms(ase_atoms)
     material["basis"]["atomic_properties"] = AtomicProperties(
-        property_by_name={
-            ProtoPropertyEnum.atomic_labels: ArrayWithIds.from_list_of_dicts(ase_tags),
-            ProtoPropertyEnum.atomic_constraints: ArrayWithIds.from_list_of_dicts(
-                map_array_to_array_with_id_value(is_free_by_atom, remove_none=True)
+        [
+            AtomicProperty(name=ProtoPropertyEnum.atomic_labels, values=ArrayWithIds.from_list_of_dicts(ase_tags)),
+            AtomicProperty(
+                name=ProtoPropertyEnum.atomic_constraints,
+                values=ArrayWithIds.from_list_of_dicts(
+                    map_array_to_array_with_id_value(is_free_by_atom, remove_none=True)
+                ),
             ),
-        }
+        ]
     ).to_dict()
     ase_metadata = ase_atoms.info.get("metadata", {})
     if ase_metadata:
