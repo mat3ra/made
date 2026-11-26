@@ -210,6 +210,14 @@ describe("Basis", () => {
         });
     });
 
+    it("should keep the labels of atoms added to a basis without labels", () => {
+        const basis = new BasisWithAtomicProperties(Si2Basis);
+        basis.addAtomsFromAnotherBasis(
+            new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint),
+        );
+        expect(basis.atomicLabelsArray).to.be.deep.equal([undefined, undefined, undefined, 1]);
+    });
+
     /**
      * Atoms
      */
