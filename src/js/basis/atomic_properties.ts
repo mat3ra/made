@@ -31,10 +31,15 @@ export class AtomicProperties {
      * @param properties - the ESSE list of `{ name, values }` entries.
      */
     constructor(properties: AtomicPropertiesSchema = []) {
-        this.properties = properties.map(({ name, values }) => ({
+        this.properties = (
+            Object.entries(ATOMIC_PROPERTY_CLASS_BY_NAME) as [
+                keyof AtomicPropertyByName,
+                typeof ArrayWithIds,
+            ][]
+        ).map(([name, AtomicPropertyClass]) => ({
             name,
-            values: (ATOMIC_PROPERTY_CLASS_BY_NAME[name] as typeof ArrayWithIds).fromObjects(
-                values,
+            values: AtomicPropertyClass.fromObjects(
+                properties.find((property) => property.name === name)?.values ?? [],
             ),
         }));
     }
@@ -44,12 +49,9 @@ export class AtomicProperties {
     }
 
     /**
-     * Returns the stored property, storing an empty one first if absent, so that changes made to it are kept.
+     * Returns the stored property, so that changes made to it are kept.
      */
     getByName<Name extends keyof AtomicPropertyByName>(name: Name): AtomicPropertyByName[Name] {
-        if (!this.propertyByName[name]) {
-            this.properties.push({ name, values: new ATOMIC_PROPERTY_CLASS_BY_NAME[name]() });
-        }
         return this.propertyByName[name] as AtomicPropertyByName[Name];
     }
 
@@ -57,11 +59,9 @@ export class AtomicProperties {
         name: Name,
         property: AtomicPropertyByName[Name],
     ) {
-        const index = this.properties.findIndex((item) => item.name === name);
-        this.properties.splice(index < 0 ? this.properties.length : index, 1, {
-            name,
-            values: property,
-        });
+        this.properties = this.properties.map((item) =>
+            item.name === name ? { name, values: property } : item,
+        );
     }
 
     /**
