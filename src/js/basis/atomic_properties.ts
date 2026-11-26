@@ -1,3 +1,4 @@
+import { ArrayWithIds } from "@mat3ra/code";
 import type { AtomicPropertiesSchema } from "@mat3ra/esse/dist/js/types";
 
 import { AtomicConstraints } from "../constraints/constraints";
@@ -9,54 +10,46 @@ export enum ProtoPropertyEnum {
     boundary_conditions = "boundary_conditions",
 }
 
-interface AtomicPropertyByName {
-    [ProtoPropertyEnum.atomic_constraints]: AtomicConstraints;
-    [ProtoPropertyEnum.atomic_labels]: Labels;
-}
+const ATOMIC_PROPERTY_CLASS_BY_NAME = {
+    [ProtoPropertyEnum.atomic_constraints]: AtomicConstraints,
+    [ProtoPropertyEnum.atomic_labels]: Labels,
+};
+
+type AtomicPropertyByName = {
+    [Name in keyof typeof ATOMIC_PROPERTY_CLASS_BY_NAME]: InstanceType<
+        (typeof ATOMIC_PROPERTY_CLASS_BY_NAME)[Name]
+    >;
+};
 
 /**
  * Per-atom properties of a basis, each keyed by atom id and stored under its proto-property name.
  */
 export class AtomicProperties {
-    properties: {
-        name: AtomicPropertiesSchema[number]["name"];
-        values: AtomicConstraints | Labels;
-    }[];
+    properties: { name: AtomicPropertiesSchema[number]["name"]; values: ArrayWithIds<unknown> }[];
 
     /**
      * @param properties - the ESSE list of `{ name, values }` entries.
      */
     constructor(properties: AtomicPropertiesSchema = []) {
-        this.properties = [
-            {
-                name: ProtoPropertyEnum.atomic_constraints,
-                values: AtomicConstraints.fromObjects(
-                    properties.flatMap((property) =>
-                        property.name === ProtoPropertyEnum.atomic_constraints
-                            ? property.values
-                            : [],
-                    ),
-                ),
-            },
-            {
-                name: ProtoPropertyEnum.atomic_labels,
-                values: Labels.fromObjects(
-                    properties.flatMap((property) =>
-                        property.name === ProtoPropertyEnum.atomic_labels ? property.values : [],
-                    ),
-                ),
-            },
-        ];
+        this.properties = properties.map(({ name, values }) => ({
+            name,
+            values: (ATOMIC_PROPERTY_CLASS_BY_NAME[name] as typeof ArrayWithIds).fromObjects(
+                values,
+            ),
+        }));
     }
 
-    get propertyByName(): Record<string, AtomicConstraints | Labels> {
+    get propertyByName(): Record<string, ArrayWithIds<unknown>> {
         return Object.fromEntries(this.properties.map(({ name, values }) => [name, values]));
     }
 
     /**
-     * Returns the stored property, so that changes made to it are kept.
+     * Returns the stored property, storing an empty one first if absent, so that changes made to it are kept.
      */
     getByName<Name extends keyof AtomicPropertyByName>(name: Name): AtomicPropertyByName[Name] {
+        if (!this.propertyByName[name]) {
+            this.properties.push({ name, values: new ATOMIC_PROPERTY_CLASS_BY_NAME[name]() });
+        }
         return this.propertyByName[name] as AtomicPropertyByName[Name];
     }
 
@@ -64,9 +57,11 @@ export class AtomicProperties {
         name: Name,
         property: AtomicPropertyByName[Name],
     ) {
-        this.properties = this.properties.map((item) =>
-            item.name === name ? { name, values: property } : item,
-        );
+        const index = this.properties.findIndex((item) => item.name === name);
+        this.properties.splice(index < 0 ? this.properties.length : index, 1, {
+            name,
+            values: property,
+        });
     }
 
     /**
