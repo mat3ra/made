@@ -18,24 +18,35 @@ interface AtomicPropertyByName {
  * Per-atom properties of a basis, each keyed by atom id and stored under its proto-property name.
  */
 export class AtomicProperties {
-    properties: { name: string; values: AtomicConstraints | Labels }[];
+    properties: {
+        name: AtomicPropertiesSchema[number]["name"];
+        values: AtomicConstraints | Labels;
+    }[];
 
     /**
      * @param properties - the ESSE list of `{ name, values }` entries.
      */
     constructor(properties: AtomicPropertiesSchema = []) {
-        this.properties = Object.entries({
-            [ProtoPropertyEnum.atomic_constraints]: AtomicConstraints.fromObjects(
-                properties.flatMap((property) =>
-                    property.name === ProtoPropertyEnum.atomic_constraints ? property.values : [],
+        this.properties = [
+            {
+                name: ProtoPropertyEnum.atomic_constraints,
+                values: AtomicConstraints.fromObjects(
+                    properties.flatMap((property) =>
+                        property.name === ProtoPropertyEnum.atomic_constraints
+                            ? property.values
+                            : [],
+                    ),
                 ),
-            ),
-            [ProtoPropertyEnum.atomic_labels]: Labels.fromObjects(
-                properties.flatMap((property) =>
-                    property.name === ProtoPropertyEnum.atomic_labels ? property.values : [],
+            },
+            {
+                name: ProtoPropertyEnum.atomic_labels,
+                values: Labels.fromObjects(
+                    properties.flatMap((property) =>
+                        property.name === ProtoPropertyEnum.atomic_labels ? property.values : [],
+                    ),
                 ),
-            ),
-        }).map(([name, values]) => ({ name, values }));
+            },
+        ];
     }
 
     get propertyByName(): Record<string, AtomicConstraints | Labels> {
@@ -62,11 +73,11 @@ export class AtomicProperties {
      * Returns the ESSE list; properties with no values are left out.
      */
     toJSON(): AtomicPropertiesSchema {
-        return Object.entries(this.propertyByName)
-            .filter(([, property]) => property.values.length)
-            .map(([name, property]) => ({
+        return this.properties
+            .filter(({ values }) => values.values.length)
+            .map(({ name, values }) => ({
                 name,
-                values: property.toJSON(),
+                values: values.toJSON(),
             })) as AtomicPropertiesSchema;
     }
 }

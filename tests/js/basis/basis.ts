@@ -7,6 +7,7 @@ import { expect } from "chai";
 import { AtomicProperties, ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import { Basis } from "../../../src/js/basis/basis";
 import { BasisWithAtomicProperties } from "../../../src/js/basis/basis_with_atomic_properties";
+import { Labels } from "../../../src/js/basis/labels";
 import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
@@ -158,10 +159,12 @@ describe("Basis", () => {
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
     });
 
-    it("should hold the ESSE list of atomic properties", () => {
-        const { atomic_properties: atomicProperties } = Si2BasisWithLabelAndConstraint;
-        const { properties } = new AtomicProperties(atomicProperties);
-        expect(JSON.parse(JSON.stringify(properties))).to.be.deep.equal(atomicProperties);
+    it("should return a property set by name in the ESSE list", () => {
+        const atomicProperties = new AtomicProperties();
+        atomicProperties.setByName(ProtoPropertyEnum.atomic_labels, Labels.fromValues([1]));
+        expect(atomicProperties.toJSON()).to.be.deep.equal([
+            { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
+        ]);
     });
 
     it("should get the labels stored under their name", () => {
