@@ -1,6 +1,6 @@
+import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import { expect } from "chai";
 
-import { ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import { AtomicConstraints } from "../../../src/js/constraints/constraints";
 import Material from "../../../src/js/Material";
 import parsers from "../../../src/js/parsers/parsers";

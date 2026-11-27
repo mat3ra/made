@@ -1,3 +1,10 @@
+GRAPHENE_NICKEL_INTERFACE_TOP_HCP_LABELS = [
+    {"id": 0, "value": 0},
+    {"id": 1, "value": 0},
+    {"id": 2, "value": 0},
+    {"id": 3, "value": 1},
+    {"id": 4, "value": 1},
+]
 GRAPHENE_NICKEL_INTERFACE_TOP_HCP = {
     "name": "C(001)-Ni(111), Interface, Strain 0.475pct",
     "basis": {
@@ -15,18 +22,7 @@ GRAPHENE_NICKEL_INTERFACE_TOP_HCP = {
             {"id": 3, "value": [0.333333333, 0.666666667, 0.351561882]},
             {"id": 4, "value": [0.666666667, 0.333333333, 0.351561882]},
         ],
-        "atomic_properties": [
-            {
-                "name": "atomic_labels",
-                "values": [
-                    {"id": 0, "value": 0},
-                    {"id": 1, "value": 0},
-                    {"id": 2, "value": 0},
-                    {"id": 3, "value": 1},
-                    {"id": 4, "value": 1},
-                ],
-            }
-        ],
+        "atomic_properties": [{"name": "atomic_labels", "values": GRAPHENE_NICKEL_INTERFACE_TOP_HCP_LABELS}],
         "units": "crystal",
     },
     "lattice": {

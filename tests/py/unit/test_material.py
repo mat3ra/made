@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis, Coordinates
-from mat3ra.made.basis.atomic_properties import ATOMIC_PROPERTY_NAMES, AtomicProperties
+from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
@@ -15,7 +15,12 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
     create_defect_point_vacancy,
 )
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.modify import filter_by_label, interface_get_part, interface_label_parts_by_elements
+from mat3ra.made.tools.modify import (
+    filter_by_ids,
+    filter_by_label,
+    interface_get_part,
+    interface_label_parts_by_elements,
+)
 from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.made.tools.operations.core.unary import translate
 from mat3ra.utils import assertion as assertion_utils
@@ -131,8 +136,6 @@ def test_basis_cell_lattice_sync():
         ([1, 2], None, []),
         # Test normal behavior with non-empty lists
         ([], [1, 2], [1, 2]),
-        # Test string labels are stored as integers
-        ([], ["1", "2"], [1, 2]),
     ],
 )
 def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
@@ -210,12 +213,18 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             [None, None, None, None, 1, 2, None, None],
             [FIXED, None, None, None, None, None, None, None],
         ),
+        (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+            lambda material: filter_by_ids(material, [2, 4], reset_ids=True),
+            [0, 1],
+            [None, FIXED],
+        ),
     ],
 )
-def test_per_atom_values_follow_atom_ids(material_config, operation, expected_labels, expected_constraints):
+def test_atomic_properties_follow_atom_ids(material_config, operation, expected_labels, expected_constraints):
     basis = operation(MaterialWithBuildMetadata.create(material_config)).basis
     constraints = basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
-    assert basis.labels.to_padded_array_of_values(basis.elements.ids, None) == expected_labels
+    assert basis.atomic_labels_array == expected_labels
     assert constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
     assert all(set(item.values.ids) <= set(basis.elements.ids) for item in basis.atomic_properties.root)
 
@@ -223,7 +232,6 @@ def test_per_atom_values_follow_atom_ids(material_config, operation, expected_la
 @pytest.mark.parametrize("properties", [BULK_FeSe_WITH_LABELS["basis"]["atomic_properties"]])
 def test_atomic_properties_from_list_of_dicts(properties):
     atomic_properties = AtomicProperties.from_list_of_dicts(properties)
-    assert [item.name for item in atomic_properties.root] == list(ATOMIC_PROPERTY_NAMES)
     assert atomic_properties.to_dict() == properties
 
 

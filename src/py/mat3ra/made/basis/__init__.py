@@ -5,8 +5,11 @@ from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.code.constants import HASH_TOLERANCE
 from mat3ra.code.entity import InMemoryEntityPydantic
 from mat3ra.esse.models.core.abstract.matrix_3x3 import Matrix3x3Schema
-from mat3ra.esse.models.material import BasisSchema, BasisUnitsEnum
 from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
+from mat3ra.esse.models.properties_directory.structural.basis_with_atomic_properties import (
+    BasisUnitsEnum,
+    BasisWithAtomicPropertiesSchema,
+)
 from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.basis.coordinates import Coordinates
 from mat3ra.made.cell import Cell
@@ -34,7 +37,7 @@ def get_overlapping_coordinates(
     return [c for c in coordinates if np.linalg.norm(np.array(c) - np.array(coordinate)) < threshold]
 
 
-class Basis(BasisSchema, InMemoryEntityPydantic):
+class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
     elements: ArrayWithIds
     coordinates: Coordinates
     cell: Cell = Field(Cell(), exclude=True)
@@ -73,6 +76,11 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def labels(self) -> ArrayWithIds:
         """The atomic labels, read-only; set them with set_labels_from_list."""
         return self.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_labels)
+
+    @property
+    def atomic_labels_array(self) -> List[Optional[int]]:
+        """Returns the label of each atom, None where an atom has none, e.g. [1, 2, None, None]."""
+        return self.labels.to_padded_array_of_values(self.elements.ids, None)
 
     @property
     def arrays_with_ids(self) -> List[ArrayWithIds]:
@@ -207,9 +215,9 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         for array in self.arrays_with_ids:
             array.filter_by_ids(ids, invert)
         if reset_ids:
-            new_id_by_atom_id = {atom_id: index for index, atom_id in enumerate(self.elements.ids)}
+            kept_atom_ids = list(self.elements.ids)
             for array in self.arrays_with_ids:
-                array.ids = [new_id_by_atom_id[atom_id] for atom_id in array.ids]
+                array.ids = [kept_atom_ids.index(atom_id) for atom_id in array.ids]
         return self
 
     def filter_atoms_by_labels(self, labels: Union[List[str], str]) -> "Basis":
@@ -233,7 +241,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
 
         self.atomic_properties.set_by_name(
             ProtoPropertyEnum.atomic_labels,
-            ArrayWithIds(values=[int(label) for label in labels], ids=list(self.elements.ids)),
+            ArrayWithIds(values=list(labels), ids=list(self.elements.ids)),
         )
 
     def transform_by_matrix(self, matrix: Matrix3x3Schema) -> None:

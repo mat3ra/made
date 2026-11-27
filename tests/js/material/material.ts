@@ -1,6 +1,6 @@
+import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import { expect } from "chai";
 
-import { ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
 import Material from "../../../src/js/Material";
 import { FeOStandata, Graphene, Na4Cl4, Silicon } from "../fixtures";
 
@@ -171,7 +171,7 @@ describe("Material", () => {
             });
         });
 
-        it("hashes labels as main did, from atomic_properties", () => {
+        it("should match expected hash for Silicon with labels", () => {
             const values = [0, 1].map((value, id) => ({ id, value }));
             const material = new Material({
                 ...Silicon,

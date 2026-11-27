@@ -102,7 +102,7 @@ function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps = 1) 
         const intermediateBasis = initialBasis.clone();
         intermediateBasis.coordinates = intermediateCoordinatesAsNestedArray.map(
             (coordinate, index) => ({
-                id: initialBasisCopy._coordinates.ids[index],
+                id: index,
                 value: coordinate as AtomicCoordinateValue,
             }),
         );

@@ -395,8 +395,11 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      * This guarantees the independence from the order in the elements array.
      */
     getAsSortedString(): string {
-        const storedBasis = new Basis(this.clone().standardRepresentation);
-        const { elementsWithLabelsArray } = this;
+        const standardBasis = this.clone();
+        standardBasis.toStandardRepresentation();
+        // a clone goes through toJSON, which rounds the coordinates as they are stored
+        const storedBasis = standardBasis.clone();
+        const { elementsWithLabelsArray } = storedBasis;
         const standardRep = storedBasis.elementsAndCoordinatesArray.map((entry, idx) => {
             const coordinate = entry[1];
             const toleratedCoordinate = coordinate.map((x) =>
@@ -423,7 +426,7 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Returns array of elements with labels; a plain basis has none, E.g., ["Fe", "Fe", "O", "O"]
+     * Returns the element of each atom, E.g., ["Fe", "Fe", "O", "O"]
      */
     get elementsWithLabelsArray(): string[] {
         return this._elements.values;
