@@ -27,15 +27,15 @@ describe("Parsers:XYZ", () => {
         assertDeepAlmostEqual(parsers.xyz.toBasisConfig(text), FeO.basis, ["cell", "units"]);
     });
 
-    it("should keep atomic labels 0 and 1 from XYZ text to basis and back", () => {
-        const text = "Si0 0 0 0\nSi1 0.25 0.25 0.25";
+    it("should keep atomic labels 0, 1 and 10 from XYZ text to basis and back", () => {
+        const text = "Si0 0 0 0\nSi1 0.25 0.25 0.25\nSi10 0.5 0.5 0.5";
         expect(() => parsers.xyz.validate(text)).not.to.throw();
         const basis = new BasisWithAtomicProperties(parsers.xyz.toBasisConfig(text));
         expect(
             basis.atomicProperties.getByName(ProtoPropertyEnum.atomic_labels).toJSON(),
-        ).to.be.deep.equal([0, 1].map((value, id) => ({ id, value })));
+        ).to.be.deep.equal([0, 1, 10].map((value, id) => ({ id, value })));
         const xyz = parsers.xyz.fromBasis(basis, "%11.6f");
-        expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Si0", "Si1"]);
+        expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Si0", "Si1", "Si10"]);
     });
 
     it("should return [true, true, true] as constraints for the line without any constraints", () => {

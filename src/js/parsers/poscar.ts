@@ -38,7 +38,7 @@ function toPoscar(
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
     });
     const BasisLines: string[] = [];
-    const addSelectiveDynamics = !omitConstraints && basis.AtomicConstraints.values.length > 0;
+    const addSelectiveDynamics = !omitConstraints && !basis.AtomicConstraints.areUnconstrained;
     basis._elements.values.forEach((item, idx) => {
         const coord = basis.getCoordinateValueByIndex(idx).map((x) => _print(x));
         const constraintsAsString = addSelectiveDynamics
