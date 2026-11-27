@@ -92,11 +92,11 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         AtomicCoordinateValue,
         AtomicConstraintValue,
     ][] {
+        const { atomicLabelsArray } = this;
         return this._elements.values.map((element: AtomicElementValue, idx: number) => {
             const coordinate = this.getCoordinateValueByIndex(idx);
             const constraint = this.getConstraintByIndex(idx);
-            const label = this.atomicLabelsArray[idx];
-            return [element, label, coordinate, constraint];
+            return [element, atomicLabelsArray[idx], coordinate, constraint];
         });
     }
 

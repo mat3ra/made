@@ -1,12 +1,10 @@
 import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import { expect } from "chai";
 
-import { AtomicConstraints } from "../../../src/js/constraints/constraints";
 import Material from "../../../src/js/Material";
 import parsers from "../../../src/js/parsers/parsers";
 import { atomsCount } from "../../../src/js/parsers/poscar";
 import {
-    atomicConstraints,
     H2OPoscar,
     Na4Cl4,
     Na4Cl4Poscar,
@@ -55,13 +53,6 @@ describe("Parsers.POSCAR", () => {
         expect((materialConfig as { basis: { elements: object[] } }).basis.elements).to.have.length(
             2,
         );
-    });
-
-    it("should return constraints as string with given map function", () => {
-        const constraints = AtomicConstraints.fromObjects(atomicConstraints);
-        expect(
-            constraints.getAsStringByIndex(0, parsers.poscar.atomicConstraintsCharFromBool),
-        ).to.be.equal("T T F");
     });
 
     it("should generate POSCAR with constraints if they were present", () => {

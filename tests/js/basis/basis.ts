@@ -272,7 +272,7 @@ describe("Basis", () => {
 
     it("should return standard representation", () => {
         const basis = new Material(Na4Cl4Cartesian).getBasis();
-        assertDeepAlmostEqual(basis.standardRepresentation, Na4Cl4.basis, ["constraints"]);
+        assertDeepAlmostEqual(basis.standardRepresentation, Na4Cl4.basis);
     });
 
     /**
