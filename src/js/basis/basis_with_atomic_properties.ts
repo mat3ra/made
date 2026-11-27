@@ -1,4 +1,3 @@
-import { ArrayWithIds } from "@mat3ra/code";
 import { BasisWithAtomicPropertiesSchema } from "@mat3ra/esse/dist/js/types";
 
 import { Cell } from "../cell/cell";
@@ -74,14 +73,10 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
     /**
      * Returns array of elements with labels E.g., ["Fe1", "Fe2", "O", "O"]
      */
-    get elementsWithLabelsArray(): string[] {
+    override get elementsWithLabelsArray(): string[] {
         return this.atomicLabelsArray.map(
             (label, index) => `${this.getElementByIndex(index)}${label ?? ""}`,
         );
-    }
-
-    override get siteNames(): string[] {
-        return this.elementsWithLabelsArray;
     }
 
     /**
@@ -125,7 +120,15 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         );
     }
 
-    override get perAtomValuesByName(): Record<string, ArrayWithIds<unknown>> {
-        return { ...super.perAtomValuesByName, ...this.atomicProperties.propertyByName };
+    override filterAtomsByIds(ids: number | number[], invert = false, resetIds = false): this {
+        super.filterAtomsByIds(ids, invert);
+        this.atomicProperties.filterByIds(this._elements.ids, resetIds);
+        return super.filterAtomsByIds(this._elements.ids, false, resetIds);
+    }
+
+    override addAtomsFromAnotherBasis(otherBasis: this): number {
+        const idOffset = super.addAtomsFromAnotherBasis(otherBasis);
+        this.atomicProperties.addItemsFromAnother(otherBasis.atomicProperties, idOffset);
+        return idOffset;
     }
 }

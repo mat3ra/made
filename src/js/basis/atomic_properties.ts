@@ -55,6 +55,30 @@ export class AtomicProperties {
         return this.propertyByName[name] as AtomicPropertyByName[Name];
     }
 
+    /**
+     * Keeps the items of the given atom ids; with resetIds each id becomes its index in ids.
+     */
+    filterByIds(ids: number[], resetIds = false) {
+        this.properties.forEach(({ values }) => {
+            values.filterByIds(ids);
+            if (resetIds) {
+                values.ids = values.ids.map((id) => ids.indexOf(id));
+            }
+        });
+    }
+
+    /**
+     * Adds the items of another one under the same names, with their atom ids shifted by idOffset.
+     */
+    addItemsFromAnother(other: AtomicProperties, idOffset: number) {
+        const { propertyByName } = this;
+        other.properties.forEach(({ name, values }) =>
+            values.values.forEach((value, index) =>
+                propertyByName[name].addItem(value, values.ids[index] + idOffset),
+            ),
+        );
+    }
+
     setByName<Name extends keyof AtomicPropertyByName>(
         name: Name,
         property: AtomicPropertyByName[Name],
