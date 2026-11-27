@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis, Coordinates
-from mat3ra.made.basis.atomic_properties import AtomicProperties
+from mat3ra.made.basis.atomic_properties import ATOMIC_PROPERTY_NAMES, AtomicProperties
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
@@ -17,8 +17,9 @@ from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
 from mat3ra.made.tools.modify import filter_by_label, interface_get_part, interface_label_parts_by_elements
 from mat3ra.made.tools.operations.core.binary import merge
+from mat3ra.made.tools.operations.core.unary import translate
 from mat3ra.utils import assertion as assertion_utils
-from unit.fixtures.bulk import BULK_FeSe_WITH_LABELS, BULK_Si_PRIMITIVE
+from unit.fixtures.bulk import BULK_FeSe_WITH_CONSTRAINTS, BULK_FeSe_WITH_LABELS, BULK_Si_PRIMITIVE
 from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
@@ -201,6 +202,14 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             [2, None, None, 1],
             [None, None, None, None],
         ),
+        (
+            BULK_FeSe_WITH_CONSTRAINTS,
+            lambda material: merge(
+                [material, translate(MaterialWithBuildMetadata.create(BULK_FeSe_WITH_LABELS), [0, 0, 0.5])]
+            ),
+            [None, None, None, None, 1, 2, None, None],
+            [FIXED, None, None, None, None, None, None, None],
+        ),
     ],
 )
 def test_per_atom_values_follow_atom_ids(material_config, operation, expected_labels, expected_constraints):
@@ -211,9 +220,11 @@ def test_per_atom_values_follow_atom_ids(material_config, operation, expected_la
     assert all(set(item.values.ids) <= set(basis.elements.ids) for item in basis.atomic_properties.root)
 
 
-@pytest.mark.parametrize("properties", [GRAPHENE_NICKEL_INTERFACE_CONSTRAINED["basis"]["atomic_properties"]])
+@pytest.mark.parametrize("properties", [BULK_FeSe_WITH_LABELS["basis"]["atomic_properties"]])
 def test_atomic_properties_from_list_of_dicts(properties):
-    assert [item.model_dump(mode="json") for item in AtomicProperties.from_list_of_dicts(properties).root] == properties
+    atomic_properties = AtomicProperties.from_list_of_dicts(properties)
+    assert [item.name for item in atomic_properties.root] == list(ATOMIC_PROPERTY_NAMES)
+    assert atomic_properties.to_dict() == properties
 
 
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
