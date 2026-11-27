@@ -1,5 +1,5 @@
 import { ArrayWithIds, ValueWithId } from "@mat3ra/code";
-import { AtomicConstraintSchema } from "@mat3ra/esse/dist/js/types";
+import { AtomicConstraintSchema, AtomicConstraintsSchema } from "@mat3ra/esse/dist/js/types";
 
 export type AtomicConstraintValue = AtomicConstraintSchema["value"];
 
@@ -41,5 +41,9 @@ export class AtomicConstraints extends ArrayWithIds<AtomicConstraintValue> {
             const _constraint = Constraint.fromValueAndId(constraint);
             return _constraint.isUnconstrained();
         });
+    }
+
+    override toJSON(): AtomicConstraintsSchema {
+        return super.toJSON() as AtomicConstraintsSchema;
     }
 }
