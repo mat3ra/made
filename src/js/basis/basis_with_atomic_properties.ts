@@ -1,14 +1,14 @@
 import { ArrayWithIds } from "@mat3ra/code";
-import { BasisWithAtomicPropertiesSchema } from "@mat3ra/esse/dist/js/types";
+import { BasisWithAtomicPropertiesSchema, ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 
 import { Cell } from "../cell/cell";
 import { AtomicConstraints, AtomicConstraintValue, Constraint } from "../constraints/constraints";
-import { AtomicProperties, ProtoPropertyEnum } from "./atomic_properties";
+import { AtomicProperties } from "./atomic_properties";
 import { Basis, ElementsAndCoordinatesConfig } from "./basis";
 import { AtomicCoordinateValue, Coordinate } from "./coordinates";
 import { AtomicElementValue } from "./elements";
 import { ElementWithLabel } from "./helpers";
-import { AtomicLabelValue } from "./labels";
+import { AtomicLabelValue, Labels } from "./labels";
 
 export interface BasisWithAtomicPropertiesConfig extends BasisWithAtomicPropertiesSchema {
     cell?: Cell;
@@ -46,11 +46,15 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         return this.atomicProperties.getByName(ProtoPropertyEnum.atomic_constraints);
     }
 
+    get labels(): Labels {
+        return this.atomicProperties.getByName(ProtoPropertyEnum.atomic_labels);
+    }
+
     override toJSON(
         exclude: (keyof BasisWithAtomicPropertiesConfig)[] = ["cell"],
     ): BasisWithAtomicPropertiesConfig {
         return {
-            ...super.toJSON(exclude as (keyof BasisWithAtomicPropertiesConfig)[]),
+            ...super.toJSON(exclude),
             atomic_properties: this.atomicProperties.toJSON(),
         };
     }
@@ -67,8 +71,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
      * Returns array of atomic labels E.g., [1, 2, undefined, undefined]
      */
     get atomicLabelsArray(): (AtomicLabelValue | undefined)[] {
-        const labels = this.atomicProperties.getByName(ProtoPropertyEnum.atomic_labels);
-        return this._elements.ids.map((id) => labels.getElementValueById(id));
+        return this._elements.ids.map((id) => this.labels.getElementValueById(id));
     }
 
     /**

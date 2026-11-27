@@ -1,14 +1,8 @@
 import { ArrayWithIds } from "@mat3ra/code";
-import type { AtomicPropertiesSchema } from "@mat3ra/esse/dist/js/types";
+import { AtomicPropertiesSchema, ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 
 import { AtomicConstraints } from "../constraints/constraints";
 import { Labels } from "./labels";
-
-export enum ProtoPropertyEnum {
-    atomic_constraints = "atomic_constraints",
-    atomic_labels = "atomic_labels",
-    boundary_conditions = "boundary_conditions",
-}
 
 const ATOMIC_PROPERTY_CLASS_BY_NAME = {
     [ProtoPropertyEnum.atomic_constraints]: AtomicConstraints,
@@ -54,10 +48,10 @@ export class AtomicProperties {
 
     setByName<Name extends keyof AtomicPropertyByName>(
         name: Name,
-        property: AtomicPropertyByName[Name],
+        values: AtomicPropertyByName[Name],
     ) {
         this.properties = this.properties.map((item) =>
-            item.name === name ? { name, values: property } : item,
+            item.name === name ? { name, values } : item,
         );
     }
 

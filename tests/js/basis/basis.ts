@@ -1,10 +1,10 @@
 import "../setup";
 
-import { Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import { ProtoPropertyEnum, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
-import { AtomicProperties, ProtoPropertyEnum } from "../../../src/js/basis/atomic_properties";
+import { AtomicProperties } from "../../../src/js/basis/atomic_properties";
 import { Basis } from "../../../src/js/basis/basis";
 import { BasisWithAtomicProperties } from "../../../src/js/basis/basis_with_atomic_properties";
 import { Labels } from "../../../src/js/basis/labels";
@@ -14,7 +14,7 @@ import {
     C2H4,
     C2H4Translated,
     FeLiSiBasis,
-    FeOStandata,
+    FeO,
     LiFeSiBasis,
     LiFeSiBasisLabels,
     Na,
@@ -26,22 +26,6 @@ import {
 
 const { assertDeepAlmostEqual } = Utils.assertion;
 const TOLERANCE = 1e-4;
-
-const FeOWithLabels = {
-    ...FeOStandata,
-    basis: {
-        ...FeOStandata.basis,
-        atomic_properties: [
-            {
-                name: ProtoPropertyEnum.atomic_labels as const,
-                values: [
-                    { id: 0, value: 1 },
-                    { id: 1, value: 2 },
-                ],
-            },
-        ],
-    },
-};
 
 describe("Basis", () => {
     it("should return true if basises are equal", () => {
@@ -167,18 +151,11 @@ describe("Basis", () => {
         ]);
     });
 
-    it("should get the labels stored under their name", () => {
-        const { atomicProperties } = new BasisWithAtomicProperties(FeOWithLabels.basis);
-        expect(
-            atomicProperties.getByName(ProtoPropertyEnum.atomic_labels).toJSON(),
-        ).to.be.deep.equal(FeOWithLabels.basis.atomic_properties[0].values);
-    });
-
     it("should print each label on the atom with its id when ids have gaps", () => {
         const basis = new BasisWithAtomicProperties({
-            ...FeOWithLabels.basis,
-            elements: FeOWithLabels.basis.elements.slice(1),
-            coordinates: FeOWithLabels.basis.coordinates.slice(1),
+            ...FeO.basis,
+            elements: FeO.basis.elements.slice(1),
+            coordinates: FeO.basis.coordinates.slice(1),
         });
         expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
     });

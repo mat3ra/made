@@ -28,9 +28,9 @@ import type {
     MaterialHashedSchema,
     MaterialSchema,
 } from "@mat3ra/esse/dist/js/types";
+import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import CryptoJS from "crypto-js";
 
-import { ProtoPropertyEnum } from "./basis/atomic_properties";
 import { type BasisConfig } from "./basis/basis";
 import {
     type BasisWithAtomicPropertiesConfig,

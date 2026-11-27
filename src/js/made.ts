@@ -1,4 +1,4 @@
-import { AtomicProperties, ProtoPropertyEnum } from "./basis/atomic_properties";
+import { AtomicProperties } from "./basis/atomic_properties";
 import { Basis } from "./basis/basis";
 import { BasisWithAtomicProperties } from "./basis/basis_with_atomic_properties";
 import { Cell } from "./cell/cell";
@@ -36,7 +36,6 @@ export const Made = {
     BasisWithAtomicProperties,
     AtomicConstraints,
     AtomicProperties,
-    ProtoPropertyEnum,
 
     parsers,
     tools,
@@ -62,7 +61,6 @@ export {
     BasisWithAtomicProperties,
     AtomicConstraints,
     AtomicProperties,
-    ProtoPropertyEnum,
     parsers,
     tools,
     LATTICE_TYPE_CONFIGS,

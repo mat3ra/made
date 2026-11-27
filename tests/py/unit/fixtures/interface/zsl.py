@@ -1,5 +1,14 @@
 # ruff: noqa
-GRAPHENE_NICKEL_INTERFACE = {
+from typing import Any, Dict
+
+GRAPHENE_NICKEL_INTERFACE_LABELS = [
+    {"id": 0, "value": 0},
+    {"id": 1, "value": 0},
+    {"id": 2, "value": 0},
+    {"id": 3, "value": 1},
+    {"id": 4, "value": 1},
+]
+GRAPHENE_NICKEL_INTERFACE: Dict[str, Any] = {
     "metadata": {
         "build": [
             {
@@ -454,9 +463,9 @@ GRAPHENE_NICKEL_INTERFACE = {
                                         {
                                             "name": "atomic_labels",
                                             "values": [
-                                                {"id": 0, "value": "0"},
-                                                {"id": 1, "value": "0"},
-                                                {"id": 2, "value": "0"},
+                                                {"id": 0, "value": 0},
+                                                {"id": 1, "value": 0},
+                                                {"id": 2, "value": 0},
                                             ],
                                         }
                                     ],
@@ -502,18 +511,7 @@ GRAPHENE_NICKEL_INTERFACE = {
             {"id": 4, "value": [0.666666, 0.666667, 0.351561882]},
         ],
         "units": "crystal",
-        "atomic_properties": [
-            {
-                "name": "atomic_labels",
-                "values": [
-                    {"id": 0, "value": 0},
-                    {"id": 1, "value": 0},
-                    {"id": 2, "value": 0},
-                    {"id": 3, "value": 1},
-                    {"id": 4, "value": 1},
-                ],
-            }
-        ],
+        "atomic_properties": [{"name": "atomic_labels", "values": GRAPHENE_NICKEL_INTERFACE_LABELS}],
     },
     "lattice": {
         "a": 2.478974,
@@ -754,9 +752,9 @@ DIAMOND_GaAs_INTERFACE_GH = {
 GRAPHENE_NICKEL_INTERFACE_CONSTRAINED = {
     **GRAPHENE_NICKEL_INTERFACE,
     "basis": {
-        **GRAPHENE_NICKEL_INTERFACE["basis"],  # type: ignore[dict-item]
+        **GRAPHENE_NICKEL_INTERFACE["basis"],
         "atomic_properties": [
-            *GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"],  # type: ignore[index]
+            *GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"],
             {"name": "atomic_constraints", "values": [{"id": 4, "value": [False, False, False]}]},
         ],
     },

@@ -24,8 +24,11 @@ from mat3ra.made.tools.operations.core.unary import rotate
 from mat3ra.utils import assertion as assertion_utils
 
 from .fixtures.bulk import BULK_Si_CONVENTIONAL, BULK_Si_CONVENTIONAL_FILTERED
-from .fixtures.interface.gr_ni_111_top_hcp import GRAPHENE_NICKEL_INTERFACE_TOP_HCP
-from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE
+from .fixtures.interface.gr_ni_111_top_hcp import (
+    GRAPHENE_NICKEL_INTERFACE_TOP_HCP,
+    GRAPHENE_NICKEL_INTERFACE_TOP_HCP_LABELS,
+)
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE, GRAPHENE_NICKEL_INTERFACE_LABELS
 from .fixtures.slab import SI_SLAB_001_2_ATOMS, SI_SLAB_001_WITH_VACUUM
 from .utils import assert_two_entities_deep_almost_equal
 
@@ -215,7 +218,7 @@ def test_displace_interface():
         {"id": 4, "value": [0.660425493, 0.759826552, 0.366525839]},
     ]
 
-    expected_labels = GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"][0]["values"]
+    expected_labels = GRAPHENE_NICKEL_INTERFACE_LABELS
     displaced_material = interface_displace_part(
         material, [0.1, 0.2, 0.3], InterfacePartsEnum.FILM, use_cartesian_coordinates=True
     )
@@ -234,7 +237,7 @@ def test_displace_interface_optimized():
         {"id": 3, "value": [0.11112456, 0.181143574, 0.351561882]},
         {"id": 4, "value": [0.77779056, 0.847810574, 0.351561882]},
     ]
-    expected_labels = GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"][0]["values"]
+    expected_labels = GRAPHENE_NICKEL_INTERFACE_LABELS
 
     optimal_displacement = get_optimal_film_displacement(
         material,
@@ -252,13 +255,10 @@ def test_displace_interface_optimized():
 @pytest.mark.parametrize(
     "substrate_elements, expected_labels",
     [
-        (["Ni"], GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["atomic_properties"][0]["values"]),
+        (["Ni"], GRAPHENE_NICKEL_INTERFACE_TOP_HCP_LABELS),
         (
             ["C"],
-            [
-                {"id": label["id"], "value": 1 - label["value"]}
-                for label in GRAPHENE_NICKEL_INTERFACE_TOP_HCP["basis"]["atomic_properties"][0]["values"]
-            ],
+            [{"id": label["id"], "value": 1 - label["value"]} for label in GRAPHENE_NICKEL_INTERFACE_TOP_HCP_LABELS],
         ),
     ],
 )

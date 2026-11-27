@@ -1,6 +1,7 @@
 from typing import Any, Dict
 
-from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
+from mat3ra.made.material import Material
+from mat3ra.made.tools.modify import filter_by_ids
 from mat3ra.standata.materials import Materials
 
 BULK_SrTiO3 = Materials.get_by_name_first_match("SrTiO3")
@@ -17,16 +18,37 @@ BULK_FeSe_WITH_LABELS = {
     **BULK_FeSe,
     "basis": {
         **BULK_FeSe["basis"],
-        "atomic_properties": [{"name": ProtoPropertyEnum.atomic_labels.value, "values": BULK_FeSe_LABELS}],
+        "atomic_properties": [{"name": "atomic_labels", "values": BULK_FeSe_LABELS}],
     },
 }
+BULK_FeSe_LABELS_WITH_ZERO = [{"id": 0, "value": 0}, {"id": 1, "value": 3}]
+BULK_FeSe_WITH_LABELS_WITH_ZERO = {
+    **BULK_FeSe,
+    "basis": {
+        **BULK_FeSe["basis"],
+        "atomic_properties": [{"name": "atomic_labels", "values": BULK_FeSe_LABELS_WITH_ZERO}],
+    },
+}
+BULK_FeSe_WITH_ID_GAP = filter_by_ids(
+    Material.create(
+        {
+            **BULK_FeSe,
+            "basis": {
+                **BULK_FeSe["basis"],
+                "atomic_properties": [
+                    {"name": "atomic_labels", "values": [{"id": 0, "value": 1}, {"id": 3, "value": 2}]}
+                ],
+            },
+        }
+    ),
+    [1],
+    invert=True,
+).to_dict()
 BULK_FeSe_WITH_CONSTRAINTS = {
     **BULK_FeSe,
     "basis": {
         **BULK_FeSe["basis"],
-        "atomic_properties": [
-            {"name": ProtoPropertyEnum.atomic_constraints.value, "values": [{"id": 0, "value": [False, False, False]}]}
-        ],
+        "atomic_properties": [{"name": "atomic_constraints", "values": [{"id": 0, "value": [False, False, False]}]}],
     },
 }
 

@@ -29,25 +29,14 @@ class AtomicProperties(AtomicPropertiesSchema):
             ]
         )
 
-    @property
-    def property_by_name(self) -> Dict[ProtoPropertyEnum, ArrayWithIds]:
-        return {item.name: item.values for item in self.root}
-
     def get_by_name(self, name: ProtoPropertyEnum) -> ArrayWithIds:
-        """Returns the stored property, storing an empty one first if absent, so that changes made to it are kept."""
-        if name not in self.property_by_name:
-            self.set_by_name(name, ArrayWithIds.from_values([]))
-        return self.property_by_name[name]
+        """Returns the stored property, so that changes made to it are kept."""
+        return next(item.values for item in self.root if item.name == name)
 
     def set_by_name(self, name: ProtoPropertyEnum, values: ArrayWithIds) -> None:
-        property_by_name = {**self.property_by_name, name: values}
-        self.root = [AtomicProperty(name=name, values=values) for name, values in property_by_name.items()]
+        self.root = [AtomicProperty(name=name, values=values) if item.name == name else item for item in self.root]
 
     @model_serializer
     def to_dict(self) -> List[Dict[str, Any]]:
         """Returns the ESSE list; properties with no values are left out."""
-        return [
-            {"name": name.value, "values": values.to_dict()}
-            for name, values in self.property_by_name.items()
-            if values.ids
-        ]
+        return [{"name": item.name.value, "values": item.values.to_dict()} for item in self.root if item.values.ids]

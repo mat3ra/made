@@ -29,6 +29,7 @@ function generateNewBasisWithinSupercell<S extends BasisConfig>(
     oldBasis.elements.forEach((element) => {
         const coordinate = oldBasis.getCoordinateValueById(element.id);
         const cartesianCoordinate = cell.convertPointToCartesian(coordinate);
+        // the atom alone, renumbered to id 0, with its atomic properties
         const singleAtomBasis = oldBasis.clone().filterAtomsByIds(element.id, false, true);
         const shifts = cellTools.latticePointsInSupercell(supercellMatrix);
         shifts.forEach((combination) => {

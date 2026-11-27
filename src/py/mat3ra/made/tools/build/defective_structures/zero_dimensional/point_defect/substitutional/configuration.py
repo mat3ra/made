@@ -1,4 +1,4 @@
-from typing import Union, List
+from typing import List, Optional, Union
 
 from mat3ra.esse.models.materials_category.defective_structures.zero_dimensional.point_defect.substitutional import (
     SubstitutionalPointDefectSchema,
@@ -17,9 +17,9 @@ from ......build_components.entities.auxiliary.zero_dimensional.point_defect_sit
 
 def _host_atom_label_at_coordinate(
     crystal: Union[Material, MaterialWithBuildMetadata], coordinate: List[float]
-) -> Union[int, str, None]:
+) -> Optional[int]:
     site_index = get_closest_site_id_from_coordinate(crystal, coordinate)
-    return crystal.basis.labels.to_padded_array_of_values(crystal.basis.elements.ids, None)[site_index]
+    return crystal.basis.atomic_labels_array[site_index]
 
 
 class SubstitutionalDefectConfiguration(PointDefectConfiguration, SubstitutionalPointDefectSchema):
