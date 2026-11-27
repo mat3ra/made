@@ -82,30 +82,18 @@ const Si2BasisWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
         { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 1, value: 1 }] },
     ],
 };
-const Si2BasisWithIdGap: BasisSchema = {
-    elements: [
-        { id: 0, value: "Si" },
-        { id: 2, value: "Si" },
-    ],
-    coordinates: [
-        { id: 0, value: [0, 0, 0] },
-        { id: 2, value: [0.5, 0.5, 0.5] },
-    ],
+const SiBasisWithIdGap: BasisSchema = {
+    elements: [{ id: 2, value: "Si" }],
+    coordinates: [{ id: 2, value: [0.5, 0.5, 0.5] }],
     units: "crystal",
 };
-const Si2BasisWithIdGapDisplaced: BasisSchema = {
-    ...Si2BasisWithIdGap,
-    coordinates: [
-        { id: 0, value: [0, 0, 0] },
-        { id: 2, value: [0.5, 0.5, 0.7] },
-    ],
+const SiBasisWithIdGapDisplaced: BasisSchema = {
+    ...SiBasisWithIdGap,
+    coordinates: [{ id: 2, value: [0.5, 0.5, 0.7] }],
 };
-const Si2BasisWithIdGapHalfway: BasisSchema = {
-    ...Si2BasisWithIdGap,
-    coordinates: [
-        { id: 0, value: [0, 0, 0] },
-        { id: 2, value: [0.5, 0.5, 0.6] },
-    ],
+const SiBasisWithIdGapHalfway: BasisSchema = {
+    ...SiBasisWithIdGap,
+    coordinates: [{ id: 2, value: [0.5, 0.5, 0.6] }],
 };
 const Si2BasisRepeatedWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
     ...Si2BasisRepeated,
@@ -176,9 +164,9 @@ export {
     Si2BasisRepeated,
     Si2BasisWithLabelAndConstraint,
     Si2BasisRepeatedWithLabelAndConstraint,
-    Si2BasisWithIdGap,
-    Si2BasisWithIdGapDisplaced,
-    Si2BasisWithIdGapHalfway,
+    SiBasisWithIdGap,
+    SiBasisWithIdGapDisplaced,
+    SiBasisWithIdGapHalfway,
     SiGeSupercellBasisWithLabelAndConstraint,
     // Other
     FeO,
