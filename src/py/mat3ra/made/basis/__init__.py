@@ -187,8 +187,7 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """
 
         id_offset = max(self.elements.ids, default=-1) + 1
-        properties = (self.atomic_properties.get_by_name(item.name) for item in other_basis.atomic_properties.root)
-        for array, other_array in zip([self.elements, self.coordinates, *properties], other_basis.arrays_with_ids):
+        for array, other_array in zip(self.arrays_with_ids, other_basis.arrays_with_ids):
             for value, atom_id in zip(other_array.values, other_array.ids):
                 array.add_item(value, atom_id + id_offset)
 

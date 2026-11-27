@@ -20,6 +20,15 @@ BULK_FeSe_WITH_LABELS = {
         "atomic_properties": [{"name": ProtoPropertyEnum.atomic_labels.value, "values": BULK_FeSe_LABELS}],
     },
 }
+BULK_FeSe_WITH_CONSTRAINTS = {
+    **BULK_FeSe,
+    "basis": {
+        **BULK_FeSe["basis"],
+        "atomic_properties": [
+            {"name": ProtoPropertyEnum.atomic_constraints.value, "values": [{"id": 0, "value": [False, False, False]}]}
+        ],
+    },
+}
 
 BULK_Si_PRIMITIVE: Dict[str, Any] = {
     "name": "Silicon FCC",
