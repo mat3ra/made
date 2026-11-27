@@ -1,5 +1,6 @@
 // @ts-ignore
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
+import { ArrayWithIds } from "@mat3ra/code";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import {
     BaseInMemoryEntitySchema,
@@ -272,32 +273,39 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
+     * The basis' arrays keyed by atom id.
+     */
+    get arraysWithIds(): ArrayWithIds<unknown>[] {
+        return [this._elements, this._coordinates];
+    }
+
+    /**
      * Keeps the atoms with the given ids, or all others when inverted.
      * With resetIds the remaining atoms are renumbered 0, 1, ...
      */
     filterAtomsByIds(ids: number | number[], invert = false, resetIds = false): this {
-        this._elements.filterByIds(ids, invert);
-        const keptAtomIds = this._elements.ids;
-        this._coordinates.filterByIds(keptAtomIds);
+        this.arraysWithIds.forEach((array) => array.filterByIds(ids, invert));
         if (resetIds) {
-            this._elements.ids = this._elements.ids.map((id) => keptAtomIds.indexOf(id));
-            this._coordinates.ids = this._coordinates.ids.map((id) => keptAtomIds.indexOf(id));
+            const keptAtomIds = this._elements.ids;
+            this.arraysWithIds.forEach((array) => {
+                array.ids = array.ids.map((id) => keptAtomIds.indexOf(id));
+            });
         }
         return this;
     }
 
     /**
-     * Adds the atoms of another basis with ids after this basis' ids, and returns the offset added to their ids.
+     * Adds the atoms of another basis, with ids after this basis' ids.
      */
-    addAtomsFromAnotherBasis(otherBasis: this): number {
+    addAtomsFromAnotherBasis(otherBasis: this) {
         const idOffset = Math.max(-1, ...this._elements.ids) + 1;
-        otherBasis._elements.values.forEach((value, index) =>
-            this._elements.addItem(value, otherBasis._elements.ids[index] + idOffset),
-        );
-        otherBasis._coordinates.values.forEach((value, index) =>
-            this._coordinates.addItem(value, otherBasis._coordinates.ids[index] + idOffset),
-        );
-        return idOffset;
+        const otherArrays = otherBasis.arraysWithIds;
+        this.arraysWithIds.forEach((array, arrayIndex) => {
+            const otherArray = otherArrays[arrayIndex];
+            otherArray.values.forEach((value, index) =>
+                array.addItem(value, otherArray.ids[index] + idOffset),
+            );
+        });
     }
 
     /**
