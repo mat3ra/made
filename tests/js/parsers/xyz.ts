@@ -1,4 +1,3 @@
-import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
@@ -31,9 +30,7 @@ describe("Parsers:XYZ", () => {
         const text = "Si0 0 0 0\nSi1 0.25 0.25 0.25\nSi10 0.5 0.5 0.5";
         expect(() => parsers.xyz.validate(text)).not.to.throw();
         const basis = new BasisWithAtomicProperties(parsers.xyz.toBasisConfig(text));
-        expect(
-            basis.atomicProperties.getByName(ProtoPropertyEnum.atomic_labels).toJSON(),
-        ).to.be.deep.equal([0, 1, 10].map((value, id) => ({ id, value })));
+        expect(basis.atomicLabelsArray).to.be.deep.equal([0, 1, 10]);
         const xyz = parsers.xyz.fromBasis(basis, "%11.6f");
         expect(xyz.match(/^\S+/gm)).to.be.deep.equal(["Si0", "Si1", "Si10"]);
     });
@@ -41,12 +38,9 @@ describe("Parsers:XYZ", () => {
     it("should return [true, true, true] as constraints for the line without any constraints", () => {
         const text = "Si 0 0 0 0 1 1\n Si 0.25 0.25 0.25";
         const basis = new BasisWithAtomicProperties(parsers.xyz.toBasisConfig(text));
-        assertDeepAlmostEqual(
-            basis.atomicProperties.getByName(ProtoPropertyEnum.atomic_constraints).values,
-            [
-                [false, true, true],
-                [true, true, true],
-            ],
-        );
+        assertDeepAlmostEqual(basis.AtomicConstraints.values, [
+            [false, true, true],
+            [true, true, true],
+        ]);
     });
 });

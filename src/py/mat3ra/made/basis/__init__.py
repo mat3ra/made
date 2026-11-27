@@ -74,7 +74,6 @@ class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
 
     @property
     def labels(self) -> ArrayWithIds:
-        """The atomic labels, read-only; set them with set_labels_from_list."""
         return self.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_labels)
 
     @property
@@ -151,7 +150,7 @@ class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
         coordinate: Optional[List[float]] = None,
         use_cartesian_coordinates: bool = False,
         force: bool = False,
-        label: Optional[Union[int, str]] = None,
+        label: Optional[int] = None,
     ):
         """
         Add an atom to the basis at a specified coordinate. Check that no other atom is overlapping with it.
@@ -161,7 +160,7 @@ class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
             coordinate (List[float]): Coordinate of the atom to be added.
             use_cartesian_coordinates (bool): Whether the coordinate is in Cartesian units (or crystal by default).
             force (bool): Whether to force adding the atom even if it overlaps with another atom.
-            label (int|str|None): Per-atom label when the basis already uses labels; omit if the basis has none.
+            label (int|None): Label of the atom to be added.
         """
         if coordinate is None:
             coordinate = [0, 0, 0]
@@ -220,9 +219,8 @@ class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
                 array.ids = [kept_atom_ids.index(atom_id) for atom_id in array.ids]
         return self
 
-    def filter_atoms_by_labels(self, labels: Union[List[str], str]) -> "Basis":
-        labels_int = [int(label) if isinstance(label, str) else label for label in labels]
-        self.labels.filter_by_values(labels_int)
+    def filter_atoms_by_labels(self, labels: List[int]) -> "Basis":
+        self.labels.filter_by_values(labels)
         return self.filter_atoms_by_ids(self.labels.ids)
 
     def set_labels_from_list(self, labels: Optional[List[int]]) -> None:

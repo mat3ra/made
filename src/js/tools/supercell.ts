@@ -19,18 +19,13 @@ function generateNewBasisWithinSupercell<S extends BasisConfig>(
     supercell: Cell,
     supercellMatrix: Matrix3X3Schema,
 ): Basis<S> {
-    const oldBasis = basis.clone();
     const newBasis = basis.clone();
-    newBasis.removeAllAtoms();
-
-    oldBasis.toCrystal();
     newBasis.toCrystal();
+    const originalAtomIds = newBasis.elements.map(({ id }) => id);
 
-    oldBasis.elements.forEach((element) => {
-        const coordinate = oldBasis.getCoordinateValueById(element.id);
+    originalAtomIds.forEach((id) => {
+        const coordinate = newBasis.getCoordinateValueById(id);
         const cartesianCoordinate = cell.convertPointToCartesian(coordinate);
-        // the atom alone, renumbered to id 0, with its atomic properties
-        const singleAtomBasis = oldBasis.clone().filterAtomsByIds(element.id, false, true);
         const shifts = cellTools.latticePointsInSupercell(supercellMatrix);
         shifts.forEach((combination) => {
             // "combination" is effectively a point in fractional coordinates here, hence the below
@@ -39,20 +34,18 @@ function generateNewBasisWithinSupercell<S extends BasisConfig>(
                 supercell.convertPointToCartesian(combination),
             );
             if (supercell.isPointInsideCell(newPoint as Coordinate3DSchema)) {
-                singleAtomBasis.coordinates = [
-                    {
-                        id: 0,
-                        value: supercell.convertPointToCrystal(
-                            newPoint as Coordinate3DSchema,
-                        ) as Coordinate3DSchema,
-                    },
-                ];
-                newBasis.addAtomsFromAnotherBasis(singleAtomBasis);
+                newBasis.addCopyOfAtom(
+                    id,
+                    supercell.convertPointToCrystal(
+                        newPoint as Coordinate3DSchema,
+                    ) as Coordinate3DSchema,
+                );
             }
         });
     });
 
-    return newBasis;
+    // keep only the copies, numbered from 0
+    return newBasis.filterAtomsByIds(originalAtomIds, true, true);
 }
 
 /**

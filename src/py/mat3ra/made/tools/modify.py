@@ -1,4 +1,4 @@
-from typing import Callable, Container, List, Literal, Optional, Tuple, Union
+from typing import Callable, Container, List, Literal, Optional, Tuple
 
 import numpy as np
 from mat3ra.made.material import Material
@@ -17,13 +17,13 @@ from .entities.coordinate import (
 from .third_party import ase_add_vacuum
 
 
-def filter_by_label(material: Material, label: Union[int, str]) -> Material:
+def filter_by_label(material: Material, label: int) -> Material:
     """
     Filter out only atoms corresponding to the label.
 
     Args:
         material (Material): The material object to filter.
-        label (int|str): The tag/label to filter by.
+        label (int): The tag/label to filter by.
 
     Returns:
         Material: The filtered material object.

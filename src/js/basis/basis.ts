@@ -309,6 +309,17 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
+     * Adds a copy of the atom with the given id, with its per-atom values, at the coordinate.
+     */
+    addCopyOfAtom(id: number, coordinate: AtomicCoordinateValue) {
+        const copyId = Math.max(-1, ...this._elements.ids) + 1;
+        this.arraysWithIds.forEach((array) => {
+            const value = array === this._coordinates ? coordinate : array.getElementValueById(id);
+            if (value !== undefined) array.addItem(value, copyId);
+        });
+    }
+
+    /**
      * Unique names (symbols) of the chemical elements basis. E.g. `['Si', 'Li']`
      */
     get uniqueElements(): AtomicElementValue[] {
