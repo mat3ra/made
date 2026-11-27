@@ -74,11 +74,6 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """The atomic labels, read-only; set them with set_labels_from_list."""
         return self.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_labels)
 
-    @property
-    def per_atom_values(self) -> List[ArrayWithIds]:
-        """Elements, coordinates and each stored atomic property: every array keyed by atom id."""
-        return [self.elements, self.coordinates, *self.atomic_properties.property_by_name.values()]
-
     @classmethod
     def from_dict(
         cls,
@@ -187,14 +182,11 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
         """
 
         id_offset = max(self.elements.ids, default=-1) + 1
-        values_and_other_values = [(self.elements, other_basis.elements), (self.coordinates, other_basis.coordinates)]
-        values_and_other_values += [
-            (self.atomic_properties.get_by_name(name), other_values)
-            for name, other_values in other_basis.atomic_properties.property_by_name.items()
-        ]
-        for values, other_values in values_and_other_values:
-            for value, atom_id in zip(other_values.values, other_values.ids):
-                values.add_item(value, atom_id + id_offset)
+        for value, atom_id in zip(other_basis.elements.values, other_basis.elements.ids):
+            self.elements.add_item(value, atom_id + id_offset)
+        for value, atom_id in zip(other_basis.coordinates.values, other_basis.coordinates.ids):
+            self.coordinates.add_item(value, atom_id + id_offset)
+        self.atomic_properties.add_items_from_another(other_basis.atomic_properties, id_offset)
 
     def remove_atom_by_id(self, id: int):
         self.filter_atoms_by_ids(id, invert=True)
@@ -211,12 +203,12 @@ class Basis(BasisSchema, InMemoryEntityPydantic):
     def filter_atoms_by_ids(self, ids: Union[List[int], int], invert: bool = False, reset_ids=False) -> "Basis":
         self.elements.filter_by_ids(ids, invert)
         kept_atom_ids = self.elements.ids
-        for per_atom_values in self.per_atom_values:
-            per_atom_values.filter_by_ids(kept_atom_ids)
+        self.coordinates.filter_by_ids(kept_atom_ids)
+        self.atomic_properties.filter_by_ids(kept_atom_ids, reset_ids)
         if reset_ids:
             new_id_by_atom_id = {atom_id: index for index, atom_id in enumerate(kept_atom_ids)}
-            for per_atom_values in self.per_atom_values:
-                per_atom_values.ids = [new_id_by_atom_id[atom_id] for atom_id in per_atom_values.ids]
+            self.elements.ids = [new_id_by_atom_id[atom_id] for atom_id in self.elements.ids]
+            self.coordinates.ids = [new_id_by_atom_id[atom_id] for atom_id in self.coordinates.ids]
         return self
 
     def filter_atoms_by_labels(self, labels: Union[List[str], str]) -> "Basis":

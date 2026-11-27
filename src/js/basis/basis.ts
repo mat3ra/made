@@ -1,6 +1,5 @@
 // @ts-ignore
 import { getElectronegativity, getElementAtomicRadius } from "@exabyte-io/periodic-table.js";
-import { ArrayWithIds } from "@mat3ra/code";
 import { InMemoryEntity } from "@mat3ra/code/dist/js/entity";
 import {
     BaseInMemoryEntitySchema,
@@ -273,39 +272,32 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Returns the arrays keyed by atom id, by name: elements and coordinates.
-     */
-    get perAtomValuesByName(): Record<string, ArrayWithIds<unknown>> {
-        return { elements: this._elements, coordinates: this._coordinates };
-    }
-
-    /**
-     * Keeps the atoms with the given ids, or all others when inverted, in every array keyed by atom id.
+     * Keeps the atoms with the given ids, or all others when inverted.
      * With resetIds the remaining atoms are renumbered 0, 1, ...
      */
     filterAtomsByIds(ids: number | number[], invert = false, resetIds = false): this {
         this._elements.filterByIds(ids, invert);
         const keptAtomIds = this._elements.ids;
-        Object.values(this.perAtomValuesByName).forEach((values) => {
-            values.filterByIds(keptAtomIds);
-            if (resetIds) {
-                values.ids = values.ids.map((id) => keptAtomIds.indexOf(id));
-            }
-        });
+        this._coordinates.filterByIds(keptAtomIds);
+        if (resetIds) {
+            this._elements.ids = this._elements.ids.map((id) => keptAtomIds.indexOf(id));
+            this._coordinates.ids = this._coordinates.ids.map((id) => keptAtomIds.indexOf(id));
+        }
         return this;
     }
 
     /**
-     * Adds the atoms of another basis, matching arrays keyed by atom id by name, with ids after this basis' ids.
+     * Adds the atoms of another basis with ids after this basis' ids, and returns the offset added to their ids.
      */
-    addAtomsFromAnotherBasis(otherBasis: this) {
+    addAtomsFromAnotherBasis(otherBasis: this): number {
         const idOffset = Math.max(-1, ...this._elements.ids) + 1;
-        const valuesByName = this.perAtomValuesByName;
-        Object.entries(otherBasis.perAtomValuesByName).forEach(([name, otherValues]) => {
-            otherValues.values.forEach((value, index) =>
-                valuesByName[name].addItem(value, otherValues.ids[index] + idOffset),
-            );
-        });
+        otherBasis._elements.values.forEach((value, index) =>
+            this._elements.addItem(value, otherBasis._elements.ids[index] + idOffset),
+        );
+        otherBasis._coordinates.values.forEach((value, index) =>
+            this._coordinates.addItem(value, otherBasis._coordinates.ids[index] + idOffset),
+        );
+        return idOffset;
     }
 
     /**
@@ -396,13 +388,13 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      */
     getAsSortedString(): string {
         const storedBasis = new Basis(this.clone().standardRepresentation);
-        const { siteNames } = this;
+        const { elementsWithLabelsArray } = this;
         const standardRep = storedBasis.elementsAndCoordinatesArray.map((entry, idx) => {
             const coordinate = entry[1];
             const toleratedCoordinate = coordinate.map((x) =>
                 Utils.math.mod(Utils.math.roundCustom(x, HASH_TOLERANCE), 0),
             );
-            return `${siteNames[idx]} ${toleratedCoordinate.join()}`;
+            return `${elementsWithLabelsArray[idx]} ${toleratedCoordinate.join()}`;
         });
         return `${standardRep.sort().join(";")};`;
     }
@@ -423,9 +415,9 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Returns the name of each site in atomic positions and the hash, E.g., ["Fe", "Fe", "O", "O"]
+     * Returns array of elements with labels; a plain basis has none, E.g., ["Fe", "Fe", "O", "O"]
      */
-    get siteNames(): string[] {
+    get elementsWithLabelsArray(): string[] {
         return this._elements.values;
     }
 
@@ -434,10 +426,10 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      * E.g., ``` ['Si 0 0 0', 'Li 0.5 0.5 0.5']```
      */
     get atomicPositions(): string[] {
-        const { siteNames } = this;
+        const { elementsWithLabelsArray } = this;
         return this.elementsAndCoordinatesArray.map((entry, idx) => {
             const coordinate = entry[1];
-            return `${siteNames[idx]} ${coordinate}`;
+            return `${elementsWithLabelsArray[idx]} ${coordinate}`;
         });
     }
 

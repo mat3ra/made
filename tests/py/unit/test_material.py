@@ -208,7 +208,7 @@ def test_per_atom_values_follow_atom_ids(material_config, operation, expected_la
     constraints = basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
     assert basis.labels.to_padded_array_of_values(basis.elements.ids, None) == expected_labels
     assert constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
-    assert all(set(per_atom_values.ids) <= set(basis.elements.ids) for per_atom_values in basis.per_atom_values)
+    assert all(set(item.values.ids) <= set(basis.elements.ids) for item in basis.atomic_properties.root)
 
 
 @pytest.mark.parametrize("properties", [GRAPHENE_NICKEL_INTERFACE_CONSTRAINED["basis"]["atomic_properties"]])
