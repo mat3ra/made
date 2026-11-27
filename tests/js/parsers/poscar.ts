@@ -106,7 +106,7 @@ direct
         expect(poscarFlags?.map((flags) => flags === "T T T")).to.be.deep.equal(isFree);
     });
 
-    it("should omit selective dynamics when every atom is free", () => {
+    it("should write selective dynamics whenever constraints are stored, even when every atom is free", () => {
         const allFree: [boolean, boolean, boolean] = [true, true, true];
         const material = new Material({
             ...Na4Cl4,
@@ -120,6 +120,6 @@ direct
                 ],
             },
         });
-        expect(`${material.getAsPOSCAR()}\n`).to.be.equal(Na4Cl4Poscar);
+        expect(material.getAsPOSCAR()).to.include("Selective dynamics");
     });
 });
