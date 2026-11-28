@@ -31,7 +31,6 @@ import type {
 import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import CryptoJS from "crypto-js";
 
-import { type BasisConfig } from "./basis/basis";
 import {
     type BasisWithAtomicPropertiesConfig,
     BasisWithAtomicProperties,
@@ -56,7 +55,7 @@ const MATERIAL_SCHEMA_IDS = {
 } as const;
 
 function parseBasis(
-    textOrObject: string | BasisConfig | BasisWithAtomicPropertiesConfig,
+    textOrObject: string | BasisWithAtomicPropertiesConfig,
     format?: "xyz",
     units?: BasisSchema["units"],
 ): BasisWithAtomicPropertiesConfig {
@@ -91,7 +90,7 @@ export type DefaultMaterialSchemas = MaterialSchemaMap;
  */
 export type MaterialConfig<S extends MaterialEnhancedHashedSchema = MaterialEnhancedHashedSchema> =
     Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
-        basis: MaterialSchema["basis"] | MaterialEnhancedSchema["basis"];
+        basis: MaterialEnhancedSchema["basis"];
     };
 
 export const defaultMaterialConfig: MaterialEnhancedSchema = {
@@ -308,12 +307,12 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
         this.unsetProp("external");
     }
 
-    setBasis(basis: BasisConfig | BasisWithAtomicPropertiesConfig): void;
+    setBasis(basis: BasisWithAtomicPropertiesConfig): void;
 
     setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
 
     setBasis(
-        textOrObject: string | BasisConfig | BasisWithAtomicPropertiesConfig,
+        textOrObject: string | BasisWithAtomicPropertiesConfig,
         format?: "xyz",
         units?: BasisSchema["units"],
     ) {
