@@ -2,6 +2,7 @@ import {
     AtomicConstraintsSchema,
     BasisSchema,
     BasisWithAtomicPropertiesSchema,
+    MaterialEnhancedSchema,
     MaterialHashedSchema,
     MaterialSchema,
     ProtoPropertyEnum,
@@ -53,6 +54,30 @@ const FeOStandata = MaterialStandata.getRuntimeDataConfigs().find((m: any) =>
 ) as MaterialHashedSchema;
 const Na4Cl4 = Na4Cl4_JSON as unknown as MaterialSchema;
 const Na4Cl4Cartesian = Na4Cl4Cartesian_JSON as unknown as MaterialSchema;
+const Na4Cl4WithTwoFixedAtoms: MaterialEnhancedSchema = {
+    ...Na4Cl4,
+    basis: {
+        ...Na4Cl4.basis,
+        atomic_properties: [
+            {
+                name: ProtoPropertyEnum.atomic_constraints,
+                values: [4, 5].map((id) => ({ id, value: [false, false, false] })),
+            },
+        ],
+    },
+};
+const Na4Cl4WithFreeAtoms: MaterialEnhancedSchema = {
+    ...Na4Cl4,
+    basis: {
+        ...Na4Cl4.basis,
+        atomic_properties: [
+            {
+                name: ProtoPropertyEnum.atomic_constraints,
+                values: Na4Cl4.basis.elements.map(({ id }) => ({ id, value: [true, true, true] })),
+            },
+        ],
+    },
+};
 const C2H4 = C2H4_JSON as unknown as MaterialSchema;
 const C2H4Translated = C2H4Translated_JSON as unknown as MaterialSchema;
 const Na = Na_JSON as unknown as MaterialSchema;
@@ -186,6 +211,8 @@ export {
     FeOStandata,
     Na4Cl4,
     Na4Cl4Cartesian,
+    Na4Cl4WithTwoFixedAtoms,
+    Na4Cl4WithFreeAtoms,
     C2H4,
     C2H4Translated,
     Na,

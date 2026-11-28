@@ -7,6 +7,8 @@ import {
     H2OPoscar,
     Na4Cl4,
     Na4Cl4Poscar,
+    Na4Cl4WithFreeAtoms,
+    Na4Cl4WithTwoFixedAtoms,
     Silicon,
     Zr1H23Zr1H1,
     Zr1H23Zr1H1Poscar,
@@ -76,5 +78,17 @@ direct
 
         const poscar = clonedMaterial.getAsPOSCAR(true);
         expect(poscar).to.be.equal(poscarConstraints);
+    });
+
+    it("should keep constraints on their atoms by id", () => {
+        const material = new Material(Na4Cl4WithTwoFixedAtoms);
+        const isFree = [true, true, true, true, false, false, true, true];
+        const poscarFlags = material.getAsPOSCAR().match(/[TF] [TF] [TF]/g);
+        expect(poscarFlags?.map((flags) => flags === "T T T")).to.be.deep.equal(isFree);
+    });
+
+    it("should write selective dynamics whenever constraints are stored, even when every atom is free", () => {
+        const material = new Material(Na4Cl4WithFreeAtoms);
+        expect(material.getAsPOSCAR()).to.include("Selective dynamics");
     });
 });
