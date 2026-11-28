@@ -16,6 +16,7 @@ from unit.fixtures.strain import BULK_Si_CONVENTIONAL_STRAINED
 from unit.utils import assert_two_entities_deep_almost_equal
 
 from .fixtures.bulk import BULK_Si_PRIMITIVE
+from .fixtures.monolayer import GRAPHENE
 from .fixtures.nanoribbon.nanoribbon import GRAPHENE_ZIGZAG_NANORIBBON
 from .fixtures.slab import SI_CONVENTIONAL_SLAB_001
 
@@ -85,16 +86,17 @@ def test_perturb(material_config, perturbation_function, expected_coord_changes)
 
 
 @pytest.mark.parametrize(
-    "matrix, expected_a, expected_b, expected_c",
+    "material_config, matrix, expected_a, expected_b, expected_c",
     [
-        (np.eye(3), 5.468763846, 5.468763846, 15.937527692),
-        (np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]]), 5.468763846, 5.468763846, 15.937527692),
-        (np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]]), 5.468763846, 15.937527692, 5.468763846),
-        (np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]), 15.937527692, 5.468763846, 5.468763846),
+        (SI_CONVENTIONAL_SLAB_001, np.eye(3), 5.468763846, 5.468763846, 15.937527692),
+        (SI_CONVENTIONAL_SLAB_001, np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]]), 5.468763846, 5.468763846, 15.937527692),
+        (SI_CONVENTIONAL_SLAB_001, np.array([[1, 0, 0], [0, 0, 1], [0, 1, 0]]), 5.468763846, 15.937527692, 5.468763846),
+        (SI_CONVENTIONAL_SLAB_001, np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]), 15.937527692, 5.468763846, 5.468763846),
+        (GRAPHENE, np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]]), 2.467291, 2.467291, 20.0),
     ],
 )
-def test_transform_material_by_matrix(matrix, expected_a, expected_b, expected_c):
-    material = Material.create(SI_CONVENTIONAL_SLAB_001)
+def test_transform_material_by_matrix(material_config, matrix, expected_a, expected_b, expected_c):
+    material = Material.create(material_config)
     transformed_material = transform_material_by_matrix(material, matrix)
 
     assert len(transformed_material.basis.coordinates.values) == len(material.basis.coordinates.values)

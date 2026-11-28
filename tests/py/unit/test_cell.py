@@ -54,16 +54,16 @@ def test_get_vector_arrays():
     assert cell.get_vector_arrays(skip_rounding=False) == VECTORS
 
 
-def test_vector_arrays_including_rounded():
+def test_vector_arrays_including_rounded(monkeypatch):
     class_reference = Cell
     class_reference.__rounded_vector3d__ = RoundedVector3D
 
-    class_reference.__rounded_vector3d__.__round_precision__ = 4
+    monkeypatch.setattr(RoundedVector3D, "__round_precision__", 4)
     cell = class_reference.from_vectors_array(vectors=VECTORS_EQUAL_UP_TO_PRECISION_4)
     assert cell.vector_arrays == VECTORS_EQUAL_UP_TO_PRECISION_4
     assert cell.vector_arrays_rounded == VECTORS
 
-    class_reference.__rounded_vector3d__.__round_precision__ = 5
+    monkeypatch.setattr(RoundedVector3D, "__round_precision__", 5)
     cell = class_reference.from_vectors_array(vectors=VECTORS_EQUAL_UP_TO_PRECISION_4)
     assert cell.vector_arrays == VECTORS_EQUAL_UP_TO_PRECISION_4
     assert cell.vector_arrays_rounded != VECTORS
@@ -90,14 +90,14 @@ def test_volume():
     assert cell.volume == VECTORS_VOLUME
 
 
-def test_volume_rounded():
+def test_volume_rounded(monkeypatch):
     class_reference = Cell
-    class_reference.__round_precision__ = 4
+    monkeypatch.setattr(Cell, "__round_precision__", 4)
     cell = class_reference.from_vectors_array(vectors=VECTORS_EQUAL_UP_TO_PRECISION_4)
     assert cell.volume == VECTORS_EQUAL_UP_TO_PRECISION_4_VOLUME
     assert cell.volume_rounded == VECTORS_EQUAL_UP_TO_PRECISION_4_VOLUME_ROUNDED_TO_PRECISION_4
 
-    class_reference.__round_precision__ = 5
+    monkeypatch.setattr(Cell, "__round_precision__", 5)
     cell = class_reference.from_vectors_array(vectors=VECTORS_EQUAL_UP_TO_PRECISION_4)
     assert cell.volume == VECTORS_EQUAL_UP_TO_PRECISION_4_VOLUME
     assert cell.volume_rounded != VECTORS_EQUAL_UP_TO_PRECISION_4_VOLUME_ROUNDED_TO_PRECISION_4

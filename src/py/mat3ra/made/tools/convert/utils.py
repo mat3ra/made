@@ -17,6 +17,8 @@ with open(_CONSTANTS_FILE) as _f:
 DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE = _CONSTANTS["molecule"]["nonPeriodicMinimumLatticeSize"]
 DIATOMIC_LATTICE_PADDING_FACTOR = _CONSTANTS["molecule"]["diatomicLatticePaddingFactor"]
 MOLECULAR_LATTICE_PADDING_FACTOR = _CONSTANTS["molecule"]["molecularLatticePaddingFactor"]
+LATTICE_LENGTHS_PRECISION = _CONSTANTS["precision"]["latticeLengths"]
+LATTICE_ANGLES_PRECISION = _CONSTANTS["precision"]["latticeAngles"]
 # Label of an atom without a label, in ASE tags and pymatgen site labels (0 is a real label)
 UNLABELED_ATOM_LABEL = -1
 

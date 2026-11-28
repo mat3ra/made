@@ -171,8 +171,8 @@ def test_add_vacuum():
 def test_remove_vacuum():
     material_with_vacuum = Material.create(SI_SLAB_001_WITH_VACUUM)
     vacuum = 7.368
-    material_with_no_vacuum = remove_vacuum(material_with_vacuum, from_top=True, from_bottom=True, fixed_padding=0)
-    expected_material = add_vacuum(material_with_no_vacuum, vacuum)
+    material_with_no_vacuum = remove_vacuum(material_with_vacuum, from_top=True, from_bottom=True, fixed_padding=1.0)
+    expected_material = add_vacuum(material_with_no_vacuum, vacuum - 1.0)
     # to compare correctly, we need to translate the expected material to the bottom
     # as it is effectively moved down when vacuum is removed (set to 0), use atol=1e-3 to account for the translation
     reference_material = Material.create(SI_SLAB_001_2_ATOMS)
