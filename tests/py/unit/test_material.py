@@ -23,7 +23,7 @@ from mat3ra.made.tools.modify import (
     interface_label_parts_by_elements,
 )
 from mat3ra.made.tools.operations.core.binary import merge
-from mat3ra.made.tools.operations.core.unary import translate
+from mat3ra.made.tools.operations.core.unary import supercell, translate
 from mat3ra.utils import assertion as assertion_utils
 from unit.fixtures.bulk import (
     BULK_FeSe_WITH_CONSTRAINTS,
@@ -224,6 +224,12 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
             lambda material: filter_by_ids(material, [2, 4], reset_ids=True),
             [0, 1],
             [None, FIXED],
+        ),
+        (
+            BULK_FeSe_WITH_CONSTRAINTS,
+            lambda material: supercell(material, [[2, 0, 0], [0, 1, 0], [0, 0, 1]]),
+            [None] * 8,
+            [FIXED, None, None, None, FIXED, None, None, None],
         ),
     ],
 )

@@ -63,6 +63,9 @@ def supercell(material: MaterialWithBuildMetadata, supercell_matrix) -> Material
     atoms = to_ase(material)
 
     supercell_atoms = ase_make_supercell(atoms, supercell_matrix)
+    # ASE make_supercell drops atoms.constraints; repeat them over its copies, which it lists cell by cell.
+    copies = len(supercell_atoms) // len(atoms)
+    supercell_atoms.set_constraint([constraint.repeat((copies, 1, 1), len(atoms)) for constraint in atoms.constraints])
     material_config = from_ase(supercell_atoms)
     # ASE make_supercell drops atoms.info; merge prior build/boundaryConditions when present.
     source_metadata = material.to_dict().get("metadata") or {}

@@ -13,6 +13,7 @@ from ase.cluster import Octahedron as ASEOctahedron
 from ase.cluster import SimpleCubic as ASESimpleCubic
 from ase.cluster.wulff import wulff_construction as ASEWulffConstruction
 from ase.constraints import FixAtoms as ASEFixAtoms
+from ase.constraints import FixCartesian as ASEFixCartesian
 from ase.constraints import FixedPlane as ASEFixedPlane
 from pymatgen.analysis.defects.core import Interstitial as PymatgenInterstitial
 from pymatgen.analysis.defects.core import Substitution as PymatgenSubstitution
@@ -38,6 +39,7 @@ __all__ = [
     "ASECalculator",
     "ASECalculatorEMT",
     "ASEFixAtoms",
+    "ASEFixCartesian",
     "ASEFixedPlane",
     "ase_all_changes",
     "PymatgenLattice",

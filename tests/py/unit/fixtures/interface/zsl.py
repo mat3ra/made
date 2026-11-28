@@ -759,3 +759,14 @@ GRAPHENE_NICKEL_INTERFACE_CONSTRAINED = {
         ],
     },
 }
+
+GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED = {
+    **GRAPHENE_NICKEL_INTERFACE,
+    "basis": {
+        **GRAPHENE_NICKEL_INTERFACE["basis"],
+        "atomic_properties": [
+            *GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"],
+            {"name": "atomic_constraints", "values": [{"id": 0, "value": [True, False, True]}]},
+        ],
+    },
+}

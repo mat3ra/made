@@ -2,10 +2,14 @@ import numpy as np
 import pytest
 from ase import Atoms
 from ase.build import make_supercell, molecule
+from ase.calculators.emt import EMT
+from ase.constraints import FixAtoms, FixCartesian
+from ase.optimize import BFGS
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
 from mat3ra.made.tools.convert.utils import DEFAULT_NON_PERIODIC_MIN_LATTICE_SIZE, calculate_padded_cell_simple_cubic
+from mat3ra.made.utils import map_array_to_array_with_id_value
 from mat3ra.utils import assertion as assertion_utils
 from pymatgen.core.structure import Element, Lattice, Structure
 
@@ -16,6 +20,7 @@ from .fixtures.bulk import (
     BULK_FeSe_WITH_LABELS,
     BULK_FeSe_WITH_LABELS_WITH_ZERO,
 )
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED, GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -178,6 +183,29 @@ def test_from_ase(
 FESE_WITH_ID_GAP_LABELS = [{"id": 0, "value": 1}, {"id": 2, "value": 2}]
 IDENTITY_MATRIX = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 SUPERCELL_MATRIX_2X1X1 = [[2, 0, 0], [0, 1, 0], [0, 0, 1]]
+
+
+@pytest.mark.parametrize(
+    "material_config", [GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED]
+)
+def test_to_ase_from_ase_atomic_properties(material_config):
+    material = Material.create(material_config)
+    material.basis.remove_atom_by_id(1)
+    expected_labels = material.basis.atomic_labels_array
+    expected_constraints = material.basis.constraints.to_padded_array_of_values(material.basis.elements.ids, None)
+    atoms = to_ase(material)
+    atoms.calc = EMT()
+    BFGS(atoms).run(steps=2)
+    basis = Material.create(from_ase(atoms)).basis
+    assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
+    assert basis.constraints.to_dict() == map_array_to_array_with_id_value(expected_constraints, remove_none=True)
+
+
+def test_from_ase_overlapping_constraints():
+    atoms = ASE_BULK_Si.copy()
+    atoms.set_constraint([FixAtoms([0]), FixCartesian(0, [False, False, True])])
+    basis = Basis(**from_ase(atoms)["basis"])
+    assert basis.constraints.to_dict() == [{"id": 0, "value": [False, False, False]}]
 
 
 @pytest.mark.parametrize(
