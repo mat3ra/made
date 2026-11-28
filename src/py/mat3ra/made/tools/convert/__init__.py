@@ -52,18 +52,14 @@ def to_pymatgen(material_or_material_data: Union[Material, Dict[str, Any]]) -> P
         gamma=lattice_params["gamma"],
     )
 
-    basis = material_data["basis"]
-    elements = [element["value"] for element in basis["elements"]]
-    coordinates = [coord["value"] for coord in basis["coordinates"]]
-    atomic_labels = Basis(**basis).labels
+    basis = Basis(**material_data["basis"])
+    elements = basis.elements.values
+    coordinates = basis.coordinates.values
     labels = []
-    if atomic_labels.ids:
-        labels_in_atom_order = atomic_labels.to_padded_array_of_values(
-            [element["id"] for element in basis["elements"]], UNLABELED_ATOM_LABEL
-        )
+    if basis.labels.values:
+        labels_in_atom_order = basis.labels.to_padded_array_of_values(basis.elements.ids, UNLABELED_ATOM_LABEL)
         labels = [str(label) for label in labels_in_atom_order]
-    # Assuming that the basis units are fractional since it's a crystal basis
-    coords_are_cartesian = "units" in basis and basis["units"] == "angstrom"
+    coords_are_cartesian = basis.is_in_cartesian_units
 
     if "labels" in inspect.signature(PymatgenStructure.__init__).parameters:
         structure = PymatgenStructure(
@@ -206,7 +202,7 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     basis = Basis(**material_config["basis"])
-    if basis.labels.ids:
+    if basis.labels.values:
         atoms.set_tags(basis.labels.to_padded_array_of_values(basis.elements.ids, UNLABELED_ATOM_LABEL))
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})

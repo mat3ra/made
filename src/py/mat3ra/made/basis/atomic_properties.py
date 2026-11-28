@@ -17,7 +17,9 @@ class AtomicProperty(BaseModel):
 class AtomicProperties(AtomicPropertiesSchema):
     """Per-atom properties of a basis, each keyed by atom id and stored under its proto-property name."""
 
-    root: List[AtomicProperty] = Field(default_factory=lambda: AtomicProperties.from_list_of_dicts([]).root)
+    root: List[AtomicProperty] = Field(
+        default_factory=lambda: AtomicProperties.from_list_of_dicts([]).root, frozen=True
+    )
 
     @classmethod
     def from_list_of_dicts(cls, list_of_dicts: List[Dict[str, Any]]) -> "AtomicProperties":

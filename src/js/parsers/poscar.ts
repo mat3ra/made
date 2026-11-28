@@ -37,15 +37,16 @@ function toPoscar(
         ...materialOrConfig.basis,
         cell: Cell.fromVectorsArray(lattice.vectorArrays),
     });
-    const BasisLines: string[] = [];
     const addSelectiveDynamics = !omitConstraints && basis.constraints.values.length > 0;
-    basis._elements.values.forEach((item, idx) => {
-        const coord = basis.getCoordinateValueByIndex(idx).map((x) => _print(x));
-        const constraintsAsString = addSelectiveDynamics
-            ? basis.getConstraintByIndex(idx).map(atomicConstraintsCharFromBool).join(" ")
-            : "";
-        BasisLines.push([coord.join(" "), constraintsAsString, item].join(" "));
-    });
+    const BasisLines = basis.elementsCoordinatesConstraintsArray.map(
+        ([element, , coordinate, constraint]) => {
+            const constraintsAsString = addSelectiveDynamics
+                ? constraint.map(atomicConstraintsCharFromBool).join(" ")
+                : "";
+            const coord = coordinate.map((x) => _print(x));
+            return [coord.join(" "), constraintsAsString, element].join(" ");
+        },
+    );
     const basisContent = BasisLines.join("\n");
     const elementsLine = basis.elementCounts.map((e) => e.value).join(" ");
     const countsLine = basis.elementCounts.map((e) => parseInt(`${e.count}`, 10)).join(" ");

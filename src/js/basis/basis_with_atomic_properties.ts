@@ -69,14 +69,6 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         };
     }
 
-    getConstraintByIndex(idx: number): AtomicConstraintValue {
-        return this.getConstraintById(this._elements.ids[idx]);
-    }
-
-    getConstraintById(id: number): AtomicConstraintValue {
-        return this.constraints.getElementValueById(id) || [true, true, true];
-    }
-
     /**
      * Returns array of atomic labels E.g., [1, 2, undefined, undefined]
      */

@@ -9,19 +9,24 @@ const ATOMIC_PROPERTY_CLASS_BY_NAME = {
     [ProtoPropertyEnum.atomic_labels]: Labels,
 };
 
-type AtomicPropertyByName = {
+type AtomicPropertyValuesByName = {
     [Name in keyof typeof ATOMIC_PROPERTY_CLASS_BY_NAME]: InstanceType<
         (typeof ATOMIC_PROPERTY_CLASS_BY_NAME)[Name]
     >;
+};
+
+type AtomicProperty = {
+    name: AtomicPropertiesSchema[number]["name"];
+    values: ArrayWithIds<unknown>;
 };
 
 /**
  * Per-atom properties of a basis, each keyed by atom id and stored under its proto-property name.
  */
 export class AtomicProperties {
-    properties: { name: AtomicPropertiesSchema[number]["name"]; values: ArrayWithIds<unknown> }[];
+    readonly properties: AtomicProperty[];
 
-    readonly propertyMapByName: Record<string, AtomicProperties["properties"][number]>;
+    readonly propertyMapByName: Record<string, AtomicProperty>;
 
     /**
      * @param properties - the ESSE list of `{ name, values }` entries.
@@ -29,7 +34,7 @@ export class AtomicProperties {
     constructor(properties: AtomicPropertiesSchema = []) {
         this.properties = (
             Object.entries(ATOMIC_PROPERTY_CLASS_BY_NAME) as [
-                keyof AtomicPropertyByName,
+                keyof AtomicPropertyValuesByName,
                 typeof ArrayWithIds,
             ][]
         ).map(([name, AtomicPropertyClass]) => ({
@@ -46,13 +51,15 @@ export class AtomicProperties {
     /**
      * Returns the stored property, so that changes made to it are kept.
      */
-    getByName<Name extends keyof AtomicPropertyByName>(name: Name): AtomicPropertyByName[Name] {
-        return this.propertyMapByName[name].values as AtomicPropertyByName[Name];
+    getByName<Name extends keyof AtomicPropertyValuesByName>(
+        name: Name,
+    ): AtomicPropertyValuesByName[Name] {
+        return this.propertyMapByName[name].values as AtomicPropertyValuesByName[Name];
     }
 
-    setByName<Name extends keyof AtomicPropertyByName>(
+    setByName<Name extends keyof AtomicPropertyValuesByName>(
         name: Name,
-        values: AtomicPropertyByName[Name],
+        values: AtomicPropertyValuesByName[Name],
     ) {
         this.propertyMapByName[name].values = values;
     }
