@@ -42,8 +42,6 @@ GRAPHENE_ZIGZAG_NANORIBBON: Dict[str, Any] = {
             {"id": 15, "value": [0.812500063, 0.6333333, 0.5]},
         ],
         "units": "crystal",
-        "constraints": [],
-        "labels": [],
     },
     "lattice": {
         "a": 9.869164,
@@ -113,8 +111,6 @@ GRAPHENE_ARMCHAIR_NANORIBBON = {
             {"id": 15, "value": [0.041666638, 0.649999951, 0.5]},
         ],
         "units": "crystal",
-        "constraints": [],
-        "labels": [],
     },
     "lattice": {
         "a": 8.546946738,

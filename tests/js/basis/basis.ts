@@ -1,21 +1,29 @@
 import "../setup";
 
-import { Vector3DSchema } from "@mat3ra/esse/dist/js/types";
+import { ProtoPropertyEnum, Vector3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { expect } from "chai";
 
+import { AtomicProperties } from "../../../src/js/basis/atomic_properties";
 import { Basis } from "../../../src/js/basis/basis";
+import { BasisWithAtomicProperties } from "../../../src/js/basis/basis_with_atomic_properties";
+import { Labels } from "../../../src/js/basis/labels";
 import Material from "../../../src/js/Material";
 import {
     AsGeBasis,
     C2H4,
     C2H4Translated,
     FeLiSiBasis,
+    FeO,
     LiFeSiBasis,
     LiFeSiBasisLabels,
     Na,
     Na4Cl4,
     Na4Cl4Cartesian,
+    Na4Cl4WithTwoFixedAtoms,
+    Si2Basis,
+    Si2BasisWithLabelAndConstraint,
+    SiBasisWithLabelAndConstraint,
 } from "../fixtures";
 
 const { assertDeepAlmostEqual } = Utils.assertion;
@@ -131,10 +139,63 @@ describe("Basis", () => {
      */
 
     it("should return elements with labels", () => {
-        const basis = new Basis(LiFeSiBasisLabels);
+        const basis = new BasisWithAtomicProperties(LiFeSiBasisLabels);
         const elementsWithLabels = basis.elementsWithLabelsArray;
         const expectedElementsWithLabels = ["Li0", "Fe1", "Si2"];
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
+    });
+
+    it("should return a property set by name from getByName and in the ESSE list", () => {
+        const atomicProperties = new AtomicProperties();
+        const labels = Labels.fromValues([1]);
+        atomicProperties.setByName(ProtoPropertyEnum.atomic_labels, labels);
+        expect(atomicProperties.getByName(ProtoPropertyEnum.atomic_labels)).to.equal(labels);
+        expect(atomicProperties.toJSON()).to.be.deep.equal([
+            { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
+        ]);
+    });
+
+    it("should keep constraints on their atoms by id", () => {
+        const material = new Material(Na4Cl4WithTwoFixedAtoms);
+        const isFree = [true, true, true, true, false, false, true, true];
+        const positions = material.getBasis().getAtomicPositionsWithConstraintsAsStrings();
+        expect(positions.map((line) => line.endsWith("1 1 1"))).to.be.deep.equal(isFree);
+    });
+
+    it("should print each label on the atom with its id when ids have gaps", () => {
+        const basis = new BasisWithAtomicProperties({
+            ...FeO.basis,
+            elements: FeO.basis.elements.slice(1),
+            coordinates: FeO.basis.coordinates.slice(1),
+        });
+        expect(basis.elementsWithLabelsArray).to.be.deep.equal(["Fe2", "O", "O"]);
+    });
+
+    it("should drop a removed atom's label and constraint, so an atom added in its place has none", () => {
+        const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
+        basis.removeAtom({ id: 1, coordinate: [0.5, 0.5, 0.5] });
+        basis.addAtom({ element: "Si", coordinate: [0.5, 0.5, 0.5] });
+        assertDeepAlmostEqual(basis.toJSON(), {
+            ...Si2Basis,
+            units: "crystal",
+            atomic_properties: [],
+        });
+    });
+
+    it("should renumber labels and constraints with the atoms when removing with id reset", () => {
+        const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
+        assertDeepAlmostEqual(
+            basis.filterAtomsByIds(0, true, true).toJSON(),
+            SiBasisWithLabelAndConstraint,
+        );
+    });
+
+    it("should keep the labels of atoms added to a basis without labels", () => {
+        const basis = new BasisWithAtomicProperties(Si2Basis);
+        basis.addAtomsFromAnotherBasis(
+            new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint),
+        );
+        expect(basis.atomicLabelsArray).to.be.deep.equal([undefined, undefined, undefined, 1]);
     });
 
     /**
@@ -167,11 +228,17 @@ describe("Basis", () => {
         const basis = new Basis(Na4Cl4.basis);
         basis.removeAtom({
             id: 3,
-            element: "Na",
             coordinate: [0.5, 0.5, 0],
         });
         expect(basis.elements.length).to.be.equal(7);
         expect(basis.coordinates.length).to.be.equal(7);
+    });
+
+    it("should throw when removing an atom id the basis does not have", () => {
+        const basis = new Basis(Na4Cl4.basis);
+        expect(() => basis.removeAtom({ id: 9, coordinate: [0.5, 0.5, 0] })).to.throw(
+            "Atom 9 not found",
+        );
     });
 
     it("should return number of atoms", () => {
@@ -196,7 +263,7 @@ describe("Basis", () => {
 
     it("should return standard representation", () => {
         const basis = new Material(Na4Cl4Cartesian).getBasis();
-        assertDeepAlmostEqual(basis.standardRepresentation, Na4Cl4.basis, ["constraints"]);
+        assertDeepAlmostEqual(basis.standardRepresentation, Na4Cl4.basis);
     });
 
     /**

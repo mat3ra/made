@@ -3,13 +3,39 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from mat3ra.code.array_with_ids import ArrayWithIds
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis, Coordinates
+from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.lattice import Lattice
 from mat3ra.made.material import Material
+from mat3ra.made.tools.build import MaterialWithBuildMetadata
+from mat3ra.made.tools.build.defective_structures.three_dimensional.solid_solution.helpers import create_solid_solution
+from mat3ra.made.tools.build.defective_structures.zero_dimensional.point_defect.helpers import (
+    create_defect_point_substitution,
+    create_defect_point_vacancy,
+)
+from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from mat3ra.made.tools.modify import (
+    filter_by_ids,
+    filter_by_label,
+    interface_get_part,
+    interface_label_parts_by_elements,
+)
+from mat3ra.made.tools.operations.core.binary import merge
+from mat3ra.made.tools.operations.core.unary import translate
 from mat3ra.utils import assertion as assertion_utils
-from unit.fixtures.bulk import BULK_Si_PRIMITIVE
+from unit.fixtures.bulk import (
+    BULK_FeSe_WITH_CONSTRAINTS,
+    BULK_FeSe_WITH_LABELS,
+    BULK_FeSe_WITH_LABELS_WITH_ZERO,
+    BULK_Si_PRIMITIVE,
+)
+from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
+
+FIXED = [False, False, False]
 
 FIXTURES_DIR = Path(__file__).parents[2] / "fixtures"
 HASH_KEY = "hash"
@@ -132,6 +158,117 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
     assert material.basis.labels.values == expected_final
 
 
+@pytest.mark.parametrize(
+    "material_config, operation, expected_labels, expected_constraints",
+    [
+        (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+            lambda material: create_defect_point_vacancy(
+                material, material.basis.coordinates.values[1], "closest_site"
+            ),
+            [0, 0, 1, 1],
+            [None, None, None, FIXED],
+        ),
+        (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+            lambda material: create_defect_point_substitution(
+                material, material.basis.coordinates.values[3], "Ge", "closest_site"
+            ),
+            [0, 0, 0, 1, 1],
+            [None, None, None, FIXED, None],
+        ),
+        (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+            lambda material: interface_get_part(material, InterfacePartsEnum.SUBSTRATE),
+            [0, 0, 0],
+            [None, None, None],
+        ),
+        (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+            lambda material: merge([filter_by_label(material, 1), filter_by_label(material, 0)]),
+            [1, 1, 0, 0, 0],
+            [None, FIXED, None, None, None],
+        ),
+        (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+            lambda material: interface_label_parts_by_elements(
+                interface_get_part(material, InterfacePartsEnum.FILM), ["Ni"]
+            ),
+            [1, 1],
+            [None, FIXED],
+        ),
+        (
+            BULK_FeSe_WITH_LABELS,
+            lambda material: create_defect_point_substitution(
+                material, material.basis.coordinates.values[2], "S", "closest_site"
+            ),
+            [1, 2, None, None],
+            [None, None, None, None],
+        ),
+        (
+            BULK_FeSe_WITH_LABELS,
+            lambda material: create_solid_solution(material, "Fe", "Co", 0.5, seed=42),
+            [2, None, None, 1],
+            [None, None, None, None],
+        ),
+        (
+            BULK_FeSe_WITH_CONSTRAINTS,
+            lambda material: merge(
+                [material, translate(MaterialWithBuildMetadata.create(BULK_FeSe_WITH_LABELS), [0, 0, 0.5])]
+            ),
+            [None, None, None, None, 1, 2, None, None],
+            [FIXED, None, None, None, None, None, None, None],
+        ),
+        (
+            GRAPHENE_NICKEL_INTERFACE_CONSTRAINED,
+            lambda material: filter_by_ids(material, [2, 4], reset_ids=True),
+            [0, 1],
+            [None, FIXED],
+        ),
+    ],
+)
+def test_atomic_properties_follow_atom_ids(material_config, operation, expected_labels, expected_constraints):
+    basis = operation(MaterialWithBuildMetadata.create(material_config)).basis
+    assert basis.atomic_labels_array == expected_labels
+    assert basis.constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
+    assert all(set(item.values.ids) <= set(basis.elements.ids) for item in basis.atomic_properties.root)
+
+
+@pytest.mark.parametrize(
+    "material_config, atom_id, expected_labels", [(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, 4, [0, 0, 0, 1])]
+)
+def test_remove_atom_by_id(material_config, atom_id, expected_labels):
+    basis = Material.create(material_config).basis
+    basis.remove_atom_by_id(atom_id)
+    assert basis.atomic_labels_array == expected_labels
+    assert basis.constraints.values == []
+
+
+@pytest.mark.parametrize("material_config, atom_id", [(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, 9)])
+def test_remove_atom_by_id_not_found(material_config, atom_id):
+    basis = Material.create(material_config).basis
+    with pytest.raises(ValueError, match=f"Atom {atom_id} not found"):
+        basis.remove_atom_by_id(atom_id)
+
+
+@pytest.mark.parametrize(
+    "properties, properties_after_set",
+    [
+        (
+            BULK_FeSe_WITH_LABELS["basis"]["atomic_properties"],
+            BULK_FeSe_WITH_LABELS_WITH_ZERO["basis"]["atomic_properties"],
+        )
+    ],
+)
+def test_atomic_properties_from_list_of_dicts(properties, properties_after_set):
+    atomic_properties = AtomicProperties.from_list_of_dicts(properties)
+    assert atomic_properties.to_dict() == properties
+    labels = ArrayWithIds.from_list_of_dicts(properties_after_set[0]["values"])
+    atomic_properties.set_by_name(ProtoPropertyEnum.atomic_labels, labels)
+    assert atomic_properties.get_by_name(ProtoPropertyEnum.atomic_labels) is labels
+    assert atomic_properties.to_dict() == properties_after_set
+
+
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
 def test_calculate_hash(fixture_file):
     fixture = load_fixture(fixture_file)
@@ -148,6 +285,12 @@ def test_calculate_hash_feo_standata():
     material = Material.create(data)
     assert material.hash == expected_hashes["hash"]
     assert material.scaled_hash == expected_hashes["scaledHash"]
+
+
+def test_calculate_hash_with_labels():
+    material = Material.create(load_fixture("si-standata.json"))
+    material.set_labels_from_list([0, 1])
+    assert material.hash == load_fixture("hashes.json")["SiliconWithLabels"]["hash"]
 
 
 @pytest.mark.parametrize(

@@ -1,5 +1,14 @@
 # ruff: noqa
-GRAPHENE_NICKEL_INTERFACE = {
+from typing import Any, Dict
+
+GRAPHENE_NICKEL_INTERFACE_LABELS = [
+    {"id": 0, "value": 0},
+    {"id": 1, "value": 0},
+    {"id": 2, "value": 0},
+    {"id": 3, "value": 1},
+    {"id": 4, "value": 1},
+]
+GRAPHENE_NICKEL_INTERFACE: Dict[str, Any] = {
     "metadata": {
         "build": [
             {
@@ -19,8 +28,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                             "elements": [{"id": 0, "value": "Ni"}],
                                             "coordinates": [{"id": 0, "value": [0, 0, 0]}],
                                             "units": "crystal",
-                                            "labels": [],
-                                            "constraints": [],
                                         },
                                         "lattice": {
                                             "a": 2.478974,
@@ -65,8 +72,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                                 "elements": [{"id": 0, "value": "Ni"}],
                                                                 "coordinates": [{"id": 0, "value": [0, 0, 0]}],
                                                                 "units": "crystal",
-                                                                "labels": [],
-                                                                "constraints": [],
                                                             },
                                                             "lattice": {
                                                                 "a": 2.478974,
@@ -114,8 +119,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                 {"id": 2, "value": [0, 0, 0.666667667]},
                                             ],
                                             "units": "crystal",
-                                            "labels": [],
-                                            "constraints": [],
                                         },
                                         "lattice": {
                                             "a": 2.478974,
@@ -157,8 +160,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                 {"id": 1, "value": [0.333333, 0.666667, 0]},
                                             ],
                                             "units": "crystal",
-                                            "labels": [],
-                                            "constraints": [],
                                         },
                                         "lattice": {
                                             "a": 2.467291,
@@ -202,8 +203,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                                     {"id": 1, "value": [0.333333, 0.666667, 0]},
                                                                 ],
                                                                 "units": "crystal",
-                                                                "labels": [],
-                                                                "constraints": [],
                                                             },
                                                             "lattice": {
                                                                 "a": 2.467291,
@@ -239,8 +238,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                 {"id": 1, "value": [0.333333, 0.666667, 0.000001]},
                                             ],
                                             "units": "crystal",
-                                            "labels": [],
-                                            "constraints": [],
                                         },
                                         "lattice": {
                                             "a": 2.467291,
@@ -278,8 +275,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                         "elements": [{"id": 0, "value": "Ni"}],
                                                         "coordinates": [{"id": 0, "value": [0, 0, 0]}],
                                                         "units": "crystal",
-                                                        "labels": [],
-                                                        "constraints": [],
                                                     },
                                                     "lattice": {
                                                         "a": 2.478974,
@@ -324,8 +319,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                                 "elements": [{"id": 0, "value": "Ni"}],
                                                                 "coordinates": [{"id": 0, "value": [0, 0, 0]}],
                                                                 "units": "crystal",
-                                                                "labels": [],
-                                                                "constraints": [],
                                                             },
                                                             "lattice": {
                                                                 "a": 2.478974,
@@ -374,8 +367,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                                                         {"id": 0, "value": [0, 0, 0]}
                                                                                     ],
                                                                                     "units": "crystal",
-                                                                                    "labels": [],
-                                                                                    "constraints": [],
                                                                                 },
                                                                                 "lattice": {
                                                                                     "a": 2.478974,
@@ -427,8 +418,6 @@ GRAPHENE_NICKEL_INTERFACE = {
                                                                     {"id": 2, "value": [0, 0, 0.666667667]},
                                                                 ],
                                                                 "units": "crystal",
-                                                                "labels": [],
-                                                                "constraints": [],
                                                             },
                                                             "lattice": {
                                                                 "a": 2.478974,
@@ -470,12 +459,16 @@ GRAPHENE_NICKEL_INTERFACE = {
                                         {"id": 2, "value": [0.333332333, 0.333332333, 0.666667667]},
                                     ],
                                     "units": "crystal",
-                                    "labels": [
-                                        {"id": 0, "value": "0"},
-                                        {"id": 1, "value": "0"},
-                                        {"id": 2, "value": "0"},
+                                    "atomic_properties": [
+                                        {
+                                            "name": "atomic_labels",
+                                            "values": [
+                                                {"id": 0, "value": 0},
+                                                {"id": 1, "value": 0},
+                                                {"id": 2, "value": 0},
+                                            ],
+                                        }
                                     ],
-                                    "constraints": [],
                                 },
                                 "lattice": {
                                     "a": 2.478974,
@@ -518,14 +511,7 @@ GRAPHENE_NICKEL_INTERFACE = {
             {"id": 4, "value": [0.666666, 0.666667, 0.351561882]},
         ],
         "units": "crystal",
-        "labels": [
-            {"id": 0, "value": 0},
-            {"id": 1, "value": 0},
-            {"id": 2, "value": 0},
-            {"id": 3, "value": 1},
-            {"id": 4, "value": 1},
-        ],
-        "constraints": [],
+        "atomic_properties": [{"name": "atomic_labels", "values": GRAPHENE_NICKEL_INTERFACE_LABELS}],
     },
     "lattice": {
         "a": 2.478974,
@@ -603,37 +589,41 @@ DIAMOND_GaAs_INTERFACE = {
             {"id": 27, "value": [0.5, 0.5, 0.133640343]},
         ],
         "units": "crystal",
-        "labels": [
-            {"id": 0, "value": 1},
-            {"id": 1, "value": 1},
-            {"id": 2, "value": 1},
-            {"id": 3, "value": 1},
-            {"id": 4, "value": 1},
-            {"id": 5, "value": 1},
-            {"id": 6, "value": 1},
-            {"id": 7, "value": 1},
-            {"id": 8, "value": 0},
-            {"id": 9, "value": 0},
-            {"id": 10, "value": 0},
-            {"id": 11, "value": 0},
-            {"id": 12, "value": 0},
-            {"id": 13, "value": 0},
-            {"id": 14, "value": 0},
-            {"id": 15, "value": 0},
-            {"id": 16, "value": 0},
-            {"id": 17, "value": 0},
-            {"id": 18, "value": 0},
-            {"id": 19, "value": 0},
-            {"id": 20, "value": 0},
-            {"id": 21, "value": 0},
-            {"id": 22, "value": 0},
-            {"id": 23, "value": 0},
-            {"id": 24, "value": 0},
-            {"id": 25, "value": 0},
-            {"id": 26, "value": 0},
-            {"id": 27, "value": 0},
+        "atomic_properties": [
+            {
+                "name": "atomic_labels",
+                "values": [
+                    {"id": 0, "value": 1},
+                    {"id": 1, "value": 1},
+                    {"id": 2, "value": 1},
+                    {"id": 3, "value": 1},
+                    {"id": 4, "value": 1},
+                    {"id": 5, "value": 1},
+                    {"id": 6, "value": 1},
+                    {"id": 7, "value": 1},
+                    {"id": 8, "value": 0},
+                    {"id": 9, "value": 0},
+                    {"id": 10, "value": 0},
+                    {"id": 11, "value": 0},
+                    {"id": 12, "value": 0},
+                    {"id": 13, "value": 0},
+                    {"id": 14, "value": 0},
+                    {"id": 15, "value": 0},
+                    {"id": 16, "value": 0},
+                    {"id": 17, "value": 0},
+                    {"id": 18, "value": 0},
+                    {"id": 19, "value": 0},
+                    {"id": 20, "value": 0},
+                    {"id": 21, "value": 0},
+                    {"id": 22, "value": 0},
+                    {"id": 23, "value": 0},
+                    {"id": 24, "value": 0},
+                    {"id": 25, "value": 0},
+                    {"id": 26, "value": 0},
+                    {"id": 27, "value": 0},
+                ],
+            }
         ],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.630032327,
@@ -711,37 +701,41 @@ DIAMOND_GaAs_INTERFACE_GH = {
             {"id": 27, "value": [0.5, 0.5, 0.133640343]},
         ],
         "units": "crystal",
-        "labels": [
-            {"id": 0, "value": 1},
-            {"id": 1, "value": 1},
-            {"id": 2, "value": 1},
-            {"id": 3, "value": 1},
-            {"id": 4, "value": 1},
-            {"id": 5, "value": 1},
-            {"id": 6, "value": 1},
-            {"id": 7, "value": 1},
-            {"id": 8, "value": 0},
-            {"id": 9, "value": 0},
-            {"id": 10, "value": 0},
-            {"id": 11, "value": 0},
-            {"id": 12, "value": 0},
-            {"id": 13, "value": 0},
-            {"id": 14, "value": 0},
-            {"id": 15, "value": 0},
-            {"id": 16, "value": 0},
-            {"id": 17, "value": 0},
-            {"id": 18, "value": 0},
-            {"id": 19, "value": 0},
-            {"id": 20, "value": 0},
-            {"id": 21, "value": 0},
-            {"id": 22, "value": 0},
-            {"id": 23, "value": 0},
-            {"id": 24, "value": 0},
-            {"id": 25, "value": 0},
-            {"id": 26, "value": 0},
-            {"id": 27, "value": 0},
+        "atomic_properties": [
+            {
+                "name": "atomic_labels",
+                "values": [
+                    {"id": 0, "value": 1},
+                    {"id": 1, "value": 1},
+                    {"id": 2, "value": 1},
+                    {"id": 3, "value": 1},
+                    {"id": 4, "value": 1},
+                    {"id": 5, "value": 1},
+                    {"id": 6, "value": 1},
+                    {"id": 7, "value": 1},
+                    {"id": 8, "value": 0},
+                    {"id": 9, "value": 0},
+                    {"id": 10, "value": 0},
+                    {"id": 11, "value": 0},
+                    {"id": 12, "value": 0},
+                    {"id": 13, "value": 0},
+                    {"id": 14, "value": 0},
+                    {"id": 15, "value": 0},
+                    {"id": 16, "value": 0},
+                    {"id": 17, "value": 0},
+                    {"id": 18, "value": 0},
+                    {"id": 19, "value": 0},
+                    {"id": 20, "value": 0},
+                    {"id": 21, "value": 0},
+                    {"id": 22, "value": 0},
+                    {"id": 23, "value": 0},
+                    {"id": 24, "value": 0},
+                    {"id": 25, "value": 0},
+                    {"id": 26, "value": 0},
+                    {"id": 27, "value": 0},
+                ],
+            }
         ],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.630032327,
@@ -752,5 +746,16 @@ DIAMOND_GaAs_INTERFACE_GH = {
         "gamma": 90.0,
         "units": {"length": "angstrom", "angle": "degree"},
         "type": "TRI",
+    },
+}
+
+GRAPHENE_NICKEL_INTERFACE_CONSTRAINED = {
+    **GRAPHENE_NICKEL_INTERFACE,
+    "basis": {
+        **GRAPHENE_NICKEL_INTERFACE["basis"],
+        "atomic_properties": [
+            *GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"],
+            {"name": "atomic_constraints", "values": [{"id": 4, "value": [False, False, False]}]},
+        ],
     },
 }

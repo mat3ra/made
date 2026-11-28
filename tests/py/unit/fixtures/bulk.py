@@ -1,5 +1,7 @@
 from typing import Any, Dict
 
+from mat3ra.made.material import Material
+from mat3ra.made.tools.modify import filter_by_ids
 from mat3ra.standata.materials import Materials
 
 BULK_SrTiO3 = Materials.get_by_name_first_match("SrTiO3")
@@ -10,14 +12,51 @@ BULK_TiN = Materials.get_by_name_first_match("TiN")
 BULK_Ni_PRIMITIVE = Materials.get_by_name_first_match("Nickel")
 BULK_GRAPHENE = Materials.get_by_name_first_match("Graphene")
 BULK_Cu = Materials.get_by_name_first_match("Copper")
+BULK_FeSe = Materials.get_by_name_first_match("FeSe")
+BULK_FeSe_LABELS = [{"id": 0, "value": 1}, {"id": 1, "value": 2}]
+BULK_FeSe_WITH_LABELS = {
+    **BULK_FeSe,
+    "basis": {
+        **BULK_FeSe["basis"],
+        "atomic_properties": [{"name": "atomic_labels", "values": BULK_FeSe_LABELS}],
+    },
+}
+BULK_FeSe_LABELS_WITH_ZERO = [{"id": 0, "value": 0}, {"id": 1, "value": 3}]
+BULK_FeSe_WITH_LABELS_WITH_ZERO = {
+    **BULK_FeSe,
+    "basis": {
+        **BULK_FeSe["basis"],
+        "atomic_properties": [{"name": "atomic_labels", "values": BULK_FeSe_LABELS_WITH_ZERO}],
+    },
+}
+BULK_FeSe_WITH_ID_GAP = filter_by_ids(
+    Material.create(
+        {
+            **BULK_FeSe,
+            "basis": {
+                **BULK_FeSe["basis"],
+                "atomic_properties": [
+                    {"name": "atomic_labels", "values": [{"id": 0, "value": 1}, {"id": 3, "value": 2}]}
+                ],
+            },
+        }
+    ),
+    [1],
+    invert=True,
+).to_dict()
+BULK_FeSe_WITH_CONSTRAINTS = {
+    **BULK_FeSe,
+    "basis": {
+        **BULK_FeSe["basis"],
+        "atomic_properties": [{"name": "atomic_constraints", "values": [{"id": 0, "value": [False, False, False]}]}],
+    },
+}
 
 BULK_Si_PRIMITIVE: Dict[str, Any] = {
     "name": "Silicon FCC",
     "basis": {
-        "constraints": [],
         "coordinates": [{"id": 0, "value": [0.0, 0.0, 0.0]}, {"id": 1, "value": [0.25, 0.25, 0.25]}],
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}],
-        "labels": [],
         "units": "crystal",
     },
     "lattice": {
@@ -39,8 +78,6 @@ BULK_Si_PRIMITIVIZED = {
         "elements": [{"id": 0, "value": "Si"}, {"id": 1, "value": "Si"}],
         "coordinates": [{"id": 0, "value": [0.5, 0.5, 0.5]}, {"id": 1, "value": [0.75, 0.75, 0.75]}],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 3.867,
@@ -79,8 +116,6 @@ BULK_Si_CONVENTIONAL: Dict[str, Any] = {
             {"id": 7, "value": [0.75, 0.75, 0.75]},
         ],
         "units": "crystal",
-        "constraints": [],
-        "labels": [],
     },
     "lattice": {
         "a": 5.468763846,
@@ -108,8 +143,6 @@ BULK_Si_CONVENTIONAL_FILTERED: Dict[str, Any] = {
             {"id": 2, "value": [0.5, 0.5, 0.5]},
         ],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.468763846,
@@ -147,7 +180,6 @@ BULK_Ge_CONVENTIONAL: Dict[str, Any] = {
             {"id": 6, "value": [0.75, 0.25, 0.75]},
             {"id": 7, "value": [0.25, 0.75, 0.75]},
         ],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.67099638511611,

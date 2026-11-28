@@ -25,7 +25,7 @@ def get_film_site_occupation(
     Raises:
         ValueError: when the material carries no film-labelled or no substrate-labelled atoms.
     """
-    labels = interface.basis.labels.values
+    labels = interface.basis.atomic_labels_array
     if InterfacePartsEnum.FILM.value not in labels:
         raise ValueError("The material is not an interface — no film labels.")
     if InterfacePartsEnum.SUBSTRATE.value not in labels:

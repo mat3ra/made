@@ -54,8 +54,6 @@ TERRACE_SLAB_Si_001_3x3 = {
             {"id": 23, "value": [0.75, 0.127786405, 0.79755026]},
         ],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.468763846,

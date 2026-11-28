@@ -1,8 +1,11 @@
 import {
     AtomicConstraintsSchema,
     BasisSchema,
+    BasisWithAtomicPropertiesSchema,
+    MaterialEnhancedSchema,
     MaterialHashedSchema,
     MaterialSchema,
+    ProtoPropertyEnum,
 } from "@mat3ra/esse/dist/js/types";
 import { MaterialStandata } from "@mat3ra/standata";
 import fs from "fs";
@@ -51,6 +54,30 @@ const FeOStandata = MaterialStandata.getRuntimeDataConfigs().find((m: any) =>
 ) as MaterialHashedSchema;
 const Na4Cl4 = Na4Cl4_JSON as unknown as MaterialSchema;
 const Na4Cl4Cartesian = Na4Cl4Cartesian_JSON as unknown as MaterialSchema;
+const Na4Cl4WithTwoFixedAtoms: MaterialEnhancedSchema = {
+    ...Na4Cl4,
+    basis: {
+        ...Na4Cl4.basis,
+        atomic_properties: [
+            {
+                name: ProtoPropertyEnum.atomic_constraints,
+                values: [4, 5].map((id) => ({ id, value: [false, false, false] })),
+            },
+        ],
+    },
+};
+const Na4Cl4WithFreeAtoms: MaterialEnhancedSchema = {
+    ...Na4Cl4,
+    basis: {
+        ...Na4Cl4.basis,
+        atomic_properties: [
+            {
+                name: ProtoPropertyEnum.atomic_constraints,
+                values: Na4Cl4.basis.elements.map(({ id }) => ({ id, value: [true, true, true] })),
+            },
+        ],
+    },
+};
 const C2H4 = C2H4_JSON as unknown as MaterialSchema;
 const C2H4Translated = C2H4Translated_JSON as unknown as MaterialSchema;
 const Na = Na_JSON as unknown as MaterialSchema;
@@ -69,7 +96,94 @@ const Ge2Basis = Ge2Basis_JSON as BasisSchema;
 const AsGeBasis = AsGeBasis_JSON as BasisSchema;
 const FeLiSiBasis = FeLiSiBasis_JSON as BasisSchema;
 const LiFeSiBasis = LiFeSiBasis_JSON as BasisSchema;
-const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as BasisSchema;
+const LiFeSiBasisLabels = LiFeSiBasisLabels_JSON as BasisWithAtomicPropertiesSchema;
+const Si2BasisWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
+    ...Si2Basis,
+    atomic_properties: [
+        {
+            name: ProtoPropertyEnum.atomic_constraints,
+            values: [{ id: 1, value: [false, false, true] }],
+        },
+        { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 1, value: 1 }] },
+    ],
+};
+const SiBasisWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
+    elements: [{ id: 0, value: "Si" }],
+    coordinates: [{ id: 0, value: [0.5, 0.5, 0.5] }],
+    units: "crystal",
+    atomic_properties: [
+        {
+            name: ProtoPropertyEnum.atomic_constraints,
+            values: [{ id: 0, value: [false, false, true] }],
+        },
+        { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
+    ],
+};
+const SiBasisWithIdGap: BasisSchema = {
+    elements: [{ id: 2, value: "Si" }],
+    coordinates: [{ id: 2, value: [0.5, 0.5, 0.5] }],
+    units: "crystal",
+};
+const SiBasisWithIdGapDisplaced: BasisSchema = {
+    ...SiBasisWithIdGap,
+    coordinates: [{ id: 2, value: [0.5, 0.5, 0.7] }],
+};
+const SiBasisWithIdGapHalfway: BasisSchema = {
+    ...SiBasisWithIdGap,
+    coordinates: [{ id: 2, value: [0.5, 0.5, 0.6] }],
+};
+const Si2BasisRepeatedWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
+    ...Si2BasisRepeated,
+    atomic_properties: [
+        {
+            name: ProtoPropertyEnum.atomic_constraints,
+            values: [
+                { id: 1, value: [false, false, true] },
+                { id: 3, value: [false, false, true] },
+            ],
+        },
+        {
+            name: ProtoPropertyEnum.atomic_labels,
+            values: [
+                { id: 1, value: 1 },
+                { id: 3, value: 1 },
+            ],
+        },
+    ],
+};
+const SiGeSupercellBasisWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
+    elements: [
+        { id: 0, value: "Si" },
+        { id: 1, value: "Si" },
+        { id: 2, value: "Ge" },
+        { id: 3, value: "Ge" },
+    ],
+    coordinates: [
+        { id: 0, value: [0, 0, 0] },
+        { id: 1, value: [0.5, 0, 0] },
+        { id: 2, value: [0.125, 0.25, 0.25] },
+        { id: 3, value: [0.625, 0.25, 0.25] },
+    ],
+    units: "crystal",
+    atomic_properties: [
+        {
+            name: ProtoPropertyEnum.atomic_constraints,
+            values: [
+                { id: 0, value: [false, false, true] },
+                { id: 1, value: [false, false, true] },
+                { id: 2, value: [true, true, true] },
+                { id: 3, value: [true, true, true] },
+            ],
+        },
+        {
+            name: ProtoPropertyEnum.atomic_labels,
+            values: [
+                { id: 0, value: 1 },
+                { id: 1, value: 1 },
+            ],
+        },
+    ],
+};
 
 // Other
 const atomicConstraints = atomicConstraints_JSON as AtomicConstraintsSchema;
@@ -85,11 +199,20 @@ export {
     SiSlab111NoVacuum,
     Si2Basis,
     Si2BasisRepeated,
+    Si2BasisWithLabelAndConstraint,
+    Si2BasisRepeatedWithLabelAndConstraint,
+    SiBasisWithLabelAndConstraint,
+    SiBasisWithIdGap,
+    SiBasisWithIdGapDisplaced,
+    SiBasisWithIdGapHalfway,
+    SiGeSupercellBasisWithLabelAndConstraint,
     // Other
     FeO,
     FeOStandata,
     Na4Cl4,
     Na4Cl4Cartesian,
+    Na4Cl4WithTwoFixedAtoms,
+    Na4Cl4WithFreeAtoms,
     C2H4,
     C2H4Translated,
     Na,

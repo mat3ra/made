@@ -28,16 +28,19 @@ import type {
     MaterialHashedSchema,
     MaterialSchema,
 } from "@mat3ra/esse/dist/js/types";
+import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import CryptoJS from "crypto-js";
 
-import { type BasisConfig } from "./basis/basis";
-import { type ConstrainedBasisConfig, ConstrainedBasis } from "./basis/constrained_basis";
+import {
+    type BasisWithAtomicPropertiesConfig,
+    BasisWithAtomicProperties,
+} from "./basis/basis_with_atomic_properties";
 import {
     isConventionalCellSameAsPrimitiveForLatticeType,
     PRIMITIVE_TO_CONVENTIONAL_CELL_LATTICE_TYPES,
     PRIMITIVE_TO_CONVENTIONAL_CELL_MULTIPLIERS,
 } from "./cell/conventional_cell";
-import { Constraint } from "./constraints/constraints";
+import { AtomicConstraints } from "./constraints/constraints";
 import { type MaterialSchemaMixin, materialSchemaMixin } from "./generated/MaterialSchemaMixin";
 import { Lattice } from "./lattice/lattice";
 import parsers from "./parsers/parsers";
@@ -51,21 +54,18 @@ const MATERIAL_SCHEMA_IDS = {
     enhancedHashed: "material-enhanced-hashed",
 } as const;
 
-function parseConstrainedBasis(
-    textOrObject: string | BasisConfig | ConstrainedBasisConfig,
+function parseBasis(
+    textOrObject: string | BasisWithAtomicPropertiesConfig,
     format?: "xyz",
     units?: BasisSchema["units"],
-): ConstrainedBasisConfig {
+): BasisWithAtomicPropertiesConfig {
     if (typeof textOrObject === "string") {
         if (format !== "xyz") {
             throw new Error("Invalid format");
         }
         return parsers.xyz.toBasisConfig(textOrObject, units);
     }
-    if ("constraints" in textOrObject) {
-        return textOrObject;
-    }
-    return { ...textOrObject, constraints: [] };
+    return textOrObject;
 }
 
 export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
@@ -85,13 +85,11 @@ export type MaterialSchemaMap = {
 export type DefaultMaterialSchemas = MaterialSchemaMap;
 
 /**
- * Constructor config: constraints/hash/metadata optional — normalized in the constructor
- * (`parseConstrainedBasis` + {@link Material.updateHash}; `metadata` defaults to `{}`).
+ * Constructor config: hash/metadata optional — normalized in the constructor
+ * ({@link Material.updateHash}; `metadata` defaults to `{}`).
  */
 export type MaterialConfig<S extends MaterialEnhancedHashedSchema = MaterialEnhancedHashedSchema> =
-    Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
-        basis: MaterialSchema["basis"] | MaterialEnhancedSchema["basis"];
-    };
+    PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">;
 
 export const defaultMaterialConfig: MaterialEnhancedSchema = {
     name: "Silicon FCC",
@@ -117,7 +115,6 @@ export const defaultMaterialConfig: MaterialEnhancedSchema = {
             },
         ],
         units: "crystal",
-        constraints: [],
     },
     lattice: {
         // Primitive cell for Diamond FCC Silicon at ambient conditions
@@ -217,16 +214,13 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
     }
 
     /**
-     * @param config - Partial entity input. `basis.constraints` / `hash` / `metadata` may be omitted;
-     *   constraints and hash are filled here; missing `metadata` becomes `{}`.
+     * @param config - Partial entity input. `hash` / `metadata` may be omitted;
+     *   hash is filled here; missing `metadata` becomes `{}`.
      * `NoInfer` keeps `Schemas` from being inferred from the config object literal.
      */
     constructor(config: NoInfer<MaterialConfig>) {
-        const basis = parseConstrainedBasis(config.basis);
-
         super({
             ...config,
-            basis,
             name: config.name ?? config.formula ?? "",
             metadata: config.metadata ?? {},
             hash: config.hash ?? "",
@@ -311,41 +305,32 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
         this.unsetProp("external");
     }
 
-    setBasis(basis: BasisConfig | ConstrainedBasisConfig): void;
+    setBasis(basis: BasisWithAtomicPropertiesConfig): void;
 
     setBasis(basis: string, format: "xyz", units?: BasisSchema["units"]): void;
 
     setBasis(
-        textOrObject: string | BasisConfig | ConstrainedBasisConfig,
+        textOrObject: string | BasisWithAtomicPropertiesConfig,
         format?: "xyz",
         units?: BasisSchema["units"],
     ) {
-        this.basis = parseConstrainedBasis(textOrObject, format, units);
+        this.basis = parseBasis(textOrObject, format, units);
         this.unsetFileProps();
         this.updateFormula();
     }
 
-    private setBasisConstraints(constraints: Constraint[]) {
-        this.setBasis({
-            ...this.basis,
-            constraints: constraints.map((constraint) => ({
-                id: constraint.id,
-                value: constraint.value,
-            })),
-        });
-    }
-
     setBasisConstraintsFromArrayOfObjects(constraints: AtomicConstraintsSchema) {
-        this.setBasisConstraints(
-            constraints.map((constraint) =>
-                Constraint.fromValueAndId(constraint.value, constraint.id),
-            ),
+        const basis = this.getBasis();
+        basis.atomicProperties.setByName(
+            ProtoPropertyEnum.atomic_constraints,
+            AtomicConstraints.fromObjects(constraints),
         );
+        this.setBasis(basis.toJSON());
     }
 
-    getBasis(): ConstrainedBasis {
-        return new ConstrainedBasis({
-            ...parseConstrainedBasis(this.basis),
+    getBasis(): BasisWithAtomicProperties {
+        return new BasisWithAtomicProperties({
+            ...this.basis,
             cell: this.getLattice().vectors,
         });
     }
@@ -539,7 +524,7 @@ class Material<Schemas extends MaterialSchemaMap = DefaultMaterialSchemas> exten
     }
 
     /**
-     * Full material JSON: constrained basis + hash fields from live getters.
+     * Full material JSON: basis with atomic properties + hash fields from live getters.
      * Variants below AJV-clean this payload against the matching ESSE schema.
      * Builds from `_json` (not `super.toJSON`) so we do not pre-clean against
      * {@link Material.jsonSchema} before projecting to a narrower schema.

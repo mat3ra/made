@@ -44,8 +44,6 @@ SLAB_Si_3_ADATOMS = {
             {"id": 18, "value": [0.75, 0.75, 0.527488203]},
         ],
         "units": "crystal",
-        "labels": [],
-        "constraints": [],
     },
     "lattice": {
         "a": 5.468763846,

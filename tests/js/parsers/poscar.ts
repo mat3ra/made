@@ -1,14 +1,14 @@
 import { expect } from "chai";
 
-import { AtomicConstraints } from "../../../src/js/constraints/constraints";
 import Material from "../../../src/js/Material";
 import parsers from "../../../src/js/parsers/parsers";
 import { atomsCount } from "../../../src/js/parsers/poscar";
 import {
-    atomicConstraints,
     H2OPoscar,
     Na4Cl4,
     Na4Cl4Poscar,
+    Na4Cl4WithFreeAtoms,
+    Na4Cl4WithTwoFixedAtoms,
     Silicon,
     Zr1H23Zr1H1,
     Zr1H23Zr1H1Poscar,
@@ -56,13 +56,6 @@ describe("Parsers.POSCAR", () => {
         );
     });
 
-    it("should return constraints as string with given map function", () => {
-        const constraints = AtomicConstraints.fromObjects(atomicConstraints);
-        expect(
-            constraints.getAsStringByIndex(0, parsers.poscar.atomicConstraintsCharFromBool),
-        ).to.be.equal("T T F");
-    });
-
     it("should generate POSCAR with constraints if they were present", () => {
         const newBasisXYZ = `Si     0.000000    0.000000    0.000000 0 0 0
 Ge     0.250000    0.250000    0.250000 1 1 1
@@ -85,5 +78,17 @@ direct
 
         const poscar = clonedMaterial.getAsPOSCAR(true);
         expect(poscar).to.be.equal(poscarConstraints);
+    });
+
+    it("should keep constraints on their atoms by id", () => {
+        const material = new Material(Na4Cl4WithTwoFixedAtoms);
+        const isFree = [true, true, true, true, false, false, true, true];
+        const poscarFlags = material.getAsPOSCAR().match(/[TF] [TF] [TF]/g);
+        expect(poscarFlags?.map((flags) => flags === "T T T")).to.be.deep.equal(isFree);
+    });
+
+    it("should write selective dynamics whenever constraints are stored, even when every atom is free", () => {
+        const material = new Material(Na4Cl4WithFreeAtoms);
+        expect(material.getAsPOSCAR()).to.include("Selective dynamics");
     });
 });

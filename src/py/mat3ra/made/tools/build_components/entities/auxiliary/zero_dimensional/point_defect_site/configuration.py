@@ -11,4 +11,4 @@ from ..crystal_site import CrystalSite
 
 class PointDefectSiteConfiguration(CrystalSite, PointDefectSiteSchema):
     element: Union[VacancySchema, AtomSchema]
-    host_atom_label: Optional[Union[int, str]] = None
+    host_atom_label: Optional[int] = None

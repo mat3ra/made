@@ -74,11 +74,12 @@ def supercell(material: MaterialWithBuildMetadata, supercell_matrix) -> Material
 
 
 def edit_cell(material: Material, lattice_vectors=None) -> MaterialWithBuildMetadata:
+    new_material = material.clone()
     if lattice_vectors is not None:
-        material.set_lattice_vectors(
+        new_material.set_lattice_vectors(
             lattice_vector1=lattice_vectors[0], lattice_vector2=lattice_vectors[1], lattice_vector3=lattice_vectors[2]
         )
-    wrapped_material = wrap_to_unit_cell(material)
+    wrapped_material = wrap_to_unit_cell(new_material)
     return wrapped_material
 
 

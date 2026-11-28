@@ -2,8 +2,8 @@ import { Coordinate3DSchema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 import { chunk, flatten } from "lodash";
 
-import { Basis } from "../basis/basis";
-import { AtomicCoordinateValue, Coordinate } from "../basis/coordinates";
+import { Basis, BasisConfig } from "../basis/basis";
+import { AtomicCoordinateValue } from "../basis/coordinates";
 
 const ADD = Utils.math.add;
 const MULT = Utils.math.multiply;
@@ -14,13 +14,13 @@ const MULT = Utils.math.multiply;
  * @param repetitions{Number[]} Repetition vector `[x, y, z]`, in each spatial dimension.
  * @return {Basis} New Basis.
  */
-function repeat(basis: Basis, repetitions: number[]): Basis {
+function repeat<S extends BasisConfig>(basis: Basis<S>, repetitions: number[]): Basis<S> {
     let i, j, k;
     let shiftI = 0;
     let shiftJ = 0;
     let shiftK = 0;
 
-    // clone original basis and assert it is in cartesian coordinates
+    // clone original basis and convert it to crystal coordinates
     const newBasis = basis.clone();
     const basisCloneInCrystalCoordinates = basis.clone();
 
@@ -30,24 +30,12 @@ function repeat(basis: Basis, repetitions: number[]): Basis {
     for (i = 1; i <= repetitions[0]; i += 1) {
         for (j = 1; j <= repetitions[1]; j += 1) {
             for (k = 1; k <= repetitions[2]; k += 1) {
-                // for each atom in original basis add one with a repetition
-                // eslint-disable-next-line no-loop-func
-                basisCloneInCrystalCoordinates.elements.forEach((element, index) => {
-                    const coord = basisCloneInCrystalCoordinates.getCoordinateValueByIndex(index);
-                    // only add atoms if shifts are non-zero
-                    if (shiftI || shiftJ || shiftK) {
-                        const coordinateInstance = Coordinate.fromValueAndId(coord);
-                        const translatedCoordinateInstance = coordinateInstance.translateByVector([
-                            shiftI,
-                            shiftJ,
-                            shiftK,
-                        ]);
-                        newBasis.addAtom({
-                            element: element.value,
-                            coordinate: translatedCoordinateInstance.value,
-                        });
-                    }
-                });
+                // only add atoms if shifts are non-zero
+                if (shiftI || shiftJ || shiftK) {
+                    const repetition = basisCloneInCrystalCoordinates.clone();
+                    repetition.translateByVector([shiftI, shiftJ, shiftK]);
+                    newBasis.addAtomsFromAnotherBasis(repetition);
+                }
                 shiftK += 1;
             }
             shiftK = 0;
@@ -80,17 +68,21 @@ function _linearInterpolation(
 /**
  * Returns a set of Bases for a crystal interpolated from initial to final crystal.
  *          Can be used to generate atomic configurations along a chemical reaction path, for example.
- * @param initialBasis {Basis} Original initialBasis.
- * @param finalBasis {Basis} Final initialBasis.
+ * @param initialBasis {Basis} Initial basis.
+ * @param finalBasis {Basis} Final basis.
  * @param numberOfSteps{Number} Number of intermediate steps.
  * @return {Basis[]} List of all bases.
  */
-function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps = 1) {
+function interpolate<S extends BasisConfig>(
+    initialBasis: Basis<S>,
+    finalBasis: Basis<S>,
+    numberOfSteps = 1,
+) {
     // check that initial and final basis have the same cell
     if (!initialBasis.hasEquivalentCellTo(finalBasis))
         throw new Error("basis.interpolate: Basis cells are not equal");
 
-    // clone original initialBasis and assert it is in cartesian coordinates
+    // clone both bases and convert them to crystal coordinates
     const initialBasisCopy = initialBasis.clone();
     const finalBasisCopy = finalBasis.clone();
 
@@ -111,13 +103,14 @@ function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps = 1) 
         );
         const vectorSize = 3;
         const intermediateCoordinatesAsNestedArray = chunk(intermediateCoordinates, vectorSize);
-        const intermediateBasis = initialBasis.clone();
+        const intermediateBasis = initialBasisCopy.clone();
         intermediateBasis.coordinates = intermediateCoordinatesAsNestedArray.map(
             (coordinate, index) => ({
-                id: index,
+                id: initialBasisCopy._coordinates.ids[index],
                 value: coordinate as AtomicCoordinateValue,
             }),
         );
+        if (initialBasis.isInCartesianUnits) intermediateBasis.toCartesian();
 
         resultingListOfBases.push(intermediateBasis);
     }

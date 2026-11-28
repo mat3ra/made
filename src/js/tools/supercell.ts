@@ -1,8 +1,7 @@
 import { Coordinate3DSchema, Matrix3X3Schema } from "@mat3ra/esse/dist/js/types";
 import { Utils } from "@mat3ra/utils";
 
-import { Basis } from "../basis/basis";
-import { ConstrainedBasis } from "../basis/constrained_basis";
+import { Basis, BasisConfig } from "../basis/basis";
 import { Cell } from "../cell/cell";
 import { Lattice } from "../lattice/lattice";
 import type { MaterialSchemaMap } from "../Material";
@@ -14,12 +13,12 @@ const ADD = Utils.math.add;
 /**
  * @summary Generates new basis for a supercell. For each site from basis generates shifts that are within supercell.
  */
-function generateNewBasisWithinSupercell(
-    basis: Basis | ConstrainedBasis,
+function generateNewBasisWithinSupercell<S extends BasisConfig>(
+    basis: Basis<S>,
     cell: Cell,
     supercell: Cell,
     supercellMatrix: Matrix3X3Schema,
-): Basis {
+): Basis<S> {
     const oldBasis = basis.clone();
     const newBasis = basis.clone();
     newBasis.removeAllAtoms();
@@ -38,17 +37,18 @@ function generateNewBasisWithinSupercell(
                 supercell.convertPointToCartesian(combination),
             );
             if (supercell.isPointInsideCell(newPoint as Coordinate3DSchema)) {
-                newBasis.addAtom({
-                    element: element.value,
-                    coordinate: supercell.convertPointToCrystal(
+                newBasis.addCopyOfAtom(
+                    element.id,
+                    supercell.convertPointToCrystal(
                         newPoint as Coordinate3DSchema,
                     ) as Coordinate3DSchema,
-                });
+                    oldBasis,
+                );
             }
         });
     });
 
-    return newBasis as Basis;
+    return newBasis;
 }
 
 /**
