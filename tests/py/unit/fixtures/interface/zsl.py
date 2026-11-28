@@ -665,30 +665,3 @@ GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL = {
     },
     "lattice": {"a": 4.957948, "b": 4.957948, "c": 3.505799, "alpha": 135, "beta": 135, "gamma": 60},
 }
-
-SILICON_GERMANIUM_INTERFACE_111_FILM_BULK_CELL = {
-    "basis": {
-        "elements": [
-            {"id": 0, "value": "Ge"},
-            {"id": 1, "value": "Ge"},
-            {"id": 2, "value": "Ge"},
-            {"id": 3, "value": "Ge"},
-            {"id": 4, "value": "Ge"},
-            {"id": 5, "value": "Ge"},
-            {"id": 6, "value": "Ge"},
-            {"id": 7, "value": "Ge"},
-        ],
-        "coordinates": [
-            {"id": 0, "value": [0.0, 0.0, 0.250001]},
-            {"id": 1, "value": [0.75, 0.75, 0.000001]},
-            {"id": 2, "value": [0.5, 0.5, 0.250001]},
-            {"id": 3, "value": [0.25, 0.25, 0.000001]},
-            {"id": 4, "value": [0.0, 0.5, 0.250001]},
-            {"id": 5, "value": [0.75, 0.25, 0.000001]},
-            {"id": 6, "value": [0.5, 0.0, 0.250001]},
-            {"id": 7, "value": [0.25, 0.75, 0.000001]},
-        ],
-        "units": "crystal",
-    },
-    "lattice": {"a": 7.734, "b": 7.734, "c": 5.536995, "alpha": 134.298235, "beta": 134.298235, "gamma": 60},
-}

@@ -13,25 +13,41 @@ from mat3ra.made.tools.analyze.slab import SlabMaterialAnalyzer
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
 from mat3ra.made.tools.build.compound_pristine_structures.two_dimensional.interface import InterfaceConfiguration
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
-from mat3ra.made.tools.helpers import create_interface_simple
+from mat3ra.made.tools.helpers import create_interface_simple, create_interface_simple_between_slabs, create_slab
 from unit.fixtures.bulk import BULK_Ge_CONVENTIONAL, BULK_Si_CONVENTIONAL
-from unit.fixtures.interface.zsl import (
-    GRAPHENE_NICKEL_INTERFACE,
-    GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL,
-    SILICON_GERMANIUM_INTERFACE_111_FILM_BULK_CELL,
+from unit.fixtures.interface.simple import (
+    INTERFACE_Si_001_Ge_001_SUBSTRATE_BULK_CELL,
+    INTERFACE_Si_111_Ge_111_FILM_BULK_CELL,
 )
+from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE, GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL
 from unit.fixtures.slab import SI_CONVENTIONAL_SLAB_001
 from unit.utils import assert_two_entities_deep_almost_equal
 
 INTERFACE_MATERIAL: Final = MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE)
 SLAB_MATERIAL: Final = MaterialWithBuildMetadata.create(SI_CONVENTIONAL_SLAB_001)
 SILICON_GERMANIUM_INTERFACE_111: Final = create_interface_simple(
-    MaterialWithBuildMetadata.create(BULK_Si_CONVENTIONAL),
-    MaterialWithBuildMetadata.create(BULK_Ge_CONVENTIONAL),
-    (1, 1, 1),
-    (1, 1, 1),
-    1,
-    1,
+    substrate_crystal=MaterialWithBuildMetadata.create(BULK_Si_CONVENTIONAL),
+    film_crystal=MaterialWithBuildMetadata.create(BULK_Ge_CONVENTIONAL),
+    substrate_miller_indices=(1, 1, 1),
+    film_miller_indices=(1, 1, 1),
+    substrate_number_of_layers=1,
+    film_number_of_layers=1,
+    gap=None,
+    vacuum=0.0,
+)
+SILICON_GERMANIUM_INTERFACE_001_FROM_SLABS_WITH_VACUUM: Final = create_interface_simple_between_slabs(
+    substrate_slab=create_slab(
+        crystal=MaterialWithBuildMetadata.create(BULK_Si_CONVENTIONAL),
+        miller_indices=(0, 0, 1),
+        number_of_layers=2,
+        vacuum=10.0,
+    ),
+    film_slab=create_slab(
+        crystal=MaterialWithBuildMetadata.create(BULK_Ge_CONVENTIONAL),
+        miller_indices=(0, 0, 1),
+        number_of_layers=2,
+        vacuum=10.0,
+    ),
     gap=None,
     vacuum=0.0,
 )
@@ -45,7 +61,12 @@ GET_BULK_CRYSTAL_CASES = [
 
 CREATE_INTERFACE_BULK_CELL_CASES = [
     (INTERFACE_MATERIAL, InterfacePartsEnum.SUBSTRATE, GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL),
-    (SILICON_GERMANIUM_INTERFACE_111, InterfacePartsEnum.FILM, SILICON_GERMANIUM_INTERFACE_111_FILM_BULK_CELL),
+    (SILICON_GERMANIUM_INTERFACE_111, InterfacePartsEnum.FILM, INTERFACE_Si_111_Ge_111_FILM_BULK_CELL),
+    (
+        SILICON_GERMANIUM_INTERFACE_001_FROM_SLABS_WITH_VACUUM,
+        InterfacePartsEnum.SUBSTRATE,
+        INTERFACE_Si_001_Ge_001_SUBSTRATE_BULK_CELL,
+    ),
 ]
 
 CREATE_BUILD_METADATA_ANALYZER_CASES = [
