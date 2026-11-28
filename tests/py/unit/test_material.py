@@ -250,6 +250,13 @@ def test_remove_atom_by_id(material_config, atom_id, expected_labels):
     assert basis.constraints.values == []
 
 
+@pytest.mark.parametrize("material_config, atom_id", [(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, 9)])
+def test_remove_atom_by_id_not_found(material_config, atom_id):
+    basis = Material.create(material_config).basis
+    with pytest.raises(ValueError, match=f"Atom {atom_id} not found"):
+        basis.remove_atom_by_id(atom_id)
+
+
 @pytest.mark.parametrize(
     "properties, properties_after_set",
     [
