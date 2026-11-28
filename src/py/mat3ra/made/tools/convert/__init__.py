@@ -217,7 +217,7 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
                 [element["id"] for element in material_config["basis"]["elements"]], UNLABELED_ATOM_LABEL
             )
         )
-    constraints = basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
+    constraints = basis.constraints
     if constraints.values:
         atoms.set_constraint(
             [

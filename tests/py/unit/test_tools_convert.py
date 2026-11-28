@@ -199,26 +199,20 @@ SUPERCELL_MATRIX_2X1X1 = [[2, 0, 0], [0, 1, 0], [0, 0, 1]]
 def test_to_ase_from_ase_per_atom_values(material_config, modify_basis, arguments, expected_labels):
     material = Material.create(material_config)
     modify_basis(material.basis, *arguments)
-    expected_constraints = material.basis.atomic_properties.get_by_name(
-        ProtoPropertyEnum.atomic_constraints
-    ).to_padded_array_of_values(material.basis.elements.ids, None)
+    expected_constraints = material.basis.constraints.to_padded_array_of_values(material.basis.elements.ids, None)
     atoms = to_ase(material)
     atoms.calc = EMT()
     BFGS(atoms).run(steps=2)
     basis = Material.create(from_ase(atoms)).basis
     assert basis.labels.to_dict() == map_array_to_array_with_id_value(expected_labels, remove_none=True)
-    assert basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints).to_dict() == (
-        map_array_to_array_with_id_value(expected_constraints, remove_none=True)
-    )
+    assert basis.constraints.to_dict() == map_array_to_array_with_id_value(expected_constraints, remove_none=True)
 
 
 def test_from_ase_overlapping_constraints():
     atoms = ASE_BULK_Si.copy()
     atoms.set_constraint([FixAtoms([0]), FixCartesian(0, [False, False, True])])
     basis = Basis(**from_ase(atoms)["basis"])
-    assert basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints).to_dict() == [
-        {"id": 0, "value": [False, False, False]}
-    ]
+    assert basis.constraints.to_dict() == [{"id": 0, "value": [False, False, False]}]
 
 
 @pytest.mark.parametrize(
