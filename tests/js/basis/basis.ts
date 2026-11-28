@@ -173,7 +173,7 @@ describe("Basis", () => {
 
     it("should drop a removed atom's label and constraint, so an atom added in its place has none", () => {
         const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
-        basis.removeAtom({ id: 1, element: "Si", coordinate: [0.5, 0.5, 0.5] });
+        basis.removeAtom({ id: 1, coordinate: [0.5, 0.5, 0.5] });
         basis.addAtom({ element: "Si", coordinate: [0.5, 0.5, 0.5] });
         assertDeepAlmostEqual(basis.toJSON(), {
             ...Si2Basis,
@@ -228,7 +228,6 @@ describe("Basis", () => {
         const basis = new Basis(Na4Cl4.basis);
         basis.removeAtom({
             id: 3,
-            element: "Na",
             coordinate: [0.5, 0.5, 0],
         });
         expect(basis.elements.length).to.be.equal(7);
