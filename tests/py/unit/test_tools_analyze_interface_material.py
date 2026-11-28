@@ -13,16 +13,28 @@ from mat3ra.made.tools.analyze.slab import SlabMaterialAnalyzer
 from mat3ra.made.tools.build import MaterialWithBuildMetadata
 from mat3ra.made.tools.build.compound_pristine_structures.two_dimensional.interface import InterfaceConfiguration
 from mat3ra.made.tools.convert.interface_parts_enum import InterfacePartsEnum
+from mat3ra.made.tools.helpers import create_interface_simple
+from unit.fixtures.bulk import BULK_Ge_CONVENTIONAL, BULK_Si_CONVENTIONAL
 from unit.fixtures.interface.zsl import (
     GRAPHENE_NICKEL_INTERFACE,
-    GRAPHENE_NICKEL_INTERFACE_FILM_BULK_CELL,
     GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL,
+    SILICON_GERMANIUM_INTERFACE_111_FILM_BULK_CELL,
 )
 from unit.fixtures.slab import SI_CONVENTIONAL_SLAB_001
 from unit.utils import assert_two_entities_deep_almost_equal
 
 INTERFACE_MATERIAL: Final = MaterialWithBuildMetadata.create(GRAPHENE_NICKEL_INTERFACE)
 SLAB_MATERIAL: Final = MaterialWithBuildMetadata.create(SI_CONVENTIONAL_SLAB_001)
+SILICON_GERMANIUM_INTERFACE_111: Final = create_interface_simple(
+    MaterialWithBuildMetadata.create(BULK_Si_CONVENTIONAL),
+    MaterialWithBuildMetadata.create(BULK_Ge_CONVENTIONAL),
+    (1, 1, 1),
+    (1, 1, 1),
+    1,
+    1,
+    gap=None,
+    vacuum=0.0,
+)
 SUBSTRATE_CRYSTAL_NAME: Final = "Ni, Nickel, FCC (Fm-3m) 3D (Bulk), mp-23"
 FILM_CRYSTAL_NAME: Final = "Graphene"
 
@@ -32,8 +44,8 @@ GET_BULK_CRYSTAL_CASES = [
 ]
 
 CREATE_INTERFACE_BULK_CELL_CASES = [
-    (InterfacePartsEnum.SUBSTRATE, GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL),
-    (InterfacePartsEnum.FILM, GRAPHENE_NICKEL_INTERFACE_FILM_BULK_CELL),
+    (INTERFACE_MATERIAL, InterfacePartsEnum.SUBSTRATE, GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL),
+    (SILICON_GERMANIUM_INTERFACE_111, InterfacePartsEnum.FILM, SILICON_GERMANIUM_INTERFACE_111_FILM_BULK_CELL),
 ]
 
 CREATE_BUILD_METADATA_ANALYZER_CASES = [
@@ -75,7 +87,7 @@ def test_create_build_metadata_analyzer(
     assert isinstance(analyzer, expected_analyzer_cls)
 
 
-@pytest.mark.parametrize("part,expected_cell", CREATE_INTERFACE_BULK_CELL_CASES)
-def test_create_interface_bulk_cell(part, expected_cell):
-    bulk_cell = create_interface_bulk_cell(INTERFACE_MATERIAL, part)
+@pytest.mark.parametrize("interface,part,expected_cell", CREATE_INTERFACE_BULK_CELL_CASES)
+def test_create_interface_bulk_cell(interface, part, expected_cell):
+    bulk_cell = create_interface_bulk_cell(interface, part)
     assert_two_entities_deep_almost_equal(bulk_cell, expected_cell)
