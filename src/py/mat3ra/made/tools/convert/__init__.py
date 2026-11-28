@@ -205,13 +205,9 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     structure = to_pymatgen(material_config)
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
-    atomic_labels = Basis(**material_config["basis"]).labels
-    if atomic_labels.ids:
-        atoms.set_tags(
-            atomic_labels.to_padded_array_of_values(
-                [element["id"] for element in material_config["basis"]["elements"]], UNLABELED_ATOM_LABEL
-            )
-        )
+    basis = Basis(**material_config["basis"])
+    if basis.labels.ids:
+        atoms.set_tags(basis.labels.to_padded_array_of_values(basis.elements.ids, UNLABELED_ATOM_LABEL))
     if "metadata" in material_config:
         atoms.info.update({"metadata": material_config["metadata"]})
 

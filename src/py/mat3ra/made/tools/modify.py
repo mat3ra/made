@@ -29,9 +29,7 @@ def filter_by_label(material: Material, label: int) -> Material:
         Material: The filtered material object.
     """
     new_material = material.clone()
-    labels_array = new_material.basis.labels.to_array_of_values_with_ids()
-    filtered_label_ids = [_label.id for _label in labels_array if _label.value == label]
-    new_material.basis.filter_atoms_by_ids(filtered_label_ids)
+    new_material.basis.filter_atoms_by_labels([label])
     return new_material
 
 
@@ -599,14 +597,15 @@ def interface_displace_part(
     new_material = interface.clone()
     if use_cartesian_coordinates:
         new_material.to_cartesian()
-    labels_array = new_material.basis.labels.to_array_of_values_with_ids()
-    displaced_label_ids = [_label.id for _label in labels_array if _label.value == int(label)]
+    displaced_atom_indices = [
+        index for index, atomic_label in enumerate(new_material.basis.atomic_labels_array) if atomic_label == label
+    ]
 
     new_coordinates_values = new_material.basis.coordinates.values
-    for atom_id in displaced_label_ids:
-        current_coordinate = new_material.basis.coordinates.get_element_value_by_index(atom_id)
+    for atom_index in displaced_atom_indices:
+        current_coordinate = new_material.basis.coordinates.get_element_value_by_index(atom_index)
         new_atom_coordinate = np.array(current_coordinate) + np.array(displacement)
-        new_coordinates_values[atom_id] = new_atom_coordinate
+        new_coordinates_values[atom_index] = new_atom_coordinate
 
     new_material.set_coordinates(new_coordinates_values)
     new_material.to_crystal()

@@ -39,4 +39,4 @@ class AtomicProperties(AtomicPropertiesSchema):
     @model_serializer
     def to_dict(self) -> List[Dict[str, Any]]:
         """Returns the ESSE list; properties with no values are left out."""
-        return [{"name": item.name.value, "values": item.values.to_dict()} for item in self.root if item.values.ids]
+        return [{"name": item.name.value, "values": item.values.to_dict()} for item in self.root if item.values.values]

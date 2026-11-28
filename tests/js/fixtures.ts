@@ -82,6 +82,18 @@ const Si2BasisWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
         { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 1, value: 1 }] },
     ],
 };
+const SiBasisWithLabelAndConstraint: BasisWithAtomicPropertiesSchema = {
+    elements: [{ id: 0, value: "Si" }],
+    coordinates: [{ id: 0, value: [0.5, 0.5, 0.5] }],
+    units: "crystal",
+    atomic_properties: [
+        {
+            name: ProtoPropertyEnum.atomic_constraints,
+            values: [{ id: 0, value: [false, false, true] }],
+        },
+        { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
+    ],
+};
 const SiBasisWithIdGap: BasisSchema = {
     elements: [{ id: 2, value: "Si" }],
     coordinates: [{ id: 2, value: [0.5, 0.5, 0.5] }],
@@ -164,6 +176,7 @@ export {
     Si2BasisRepeated,
     Si2BasisWithLabelAndConstraint,
     Si2BasisRepeatedWithLabelAndConstraint,
+    SiBasisWithLabelAndConstraint,
     SiBasisWithIdGap,
     SiBasisWithIdGapDisplaced,
     SiBasisWithIdGapHalfway,

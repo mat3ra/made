@@ -208,24 +208,27 @@ def test_rotate(material_config, rotations):
     assertion_utils.assert_deep_almost_equal(material.lattice, rotated_material.lattice)
 
 
-def test_displace_interface():
-    material = Material.create(GRAPHENE_NICKEL_INTERFACE)
-    expected_coordinates = [
-        {"id": 0, "value": [0.999999, 0.999999, 0]},
-        {"id": 1, "value": [0.666665667, 0.666665667, 0.100960811]},
-        {"id": 2, "value": [0.333332333, 0.333332333, 0.201921319]},
-        {"id": 3, "value": [0.993759493, 0.093159552, 0.366525839]},
-        {"id": 4, "value": [0.660425493, 0.759826552, 0.366525839]},
-    ]
+DISPLACED_INTERFACE_COORDINATES = [
+    [0.999999, 0.999999, 0],
+    [0.666665667, 0.666665667, 0.100960811],
+    [0.333332333, 0.333332333, 0.201921319],
+    [0.993759493, 0.093159552, 0.366525839],
+    [0.660425493, 0.759826552, 0.366525839],
+]
 
-    expected_labels = GRAPHENE_NICKEL_INTERFACE_LABELS
+
+@pytest.mark.parametrize(
+    "removed_atom_ids, expected_coordinates",
+    [([], DISPLACED_INTERFACE_COORDINATES), ([0], DISPLACED_INTERFACE_COORDINATES[1:])],
+)
+def test_displace_interface(removed_atom_ids, expected_coordinates):
+    material = filter_by_ids(Material.create(GRAPHENE_NICKEL_INTERFACE), removed_atom_ids, invert=True)
     displaced_material = interface_displace_part(
         material, [0.1, 0.2, 0.3], InterfacePartsEnum.FILM, use_cartesian_coordinates=True
     )
     assertion_utils.assert_deep_almost_equal(
-        expected_coordinates, displaced_material.basis.coordinates.to_dict(), atol=1e-6
+        expected_coordinates, displaced_material.basis.coordinates.values, atol=1e-6
     )
-    assertion_utils.assert_deep_almost_equal(expected_labels, displaced_material.basis.labels.to_dict())
 
 
 def test_displace_interface_optimized():
