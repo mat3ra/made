@@ -264,14 +264,12 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Remove atom with a chemical element at coordinate either by passing the (element AND coordinate) OR id.
+     * Removes the atom with the given id, or else the atom at the coordinate.
      */
-    removeAtom({ element, coordinate, id }: ElementWithCoordinate) {
-        if (element && coordinate) {
-            const atomId = id ?? this._coordinates.getElementIdByValue(coordinate);
-            if (atomId === undefined) throw new Error(`Atom at ${coordinate} not found`);
-            this.filterAtomsByIds(atomId, true);
-        }
+    removeAtom({ coordinate, id }: ElementWithCoordinate) {
+        const atomId = id ?? this._coordinates.getElementIdByValue(coordinate);
+        if (atomId === undefined) throw new Error(`Atom at ${coordinate} not found`);
+        this.filterAtomsByIds(atomId, true);
     }
 
     /**
