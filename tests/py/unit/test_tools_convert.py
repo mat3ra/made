@@ -186,15 +186,12 @@ SUPERCELL_MATRIX_2X1X1 = [[2, 0, 0], [0, 1, 0], [0, 0, 1]]
 
 
 @pytest.mark.parametrize(
-    "material_config, expected_labels",
-    [
-        (GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, [0, 0, 1, 1]),
-        (GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED, [0, 0, 1, 1]),
-    ],
+    "material_config", [GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED]
 )
-def test_to_ase_from_ase_atomic_properties(material_config, expected_labels):
+def test_to_ase_from_ase_atomic_properties(material_config):
     material = Material.create(material_config)
     material.basis.remove_atom_by_id(1)
+    expected_labels = material.basis.atomic_labels_array
     expected_constraints = material.basis.constraints.to_padded_array_of_values(material.basis.elements.ids, None)
     atoms = to_ase(material)
     atoms.calc = EMT()
