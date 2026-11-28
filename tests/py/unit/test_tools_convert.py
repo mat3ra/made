@@ -68,8 +68,18 @@ direct
         ),
     ],
 )
-def test_to_pymatgen(material_config, expected_lattice_params, expected_species, expected_frac_coords, expected_labels):
+@pytest.mark.parametrize("use_cartesian_coordinates", [False, True])
+def test_to_pymatgen(
+    material_config,
+    expected_lattice_params,
+    expected_species,
+    expected_frac_coords,
+    expected_labels,
+    use_cartesian_coordinates,
+):
     material = Material.create(material_config)
+    if use_cartesian_coordinates:
+        material.to_cartesian()
     structure = to_pymatgen(material)
     assert isinstance(structure, Structure)
     assert np.allclose(structure.lattice.parameters, tuple(expected_lattice_params.values()), atol=1e-6)
