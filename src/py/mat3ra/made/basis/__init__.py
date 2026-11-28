@@ -203,6 +203,8 @@ class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
                 array.add_item(value, atom_id + id_offset)
 
     def remove_atom_by_id(self, id: int):
+        if id not in self.elements.ids:
+            raise ValueError(f"Atom {id} not found")
         self.filter_atoms_by_ids(id, invert=True)
 
     def remove_atoms_by_elements(self, values: Union[List[str], str]) -> "Basis":

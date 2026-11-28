@@ -234,6 +234,13 @@ describe("Basis", () => {
         expect(basis.coordinates.length).to.be.equal(7);
     });
 
+    it("should throw when removing an atom id the basis does not have", () => {
+        const basis = new Basis(Na4Cl4.basis);
+        expect(() => basis.removeAtom({ id: 9, coordinate: [0.5, 0.5, 0] })).to.throw(
+            "Atom 9 not found",
+        );
+    });
+
     it("should return number of atoms", () => {
         const basis = new Basis(Na4Cl4.basis);
         expect(basis.nAtoms).to.be.equal(8);
