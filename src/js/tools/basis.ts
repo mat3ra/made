@@ -20,7 +20,7 @@ function repeat<S extends BasisConfig>(basis: Basis<S>, repetitions: number[]): 
     let shiftJ = 0;
     let shiftK = 0;
 
-    // clone original basis and assert it is in cartesian coordinates
+    // clone original basis and convert it to crystal coordinates
     const newBasis = basis.clone();
     const basisCloneInCrystalCoordinates = basis.clone();
 
@@ -69,16 +69,20 @@ function _linearInterpolation(
  * Returns a set of Bases for a crystal interpolated from initial to final crystal.
  *          Can be used to generate atomic configurations along a chemical reaction path, for example.
  * @param initialBasis {Basis} Original initialBasis.
- * @param finalBasis {Basis} Final initialBasis.
+ * @param finalBasis {Basis} Final basis.
  * @param numberOfSteps{Number} Number of intermediate steps.
  * @return {Basis[]} List of all bases.
  */
-function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps = 1) {
+function interpolate<S extends BasisConfig>(
+    initialBasis: Basis<S>,
+    finalBasis: Basis<S>,
+    numberOfSteps = 1,
+) {
     // check that initial and final basis have the same cell
     if (!initialBasis.hasEquivalentCellTo(finalBasis))
         throw new Error("basis.interpolate: Basis cells are not equal");
 
-    // clone original initialBasis and assert it is in cartesian coordinates
+    // clone both bases and convert them to crystal coordinates
     const initialBasisCopy = initialBasis.clone();
     const finalBasisCopy = finalBasis.clone();
 
@@ -99,13 +103,14 @@ function interpolate(initialBasis: Basis, finalBasis: Basis, numberOfSteps = 1) 
         );
         const vectorSize = 3;
         const intermediateCoordinatesAsNestedArray = chunk(intermediateCoordinates, vectorSize);
-        const intermediateBasis = initialBasis.clone();
+        const intermediateBasis = initialBasisCopy.clone();
         intermediateBasis.coordinates = intermediateCoordinatesAsNestedArray.map(
             (coordinate, index) => ({
                 id: initialBasisCopy._coordinates.ids[index],
                 value: coordinate as AtomicCoordinateValue,
             }),
         );
+        if (initialBasis.isInCartesianUnits) intermediateBasis.toCartesian();
 
         resultingListOfBases.push(intermediateBasis);
     }

@@ -2,6 +2,7 @@ import { Utils } from "@mat3ra/utils";
 
 import { Basis } from "../../../src/js/basis/basis";
 import { BasisWithAtomicProperties } from "../../../src/js/basis/basis_with_atomic_properties";
+import Material from "../../../src/js/Material";
 import tools from "../../../src/js/tools";
 import {
     H2HFinal,
@@ -36,5 +37,13 @@ describe("Tools:Basis", () => {
             const images = tools.basis.interpolate(new Basis(initial), new Basis(final), 1);
             assertDeepAlmostEqual(image, images[0].toJSON());
         });
+    });
+
+    it("should return interpolated basises in the units of the initial basis", () => {
+        const [initialBasis, finalBasis] = [H2HInitial, H2HFinal].map((material) =>
+            new Material(material).getBasis().toCartesian(),
+        );
+        const [image] = tools.basis.interpolate(initialBasis, finalBasis, 1);
+        assertDeepAlmostEqual(image.toCrystal().coordinates, H2HImage.basis.coordinates);
     });
 });
