@@ -1,6 +1,6 @@
 from typing import Any, Optional, Type
 
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.made.utils import AXIS_TO_INDEX_MAP
 
 from ..... import MaterialWithBuildMetadata

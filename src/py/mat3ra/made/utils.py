@@ -1,7 +1,7 @@
-from typing import Any, Dict, List, Literal, Union
+from typing import Any, List, Literal, Union
 
 import numpy as np
-from mat3ra.esse.models.core.reusable.axis_enum import AxisEnum
+from mat3ra.esse.models.core.primitive.axis_3d_names_enum import AxisEnum
 from mat3ra.made.material import Material
 
 # TODO: move to mat3ra-code
@@ -14,11 +14,6 @@ def map_array_to_array_with_id_value(array: List[Any], remove_none: bool = False
     if remove_none:
         return list(filter(lambda x: x["value"] is not None, full_array))
     return full_array
-
-
-# TODO: use mat3ra-code
-def map_array_with_id_value_to_array(array: List[Dict[str, Any]]) -> List[Any]:
-    return [item["value"] for item in array]
 
 
 def get_center_of_coordinates(coordinates: List[List[float]]) -> List[float]:
