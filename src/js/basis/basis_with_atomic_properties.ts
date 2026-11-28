@@ -71,7 +71,11 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
      * Returns array of atomic labels E.g., [1, 2, undefined, undefined]
      */
     get atomicLabelsArray(): (AtomicLabelValue | undefined)[] {
-        return this._elements.ids.map((id) => this.labels.getElementValueById(id));
+        const { labels } = this;
+        const labelById = Object.fromEntries(
+            labels.ids.map((id, index) => [id, labels.values[index]]),
+        );
+        return this._elements.ids.map((id) => labelById[id]);
     }
 
     /**
@@ -92,10 +96,13 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         AtomicCoordinateValue,
         AtomicConstraintValue,
     ][] {
-        const { atomicLabelsArray } = this;
+        const { atomicLabelsArray, constraints } = this;
+        const constraintById = Object.fromEntries(
+            constraints.ids.map((id, index) => [id, constraints.values[index]]),
+        );
         return this._elements.values.map((element: AtomicElementValue, idx: number) => {
             const coordinate = this.getCoordinateValueByIndex(idx);
-            const constraint = this.getConstraintByIndex(idx);
+            const constraint = constraintById[this._elements.ids[idx]] || [true, true, true];
             return [element, atomicLabelsArray[idx], coordinate, constraint];
         });
     }
