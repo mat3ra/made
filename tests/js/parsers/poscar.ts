@@ -1,4 +1,3 @@
-import { ProtoPropertyEnum } from "@mat3ra/esse/dist/js/types";
 import { expect } from "chai";
 
 import Material from "../../../src/js/Material";
@@ -8,6 +7,8 @@ import {
     H2OPoscar,
     Na4Cl4,
     Na4Cl4Poscar,
+    Na4Cl4WithFreeAtoms,
+    Na4Cl4WithTwoFixedAtoms,
     Silicon,
     Zr1H23Zr1H1,
     Zr1H23Zr1H1Poscar,
@@ -80,37 +81,14 @@ direct
     });
 
     it("should keep constraints on their atoms by id", () => {
-        const material = new Material({
-            ...Na4Cl4,
-            basis: {
-                ...Na4Cl4.basis,
-                atomic_properties: [
-                    {
-                        name: ProtoPropertyEnum.atomic_constraints,
-                        values: [4, 5].map((id) => ({ id, value: [false, false, false] })),
-                    },
-                ],
-            },
-        });
+        const material = new Material(Na4Cl4WithTwoFixedAtoms);
         const isFree = [true, true, true, true, false, false, true, true];
         const poscarFlags = material.getAsPOSCAR().match(/[TF] [TF] [TF]/g);
         expect(poscarFlags?.map((flags) => flags === "T T T")).to.be.deep.equal(isFree);
     });
 
     it("should write selective dynamics whenever constraints are stored, even when every atom is free", () => {
-        const allFree: [boolean, boolean, boolean] = [true, true, true];
-        const material = new Material({
-            ...Na4Cl4,
-            basis: {
-                ...Na4Cl4.basis,
-                atomic_properties: [
-                    {
-                        name: ProtoPropertyEnum.atomic_constraints,
-                        values: Na4Cl4.basis.elements.map(({ id }) => ({ id, value: allFree })),
-                    },
-                ],
-            },
-        });
+        const material = new Material(Na4Cl4WithFreeAtoms);
         expect(material.getAsPOSCAR()).to.include("Selective dynamics");
     });
 });

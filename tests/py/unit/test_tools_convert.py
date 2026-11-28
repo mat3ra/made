@@ -5,7 +5,6 @@ from ase.build import make_supercell, molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms, FixCartesian
 from ase.optimize import BFGS
-from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
 from mat3ra.made.tools.convert import from_ase, from_poscar, from_pymatgen, to_ase, to_poscar, to_pymatgen
@@ -21,7 +20,7 @@ from .fixtures.bulk import (
     BULK_FeSe_WITH_LABELS,
     BULK_FeSe_WITH_LABELS_WITH_ZERO,
 )
-from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE, GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
+from .fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED, GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from .fixtures.monolayer import GRAPHENE
 from .fixtures.thrid_party.ase_atoms import (
     ASE_MOLECULE_H2O,
@@ -171,16 +170,6 @@ def test_from_ase(
         assert material_data["lattice"]["type"] == expected_lattice_type
 
 
-GRAPHENE_NICKEL_INTERFACE_AXIS_CONSTRAINED = {
-    **GRAPHENE_NICKEL_INTERFACE,
-    "basis": {
-        **GRAPHENE_NICKEL_INTERFACE["basis"],
-        "atomic_properties": [
-            *GRAPHENE_NICKEL_INTERFACE["basis"]["atomic_properties"],
-            {"name": ProtoPropertyEnum.atomic_constraints.value, "values": [{"id": 0, "value": [True, False, True]}]},
-        ],
-    },
-}
 FESE_WITH_ID_GAP_LABELS = [{"id": 0, "value": 1}, {"id": 2, "value": 2}]
 IDENTITY_MATRIX = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
 SUPERCELL_MATRIX_2X1X1 = [[2, 0, 0], [0, 1, 0], [0, 0, 1]]

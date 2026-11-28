@@ -20,6 +20,7 @@ import {
     Na,
     Na4Cl4,
     Na4Cl4Cartesian,
+    Na4Cl4WithTwoFixedAtoms,
     Si2Basis,
     Si2BasisWithLabelAndConstraint,
     SiBasisWithLabelAndConstraint,
@@ -153,18 +154,7 @@ describe("Basis", () => {
     });
 
     it("should keep constraints on their atoms by id", () => {
-        const material = new Material({
-            ...Na4Cl4,
-            basis: {
-                ...Na4Cl4.basis,
-                atomic_properties: [
-                    {
-                        name: ProtoPropertyEnum.atomic_constraints,
-                        values: [4, 5].map((id) => ({ id, value: [false, false, false] })),
-                    },
-                ],
-            },
-        });
+        const material = new Material(Na4Cl4WithTwoFixedAtoms);
         const isFree = [true, true, true, true, false, false, true, true];
         const positions = material.getBasis().getAtomicPositionsWithConstraintsAsStrings();
         expect(positions.map((line) => line.endsWith("1 1 1"))).to.be.deep.equal(isFree);
