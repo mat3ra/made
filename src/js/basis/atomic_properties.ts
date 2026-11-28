@@ -21,6 +21,8 @@ type AtomicPropertyByName = {
 export class AtomicProperties {
     properties: { name: AtomicPropertiesSchema[number]["name"]; values: ArrayWithIds<unknown> }[];
 
+    readonly propertyMapByName: Record<string, AtomicProperties["properties"][number]>;
+
     /**
      * @param properties - the ESSE list of `{ name, values }` entries.
      */
@@ -36,23 +38,23 @@ export class AtomicProperties {
                 properties.find((property) => property.name === name)?.values ?? [],
             ),
         }));
+        this.propertyMapByName = Object.fromEntries(
+            this.properties.map((item) => [item.name, item]),
+        );
     }
 
     /**
      * Returns the stored property, so that changes made to it are kept.
      */
     getByName<Name extends keyof AtomicPropertyByName>(name: Name): AtomicPropertyByName[Name] {
-        return this.properties.find((item) => item.name === name)
-            ?.values as AtomicPropertyByName[Name];
+        return this.propertyMapByName[name].values as AtomicPropertyByName[Name];
     }
 
     setByName<Name extends keyof AtomicPropertyByName>(
         name: Name,
         values: AtomicPropertyByName[Name],
     ) {
-        this.properties = this.properties.map((item) =>
-            item.name === name ? { name, values } : item,
-        );
+        this.propertyMapByName[name].values = values;
     }
 
     /**

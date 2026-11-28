@@ -144,9 +144,11 @@ describe("Basis", () => {
         expect(elementsWithLabels).to.be.deep.equal(expectedElementsWithLabels);
     });
 
-    it("should return a property set by name in the ESSE list", () => {
+    it("should return a property set by name from getByName and in the ESSE list", () => {
         const atomicProperties = new AtomicProperties();
-        atomicProperties.setByName(ProtoPropertyEnum.atomic_labels, Labels.fromValues([1]));
+        const labels = Labels.fromValues([1]);
+        atomicProperties.setByName(ProtoPropertyEnum.atomic_labels, labels);
+        expect(atomicProperties.getByName(ProtoPropertyEnum.atomic_labels)).to.equal(labels);
         expect(atomicProperties.toJSON()).to.be.deep.equal([
             { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
         ]);

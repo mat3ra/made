@@ -23,7 +23,9 @@ export interface ElementsCoordinatesAndConstraintsConfig extends ElementsAndCoor
  * @summary Extension of the Basis class able to deal with per-atom properties: constraints and labels.
  * @extends Basis
  */
-export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesConfig> {
+// Keep `{` on same line as `implements` to satisfy brace-style (conflicts with Prettier multi-line heritage).
+// prettier-ignore
+export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesConfig> implements BasisWithAtomicPropertiesSchema {
     atomicProperties: AtomicProperties;
 
     constructor(config: BasisWithAtomicPropertiesConfig) {
@@ -42,6 +44,14 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         return basis;
     }
 
+    get atomic_properties(): BasisWithAtomicPropertiesSchema["atomic_properties"] {
+        return this.atomicProperties.toJSON();
+    }
+
+    set atomic_properties(atomicProperties: BasisWithAtomicPropertiesSchema["atomic_properties"]) {
+        this.atomicProperties = new AtomicProperties(atomicProperties);
+    }
+
     get constraints(): AtomicConstraints {
         return this.atomicProperties.getByName(ProtoPropertyEnum.atomic_constraints);
     }
@@ -55,7 +65,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
     ): BasisWithAtomicPropertiesConfig {
         return {
             ...super.toJSON(exclude),
-            atomic_properties: this.atomicProperties.toJSON(),
+            atomic_properties: this.atomic_properties,
         };
     }
 

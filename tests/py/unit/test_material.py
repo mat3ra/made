@@ -3,6 +3,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from mat3ra.code.array_with_ids import ArrayWithIds
+from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.lattice import Lattice
@@ -23,7 +25,12 @@ from mat3ra.made.tools.modify import (
 from mat3ra.made.tools.operations.core.binary import merge
 from mat3ra.made.tools.operations.core.unary import translate
 from mat3ra.utils import assertion as assertion_utils
-from unit.fixtures.bulk import BULK_FeSe_WITH_CONSTRAINTS, BULK_FeSe_WITH_LABELS, BULK_Si_PRIMITIVE
+from unit.fixtures.bulk import (
+    BULK_FeSe_WITH_CONSTRAINTS,
+    BULK_FeSe_WITH_LABELS,
+    BULK_FeSe_WITH_LABELS_WITH_ZERO,
+    BULK_Si_PRIMITIVE,
+)
 from unit.fixtures.interface.zsl import GRAPHENE_NICKEL_INTERFACE_CONSTRAINED
 from unit.fixtures.slab import BULK_Si_CONVENTIONAL
 from unit.utils import assert_two_entities_deep_almost_equal
@@ -227,10 +234,22 @@ def test_atomic_properties_follow_atom_ids(material_config, operation, expected_
     assert all(set(item.values.ids) <= set(basis.elements.ids) for item in basis.atomic_properties.root)
 
 
-@pytest.mark.parametrize("properties", [BULK_FeSe_WITH_LABELS["basis"]["atomic_properties"]])
-def test_atomic_properties_from_list_of_dicts(properties):
+@pytest.mark.parametrize(
+    "properties, properties_after_set",
+    [
+        (
+            BULK_FeSe_WITH_LABELS["basis"]["atomic_properties"],
+            BULK_FeSe_WITH_LABELS_WITH_ZERO["basis"]["atomic_properties"],
+        )
+    ],
+)
+def test_atomic_properties_from_list_of_dicts(properties, properties_after_set):
     atomic_properties = AtomicProperties.from_list_of_dicts(properties)
     assert atomic_properties.to_dict() == properties
+    labels = ArrayWithIds.from_list_of_dicts(properties_after_set[0]["values"])
+    atomic_properties.set_by_name(ProtoPropertyEnum.atomic_labels, labels)
+    assert atomic_properties.get_by_name(ProtoPropertyEnum.atomic_labels) is labels
+    assert atomic_properties.to_dict() == properties_after_set
 
 
 @pytest.mark.parametrize("fixture_file", ["si-standata.json", "Graphene.json"])
