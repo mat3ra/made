@@ -286,9 +286,9 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     filterAtomsByIds(ids: number | number[], invert = false, resetIds = false): this {
         this.arraysWithIds.forEach((array) => array.filterByIds(ids, invert));
         if (resetIds) {
-            const keptAtomIds = this._elements.ids;
+            const indexByAtomId = Object.fromEntries(this._elements.ids.map((id, index) => [id, index]));
             this.arraysWithIds.forEach((array) => {
-                array.ids = array.ids.map((id) => keptAtomIds.indexOf(id));
+                array.ids = array.ids.map((id) => indexByAtomId[id]);
             });
         }
         return this;
@@ -309,12 +309,16 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
     }
 
     /**
-     * Adds a copy of the atom with the given id, with its per-atom values, at the coordinate.
+     * Adds a copy of the source basis' atom with the given id, with its per-atom values, at the coordinate.
      */
-    addCopyOfAtom(id: number, coordinate: AtomicCoordinateValue) {
+    addCopyOfAtom(id: number, coordinate: AtomicCoordinateValue, sourceBasis: this = this) {
         const copyId = Math.max(-1, ...this._elements.ids) + 1;
-        this.arraysWithIds.forEach((array) => {
-            const value = array === this._coordinates ? coordinate : array.getElementValueById(id);
+        const sourceArrays = sourceBasis.arraysWithIds;
+        this.arraysWithIds.forEach((array, arrayIndex) => {
+            const value =
+                array === this._coordinates
+                    ? coordinate
+                    : sourceArrays[arrayIndex].getElementValueById(id);
             if (value !== undefined) array.addItem(value, copyId);
         });
     }

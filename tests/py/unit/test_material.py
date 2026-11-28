@@ -3,7 +3,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis, Coordinates
 from mat3ra.made.basis.atomic_properties import AtomicProperties
 from mat3ra.made.lattice import Lattice
@@ -223,9 +222,8 @@ def test_set_labels_from_list(initial_labels, reset_labels, expected_final):
 )
 def test_atomic_properties_follow_atom_ids(material_config, operation, expected_labels, expected_constraints):
     basis = operation(MaterialWithBuildMetadata.create(material_config)).basis
-    constraints = basis.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
     assert basis.atomic_labels_array == expected_labels
-    assert constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
+    assert basis.constraints.to_padded_array_of_values(basis.elements.ids, None) == expected_constraints
     assert all(set(item.values.ids) <= set(basis.elements.ids) for item in basis.atomic_properties.root)
 
 

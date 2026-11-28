@@ -19,12 +19,15 @@ function generateNewBasisWithinSupercell<S extends BasisConfig>(
     supercell: Cell,
     supercellMatrix: Matrix3X3Schema,
 ): Basis<S> {
+    const oldBasis = basis.clone();
     const newBasis = basis.clone();
-    newBasis.toCrystal();
-    const originalAtomIds = newBasis.elements.map(({ id }) => id);
+    newBasis.removeAllAtoms();
 
-    originalAtomIds.forEach((id) => {
-        const coordinate = newBasis.getCoordinateValueById(id);
+    oldBasis.toCrystal();
+    newBasis.toCrystal();
+
+    oldBasis.elements.forEach((element) => {
+        const coordinate = oldBasis.getCoordinateValueById(element.id);
         const cartesianCoordinate = cell.convertPointToCartesian(coordinate);
         const shifts = cellTools.latticePointsInSupercell(supercellMatrix);
         shifts.forEach((combination) => {
@@ -35,17 +38,17 @@ function generateNewBasisWithinSupercell<S extends BasisConfig>(
             );
             if (supercell.isPointInsideCell(newPoint as Coordinate3DSchema)) {
                 newBasis.addCopyOfAtom(
-                    id,
+                    element.id,
                     supercell.convertPointToCrystal(
                         newPoint as Coordinate3DSchema,
                     ) as Coordinate3DSchema,
+                    oldBasis,
                 );
             }
         });
     });
 
-    // keep only the copies, numbered from 0
-    return newBasis.filterAtomsByIds(originalAtomIds, true, true);
+    return newBasis;
 }
 
 /**

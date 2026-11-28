@@ -73,6 +73,10 @@ class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
         return len(self.elements.values)
 
     @property
+    def constraints(self) -> ArrayWithIds:
+        return self.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_constraints)
+
+    @property
     def labels(self) -> ArrayWithIds:
         return self.atomic_properties.get_by_name(ProtoPropertyEnum.atomic_labels)
 
@@ -214,9 +218,9 @@ class Basis(BasisWithAtomicPropertiesSchema, InMemoryEntityPydantic):
         for array in self.arrays_with_ids:
             array.filter_by_ids(ids, invert)
         if reset_ids:
-            kept_atom_ids = list(self.elements.ids)
+            index_by_atom_id = {atom_id: index for index, atom_id in enumerate(self.elements.ids)}
             for array in self.arrays_with_ids:
-                array.ids = [kept_atom_ids.index(atom_id) for atom_id in array.ids]
+                array.ids = [index_by_atom_id[atom_id] for atom_id in array.ids]
         return self
 
     def filter_atoms_by_labels(self, labels: List[int]) -> "Basis":
