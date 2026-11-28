@@ -10,11 +10,11 @@ const { assertDeepAlmostEqual } = Utils.assertion;
 describe("Parsers:XYZ", () => {
     it("should extract basis from XYZ text", () => {
         const text = "Si 0 0 0 \n Si 0.25 0.25 0.25";
-        assertDeepAlmostEqual(parsers.xyz.toBasisConfig(text), Silicon.basis, [
-            "atomic_properties",
-            "cell",
-            "units",
-        ]);
+        assertDeepAlmostEqual(
+            parsers.xyz.toBasisConfig(text),
+            { ...Silicon.basis, units: "cartesian" },
+            ["atomic_properties", "cell"],
+        );
     });
 
     it("should extract basis from XYZ text with atomic labels", () => {
