@@ -56,12 +56,13 @@ def create_solid_solution(
     )
     supercell = create_supercell(material, scaling_factor=analyzer.optimal_supercell_dimensions)
     coordinates = supercell.basis.coordinates.values
+    atomic_labels = supercell.basis.atomic_labels_array
     site_configurations = [
         PointDefectSiteConfiguration(
             crystal=supercell,
             coordinate=coordinates[site_index],
             element=AtomSchema(chemical_element=target_element),
-            host_atom_label=supercell.basis.atomic_labels_array[site_index],
+            host_atom_label=atomic_labels[site_index],
         )
         for site_index in analyzer.selected_site_indices
     ]

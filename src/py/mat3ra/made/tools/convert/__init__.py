@@ -210,13 +210,8 @@ def to_ase(material_or_material_data: Union[Material, Dict[str, Any]]) -> ASEAto
     atoms = PymatgenAseAtomsAdaptor.get_atoms(structure)
 
     basis = Basis(**material_config["basis"])
-    atomic_labels = basis.labels
-    if atomic_labels.ids:
-        atoms.set_tags(
-            atomic_labels.to_padded_array_of_values(
-                [element["id"] for element in material_config["basis"]["elements"]], UNLABELED_ATOM_LABEL
-            )
-        )
+    if basis.labels.ids:
+        atoms.set_tags(basis.labels.to_padded_array_of_values(basis.elements.ids, UNLABELED_ATOM_LABEL))
     constraints = basis.constraints
     if constraints.values:
         atoms.set_constraint(

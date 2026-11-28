@@ -5,7 +5,6 @@ from ase.build import make_supercell, molecule
 from ase.calculators.emt import EMT
 from ase.constraints import FixAtoms, FixCartesian
 from ase.optimize import BFGS
-from mat3ra.code.array_with_ids import ArrayWithIds
 from mat3ra.esse.models.properties_directory.enum_options import ProtoPropertyEnum
 from mat3ra.made.basis import Basis
 from mat3ra.made.material import Material
@@ -110,14 +109,12 @@ def test_from_poscar():
 
 
 @pytest.mark.parametrize(
-    "labels_array, expected_tags",
-    [([{"id": 0, "value": 0}, {"id": 1, "value": 1}], [0, 1]), ([], [0, 0])],
+    "labels, expected_tags",
+    [([0, 1], [0, 1]), ([], [0, 0])],
 )
-def test_to_ase(labels_array, expected_tags):
+def test_to_ase(labels, expected_tags):
     material = Material.create_default()
-    material.basis.atomic_properties.set_by_name(
-        ProtoPropertyEnum.atomic_labels, ArrayWithIds.from_list_of_dicts(labels_array)
-    )
+    material.set_labels_from_list(labels)
     ase_atoms = to_ase(material)
     assert isinstance(ase_atoms, Atoms)
     assert np.allclose(

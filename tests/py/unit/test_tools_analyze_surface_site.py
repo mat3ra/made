@@ -99,10 +99,13 @@ def test_get_displacement_to_site_invalid():
 
 
 GR_NI_111_INTERFACE = Material.create(GRAPHENE_NICKEL_INTERFACE_TOP_HCP)
+GR_NI_111_INTERFACE_ATOM_0_UNLABELED = GR_NI_111_INTERFACE.clone()
+GR_NI_111_INTERFACE_ATOM_0_UNLABELED.basis.labels.filter_by_ids([0], invert=True)
 
 
-def test_get_film_site_occupation():
-    assert get_film_site_occupation(GR_NI_111_INTERFACE) == {3: "atop", 4: "hcp"}
+@pytest.mark.parametrize("interface", [GR_NI_111_INTERFACE, GR_NI_111_INTERFACE_ATOM_0_UNLABELED])
+def test_get_film_site_occupation(interface):
+    assert get_film_site_occupation(interface) == {3: "atop", 4: "hcp"}
 
 
 GR_NI_111_SUBSTRATE = GR_NI_111_INTERFACE.clone()

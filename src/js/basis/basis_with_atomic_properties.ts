@@ -42,7 +42,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         return basis;
     }
 
-    get AtomicConstraints() {
+    get constraints(): AtomicConstraints {
         return this.atomicProperties.getByName(ProtoPropertyEnum.atomic_constraints);
     }
 
@@ -64,7 +64,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
     }
 
     getConstraintById(id: number): AtomicConstraintValue {
-        return this.AtomicConstraints.getElementValueById(id) || [true, true, true];
+        return this.constraints.getElementValueById(id) || [true, true, true];
     }
 
     /**
@@ -84,7 +84,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
     }
 
     /**
-     * Helper function returning a nested array with [element, coordinates, constraints] as elements
+     * Helper function returning a nested array with [element, label, coordinate, constraint] as elements
      */
     get elementsCoordinatesConstraintsArray(): [
         AtomicElementValue,
@@ -108,7 +108,7 @@ export class BasisWithAtomicProperties extends Basis<BasisWithAtomicPropertiesCo
         coordinatePrintFormat?: string,
         precision?: number,
     ): string[] {
-        const omitConstraints = this.AtomicConstraints.areUnconstrained;
+        const omitConstraints = this.constraints.areUnconstrained;
         return this.elementsCoordinatesConstraintsArray.map(
             ([element, label, coordinate, constraint]) => {
                 const _elementWithLabel = new ElementWithLabel({ element, label });

@@ -38,7 +38,7 @@ describe("Parsers:XYZ", () => {
     it("should return [true, true, true] as constraints for the line without any constraints", () => {
         const text = "Si 0 0 0 0 1 1\n Si 0.25 0.25 0.25";
         const basis = new BasisWithAtomicProperties(parsers.xyz.toBasisConfig(text));
-        assertDeepAlmostEqual(basis.AtomicConstraints.values, [
+        assertDeepAlmostEqual(basis.constraints.values, [
             [false, true, true],
             [true, true, true],
         ]);

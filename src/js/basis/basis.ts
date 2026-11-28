@@ -268,7 +268,9 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      */
     removeAtom({ element, coordinate, id }: ElementWithCoordinate) {
         if (element && coordinate) {
-            this.filterAtomsByIds(id ?? this._coordinates.getElementIdByValue(coordinate) ?? [], true);
+            const atomId = id ?? this._coordinates.getElementIdByValue(coordinate);
+            if (atomId === undefined) throw new Error(`Atom at ${coordinate} not found`);
+            this.filterAtomsByIds(atomId, true);
         }
     }
 

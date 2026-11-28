@@ -141,7 +141,7 @@ class InterfaceBuilder(StackNComponentsBuilder):
         normalized_material = translate_to_center(material, axes=[axis])
         normalized_material.to_cartesian()
         direction_coords = np.array(normalized_material.coordinates_array)[:, AXIS_TO_INDEX_MAP[axis]]
-        labels = material.basis.labels.values
+        labels = material.basis.atomic_labels_array
 
         substrate_gap_coordinate = direction_coords[np.array(labels) == int(InterfacePartsEnum.SUBSTRATE.value)]
         film_gap_coordinate = direction_coords[np.array(labels) == int(InterfacePartsEnum.FILM.value)]

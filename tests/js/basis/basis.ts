@@ -22,6 +22,7 @@ import {
     Na4Cl4Cartesian,
     Si2Basis,
     Si2BasisWithLabelAndConstraint,
+    SiBasisWithLabelAndConstraint,
 } from "../fixtures";
 
 const { assertDeepAlmostEqual } = Utils.assertion;
@@ -191,18 +192,10 @@ describe("Basis", () => {
 
     it("should renumber labels and constraints with the atoms when removing with id reset", () => {
         const basis = new BasisWithAtomicProperties(Si2BasisWithLabelAndConstraint);
-        assertDeepAlmostEqual(basis.filterAtomsByIds(0, true, true).toJSON(), {
-            elements: [{ id: 0, value: "Si" }],
-            coordinates: [{ id: 0, value: [0.5, 0.5, 0.5] }],
-            units: "crystal",
-            atomic_properties: [
-                {
-                    name: ProtoPropertyEnum.atomic_constraints,
-                    values: [{ id: 0, value: [false, false, true] }],
-                },
-                { name: ProtoPropertyEnum.atomic_labels, values: [{ id: 0, value: 1 }] },
-            ],
-        });
+        assertDeepAlmostEqual(
+            basis.filterAtomsByIds(0, true, true).toJSON(),
+            SiBasisWithLabelAndConstraint,
+        );
     });
 
     it("should keep the labels of atoms added to a basis without labels", () => {
