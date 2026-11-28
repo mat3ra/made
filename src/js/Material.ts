@@ -89,9 +89,7 @@ export type DefaultMaterialSchemas = MaterialSchemaMap;
  * ({@link Material.updateHash}; `metadata` defaults to `{}`).
  */
 export type MaterialConfig<S extends MaterialEnhancedHashedSchema = MaterialEnhancedHashedSchema> =
-    Omit<PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">, "basis"> & {
-        basis: MaterialEnhancedSchema["basis"];
-    };
+    PartialBy<S, "name" | "metadata" | "hash" | "scaledHash">;
 
 export const defaultMaterialConfig: MaterialEnhancedSchema = {
     name: "Silicon FCC",
