@@ -1,4 +1,5 @@
 import {
+    BasisSchema,
     MaterialEnhancedSchema,
     MaterialSchema,
     ProtoPropertyEnum,
@@ -103,7 +104,7 @@ function _parseXYZLineAsWords(line: string): ParsedObject {
  */
 function toBasisConfig(
     txt: string,
-    units = "angstrom",
+    units: BasisSchema["units"] = "cartesian",
     cell = new Cell(),
 ): BasisWithAtomicPropertiesConfig {
     // @ts-ignore
@@ -141,7 +142,7 @@ function toBasisConfig(
     return {
         ...basisConfig,
         atomic_properties: atomicProperties.toJSON(),
-    } as BasisWithAtomicPropertiesConfig;
+    };
 }
 
 /**

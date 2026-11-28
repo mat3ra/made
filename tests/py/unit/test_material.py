@@ -235,6 +235,16 @@ def test_atomic_properties_follow_atom_ids(material_config, operation, expected_
 
 
 @pytest.mark.parametrize(
+    "material_config, atom_id, expected_labels", [(GRAPHENE_NICKEL_INTERFACE_CONSTRAINED, 4, [0, 0, 0, 1])]
+)
+def test_remove_atom_by_id(material_config, atom_id, expected_labels):
+    basis = Material.create(material_config).basis
+    basis.remove_atom_by_id(atom_id)
+    assert basis.atomic_labels_array == expected_labels
+    assert basis.constraints.values == []
+
+
+@pytest.mark.parametrize(
     "properties, properties_after_set",
     [
         (
