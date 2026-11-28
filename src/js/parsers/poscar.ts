@@ -43,8 +43,8 @@ function toPoscar(
             const constraintsAsString = addSelectiveDynamics
                 ? constraint.map(atomicConstraintsCharFromBool).join(" ")
                 : "";
-            const coord = coordinate.map((x) => _print(x));
-            return [coord.join(" "), constraintsAsString, element].join(" ");
+            const printedCoordinate = coordinate.map((x) => _print(x));
+            return [printedCoordinate.join(" "), constraintsAsString, element].join(" ");
         },
     );
     const basisContent = BasisLines.join("\n");

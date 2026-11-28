@@ -417,12 +417,12 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
         // a clone goes through toJSON, which rounds the coordinates as they are stored
         const storedBasis = standardBasis.clone();
         const { elementsWithLabelsArray } = storedBasis;
-        const standardRep = storedBasis.elementsAndCoordinatesArray.map((entry, idx) => {
+        const standardRep = storedBasis.elementsAndCoordinatesArray.map((entry, index) => {
             const coordinate = entry[1];
             const toleratedCoordinate = coordinate.map((x) =>
                 Utils.math.mod(Utils.math.roundCustom(x, HASH_TOLERANCE), 0),
             );
-            return `${elementsWithLabelsArray[idx]} ${toleratedCoordinate.join()}`;
+            return `${elementsWithLabelsArray[index]} ${toleratedCoordinate.join()}`;
         });
         return `${standardRep.sort().join(";")};`;
     }
@@ -455,9 +455,9 @@ export class Basis<S extends BasisConfig = BasisConfig> extends InMemoryEntity<B
      */
     get atomicPositions(): string[] {
         const { elementsWithLabelsArray } = this;
-        return this.elementsAndCoordinatesArray.map((entry, idx) => {
+        return this.elementsAndCoordinatesArray.map((entry, index) => {
             const coordinate = entry[1];
-            return `${elementsWithLabelsArray[idx]} ${coordinate}`;
+            return `${elementsWithLabelsArray[index]} ${coordinate}`;
         });
     }
 

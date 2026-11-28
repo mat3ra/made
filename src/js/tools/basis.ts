@@ -68,7 +68,7 @@ function _linearInterpolation(
 /**
  * Returns a set of Bases for a crystal interpolated from initial to final crystal.
  *          Can be used to generate atomic configurations along a chemical reaction path, for example.
- * @param initialBasis {Basis} Original initialBasis.
+ * @param initialBasis {Basis} Initial basis.
  * @param finalBasis {Basis} Final basis.
  * @param numberOfSteps{Number} Number of intermediate steps.
  * @return {Basis[]} List of all bases.
