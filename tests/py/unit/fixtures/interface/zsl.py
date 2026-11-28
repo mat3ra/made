@@ -646,3 +646,34 @@ DIAMOND_GaAs_INTERFACE = {
         "type": "TRI",
     },
 }
+
+GRAPHENE_NICKEL_INTERFACE_SUBSTRATE_BULK_CELL = {
+    "basis": {
+        "elements": [
+            {"id": 0, "value": "Ni"},
+            {"id": 1, "value": "Ni"},
+            {"id": 2, "value": "Ni"},
+            {"id": 3, "value": "Ni"},
+        ],
+        "coordinates": [
+            {"id": 0, "value": [0.0, 0.0, 0.000001]},
+            {"id": 1, "value": [0.5, 0.5, 0.000001]},
+            {"id": 2, "value": [0.0, 0.5, 0.000001]},
+            {"id": 3, "value": [0.5, 0.0, 0.000001]},
+        ],
+        "units": "crystal",
+    },
+    "lattice": {"a": 4.957948, "b": 4.957948, "c": 3.505799, "alpha": 135, "beta": 135, "gamma": 60},
+}
+
+GRAPHENE_NICKEL_INTERFACE_FILM_BULK_CELL = {
+    "basis": {
+        "elements": [{"id": 0, "value": "C"}, {"id": 1, "value": "C"}],
+        "coordinates": [
+            {"id": 0, "value": [0.333333333, 0.666666667, 0.000001]},
+            {"id": 1, "value": [0.666666667, 0.333333333, 0.000001]},
+        ],
+        "units": "crystal",
+    },
+    "lattice": {"a": 2.478974, "b": 2.478974, "c": 20, "alpha": 90, "beta": 90, "gamma": 60},
+}
