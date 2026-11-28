@@ -1,3 +1,4 @@
+from functools import cached_property
 from typing import Any, Dict, List
 
 from mat3ra.code.array_with_ids import ArrayWithIds
@@ -29,12 +30,17 @@ class AtomicProperties(AtomicPropertiesSchema):
             ]
         )
 
+    @cached_property
+    def property_map_by_name(self) -> Dict[ProtoPropertyEnum, AtomicProperty]:
+        """The items of `root` by name, built once; they are the same objects as in `root`."""
+        return {item.name: item for item in self.root}
+
     def get_by_name(self, name: ProtoPropertyEnum) -> ArrayWithIds:
         """Returns the stored property, so that changes made to it are kept."""
-        return next(item.values for item in self.root if item.name == name)
+        return self.property_map_by_name[name].values
 
     def set_by_name(self, name: ProtoPropertyEnum, values: ArrayWithIds) -> None:
-        self.root = [AtomicProperty(name=name, values=values) if item.name == name else item for item in self.root]
+        self.property_map_by_name[name].values = values
 
     @model_serializer
     def to_dict(self) -> List[Dict[str, Any]]:
